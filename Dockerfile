@@ -19,7 +19,8 @@ COPY --from=frontend-build /app/dist /app/dist
 COPY ./docker/nginx/crawlab.conf /etc/nginx/conf.d
 
 # copy docker bin files
-COPY ./docker/bin /app/
+RUN mkdir -p /app/bin
+COPY ./docker/bin/* /app/bin
 
 # start backend
 CMD ["/bin/bash", "/app/bin/docker-init.sh"]
