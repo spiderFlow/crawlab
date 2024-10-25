@@ -257,19 +257,15 @@ jobs:
           docker pull ${{ env.E2E_TESTS_IMAGE_NAME }}:latest
           docker run --network host \
             -e BASE_URL=http://localhost:8080 \
+            -v ${{ github.workspace }}/playwright-report:/app/playwright-report \
             ${{ env.E2E_TESTS_IMAGE_NAME }}:latest
-
-      - name: Copy test results
-        if: always()
-        run: |
-          docker cp $(docker ps -aq -f ancestor=${{ env.E2E_TESTS_IMAGE_NAME }}:latest):/app/playwright-report ./playwright-report
 
       - name: Deploy to GitHub Pages
         if: always()
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./playwright-report
+          publish_dir: ${{ github.workspace }}/playwright-report
           destination_dir: playwright-report/${{ needs.setup.outputs.version }}
 
   push_images:
