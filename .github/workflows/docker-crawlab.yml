@@ -201,7 +201,7 @@ jobs:
         run: echo "failed=true" >> $GITHUB_OUTPUT
 
   build_crawlab:
-    needs: [setup, build_backend, build_frontend]
+    needs: [setup, build_base_image, build_backend, build_frontend]
     if: |
       always() &&
       (needs.build_backend.outputs.failed != 'true' && needs.build_frontend.outputs.failed != 'true') &&
@@ -209,6 +209,7 @@ jobs:
         needs.setup.outputs.backend_changed == 'true' ||
         needs.setup.outputs.frontend_changed == 'true' ||
         needs.setup.outputs.dockerfile_changed == 'true' ||
+        needs.setup.outputs.base_image_changed == 'true' ||
         needs.setup.outputs.workflow_changed == 'true'
       )
     runs-on: ubuntu-latest
