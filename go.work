@@ -4,9 +4,7 @@ use (
 	backend
 	core
 	db
-	fs
 	grpc
-	template-parser
 	trace
 	vcs
 )

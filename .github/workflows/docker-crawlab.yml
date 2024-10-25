@@ -12,9 +12,11 @@ on:
 env:
   IMAGE_PATH_CRAWLAB_BACKEND: backend
   IMAGE_PATH_CRAWLAB_FRONTEND: frontend
+  GH_PKG_NAME_CRAWLAB_BASE: ${{ github.repository_owner }}/crawlab-base
   GH_PKG_NAME_CRAWLAB_BACKEND: ${{ github.repository_owner }}/crawlab-backend
   GH_PKG_NAME_CRAWLAB_FRONTEND: ${{ github.repository_owner }}/crawlab-frontend
   GH_PKG_NAME_CRAWLAB: ${{ github.repository_owner }}/crawlab
+  IMAGE_NAME_CRAWLAB_BASE: ghcr.io/${{ github.repository_owner }}/crawlab-base
   IMAGE_NAME_CRAWLAB_BACKEND: ghcr.io/${{ github.repository_owner }}/crawlab-backend
   IMAGE_NAME_CRAWLAB_FRONTEND: ghcr.io/${{ github.repository_owner }}/crawlab-frontend
   IMAGE_NAME_CRAWLAB: ghcr.io/${{ github.repository_owner }}/crawlab
@@ -30,6 +32,7 @@ jobs:
       frontend_changed: ${{ steps.check_changed_files.outputs.frontend_changed }}
       dockerfile_changed: ${{ steps.check_changed_files.outputs.dockerfile_changed }}
       workflow_changed: ${{ steps.check_changed_files.outputs.workflow_changed }}
+      base_image_changed: ${{ steps.check_changed_files.outputs.base_image_changed }}
       version: ${{ steps.version.outputs.version }}
 
     steps:
@@ -54,6 +57,8 @@ jobs:
               - 'Dockerfile'
             workflow:
               - '.github/workflows/docker-crawlab.yml'
+            base-image:
+              - 'docker/base-image/**'
 
       - id: check_changed_files
         name: Check changed files
@@ -64,11 +69,13 @@ jobs:
             echo "frontend_changed=true" >> $GITHUB_OUTPUT
             echo "dockerfile_changed=true" >> $GITHUB_OUTPUT
             echo "workflow_changed=true" >> $GITHUB_OUTPUT
+            echo "base_image_changed=true" >> $GITHUB_OUTPUT
           else
             echo "backend_changed=${{ steps.changed_files.outputs.backend_any_changed }}" >> $GITHUB_OUTPUT
             echo "frontend_changed=${{ steps.changed_files.outputs.frontend_any_changed }}" >> $GITHUB_OUTPUT
             echo "dockerfile_changed=${{ steps.changed_files.outputs.dockerfile_any_changed }}" >> $GITHUB_OUTPUT
             echo "workflow_changed=${{ steps.changed_files.outputs.workflow_any_changed }}" >> $GITHUB_OUTPUT
+            echo "base_image_changed=${{ steps.changed_files.outputs.base_image_any_changed }}" >> $GITHUB_OUTPUT
           fi
           
           # Display change status for each component
@@ -76,6 +83,7 @@ jobs:
           echo "Frontend changed: ${{ steps.changed_files.outputs.frontend_any_changed }}"
           echo "Dockerfile changed: ${{ steps.changed_files.outputs.dockerfile_any_changed }}"
           echo "Workflow changed: ${{ steps.changed_files.outputs.workflow_any_changed }}"
+          echo "Base image changed: ${{ steps.changed_files.outputs.base_image_any_changed }}"
 
       - id: version
         name: Get version
@@ -91,9 +99,26 @@ jobs:
           
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      - id: hash
-        name: Generate unique hash
-        run: echo "hash=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+  build_base_image:
+    needs: [ setup ]
+    if: needs.setup.outputs.base_image_changed == 'true' || needs.setup.outputs.workflow_changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./docker/base-image
+          push: true
+          tags: ${{ env.IMAGE_NAME_CRAWLAB_BASE }}:${{ needs.setup.outputs.version }}
 
   test_backend:
     needs: [ setup ]
@@ -106,19 +131,16 @@ jobs:
           - 27017:27017
     steps:
       - uses: actions/checkout@v4
-
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version-file: 'core/go.mod'
           cache-dependency-path: 'core/go.sum'
-
       - name: Run tests
         working-directory: core
         run: |
           # Find all directories containing *_test.go files
           test_dirs=$(find . -name "*_test.go" -exec dirname {} \; | sort -u)
-
           # Run go test on each directory
           for dir in $test_dirs
           do
@@ -192,21 +214,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
       - name: Update Dockerfile
         run: |
-          for name in crawlab-backend crawlab-frontend; do
-            IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/$name
-            sed -i "s|crawlabteam/${name}:latest|${IMAGE_NAME}:${{ needs.setup.outputs.version }}|" Dockerfile
+          IMAGE_NAMES=(
+            "crawlab-base"
+            "crawlab-backend"
+            "crawlab-frontend"
+          )
+          for name in "${IMAGE_NAMES[@]}"; do
+            IMAGE_NAME="ghcr.io/${{ github.repository_owner }}/$name"
+            OLD_IMAGE="crawlabteam/${name}:latest"
+            NEW_IMAGE="${IMAGE_NAME}:${{ needs.setup.outputs.version }}"
+            sed -i "s|${OLD_IMAGE}|${NEW_IMAGE}|" Dockerfile
           done
-
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Build and push image
         uses: docker/build-push-action@v5
         with:
@@ -244,14 +270,12 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Pull and run e2e test image
         run: |
           docker pull ${{ env.E2E_TESTS_IMAGE_NAME }}:latest
@@ -259,7 +283,6 @@ jobs:
             -e BASE_URL=http://localhost:8080 \
             -v ${{ github.workspace }}/playwright-report:/app/playwright-report \
             ${{ env.E2E_TESTS_IMAGE_NAME }}:latest
-
       - name: Deploy to GitHub Pages
         if: always()
         uses: peaceiris/actions-gh-pages@v3
@@ -282,17 +305,14 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Pull Docker image from GitHub Container Registry
         run: docker pull ${{ env.IMAGE_NAME_CRAWLAB }}:${{ needs.setup.outputs.version }}
-
       - name: Login to DockerHub or Tencent Registry
         uses: docker/login-action@v3
         with:
           registry: ${{ (matrix.registry == 'dockerhub' && 'https://index.docker.io/v1/') || (matrix.registry == 'tencent' && 'ccr.ccs.tencentyun.com') }}
           username: ${{ (matrix.registry == 'dockerhub' && secrets.DOCKER_USERNAME) || (matrix.registry == 'tencent' && secrets.DOCKER_TENCENT_USERNAME) }}
           password: ${{ (matrix.registry == 'dockerhub' && secrets.DOCKER_PASSWORD) || (matrix.registry == 'tencent' && secrets.DOCKER_TENCENT_PASSWORD) }}
-
       - name: Tag and push image
         run: |
           docker tag ${{ env.IMAGE_NAME_CRAWLAB }}:${{ needs.setup.outputs.version }} ${{ (matrix.registry == 'dockerhub' && env.IMAGE_NAME_CRAWLAB_DOCKERHUB) || (matrix.registry == 'tencent' && env.IMAGE_NAME_CRAWLAB_TENCENT) }}:${{ needs.setup.outputs.version }}
