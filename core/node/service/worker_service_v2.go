@@ -71,6 +71,7 @@ func (svc *WorkerServiceV2) Wait() {
 
 func (svc *WorkerServiceV2) Stop() {
 	_ = svc.client.Stop()
+	svc.handlerSvc.Stop()
 	log.Infof("worker[%s] service has stopped", svc.cfgSvc.GetNodeKey())
 }
 

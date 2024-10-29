@@ -32,11 +32,13 @@ type GrpcClientV2 struct {
 	timeout time.Duration
 
 	// internals
-	conn   *grpc.ClientConn
-	stream grpc2.NodeService_SubscribeClient
-	msgCh  chan *grpc2.StreamMessage
-	err    error
-	once   sync.Once
+	conn    *grpc.ClientConn
+	stream  grpc2.NodeService_SubscribeClient
+	msgCh   chan *grpc2.StreamMessage
+	err     error
+	once    sync.Once
+	stopped bool
+	stop    chan struct{}
 
 	// clients
 	NodeClient               grpc2.NodeServiceClient
@@ -71,6 +73,11 @@ func (c *GrpcClientV2) Start() (err error) {
 }
 
 func (c *GrpcClientV2) Stop() (err error) {
+	// set stopped flag
+	c.stopped = true
+	c.stop <- struct{}{}
+	log.Infof("[GrpcClient] stopped")
+
 	// skip if connection is nil
 	if c.conn == nil {
 		return nil
@@ -186,11 +193,23 @@ func (c *GrpcClientV2) connect() (err error) {
 
 func (c *GrpcClientV2) subscribe() (err error) {
 	op := func() error {
+		// skip if stopped
+		if c.stopped {
+			return nil
+		}
+
+		// request
 		req := c.NewRequest(&entity.NodeInfo{
 			Key:      c.nodeCfgSvc.GetNodeKey(),
 			IsMaster: false,
 		})
-		c.stream, err = c.NodeClient.Subscribe(context.Background(), req)
+
+		// timeout context
+		ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
+		defer cancel()
+
+		// subscribe
+		c.stream, err = c.NodeClient.Subscribe(ctx, req)
 		if err != nil {
 			return trace.TraceError(err)
 		}
@@ -200,50 +219,57 @@ func (c *GrpcClientV2) subscribe() (err error) {
 
 		return nil
 	}
+
 	return backoff.RetryNotify(op, backoff.NewExponentialBackOff(), utils.BackoffErrorNotify("grpc client subscribe"))
 }
 
 func (c *GrpcClientV2) handleStreamMessage() {
 	log.Infof("[GrpcClient] start handling stream message...")
 	for {
-		// resubscribe if stream is set to nil
-		if c.stream == nil {
-			if err := backoff.RetryNotify(c.subscribe, backoff.NewExponentialBackOff(), utils.BackoffErrorNotify("grpc client subscribe")); err != nil {
-				log.Errorf("subscribe")
-				return
+		select {
+		case <-c.stop:
+			return
+
+		default:
+			// resubscribe if stream is set to nil
+			if c.stream == nil {
+				if err := c.subscribe(); err != nil {
+					log.Errorf("subscribe")
+					return
+				}
 			}
+
+			// receive stream message
+			msg, err := c.stream.Recv()
+			log.Debugf("[GrpcClient] received message: %v", msg)
+			if err != nil {
+				// set error
+				c.err = err
+
+				// end
+				if err == io.EOF {
+					log.Infof("[GrpcClient] received EOF signal, disconnecting")
+					return
+				}
+
+				// connection closed
+				if c.IsClosed() {
+					return
+				}
+
+				// error
+				trace.PrintError(err)
+				c.stream = nil
+				time.Sleep(1 * time.Second)
+				continue
+			}
+
+			// send stream message to channel
+			c.msgCh <- msg
+
+			// reset error
+			c.err = nil
 		}
-
-		// receive stream message
-		msg, err := c.stream.Recv()
-		log.Debugf("[GrpcClient] received message: %v", msg)
-		if err != nil {
-			// set error
-			c.err = err
-
-			// end
-			if err == io.EOF {
-				log.Infof("[GrpcClient] received EOF signal, disconnecting")
-				return
-			}
-
-			// connection closed
-			if c.IsClosed() {
-				return
-			}
-
-			// error
-			trace.PrintError(err)
-			c.stream = nil
-			time.Sleep(1 * time.Second)
-			continue
-		}
-
-		// send stream message to channel
-		c.msgCh <- msg
-
-		// reset error
-		c.err = nil
 	}
 }
 
@@ -254,6 +280,7 @@ func newGrpcClientV2() (c *GrpcClientV2) {
 			Port: constants.DefaultGrpcClientRemotePort,
 		}),
 		timeout: 10 * time.Second,
+		stop:    make(chan struct{}),
 		msgCh:   make(chan *grpc2.StreamMessage),
 	}
 	client.nodeCfgSvc = nodeconfig.GetNodeConfigService()

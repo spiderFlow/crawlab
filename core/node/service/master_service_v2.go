@@ -87,6 +87,7 @@ func (svc *MasterServiceV2) Wait() {
 
 func (svc *MasterServiceV2) Stop() {
 	_ = svc.server.Stop()
+	svc.handlerSvc.Stop()
 	log.Infof("master[%s] service has stopped", svc.GetConfigService().GetNodeKey())
 }
 
