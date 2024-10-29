@@ -10,7 +10,6 @@ on:
     types: [ docker-crawlab ]
 
 env:
-  SOURCE_CODE_PATH_CRAWLAB_BACKEND: core
   IMAGE_PATH_CRAWLAB_BACKEND: backend
   IMAGE_PATH_CRAWLAB_FRONTEND: frontend
   GH_PKG_NAME_CRAWLAB_BASE: ${{ github.repository_owner }}/crawlab-base
@@ -165,7 +164,7 @@ jobs:
       - name: Build and push image
         uses: docker/build-push-action@v5
         with:
-          context: ${{ env.SOURCE_CODE_PATH_CRAWLAB_BACKEND }}
+          context: ${{ env.IMAGE_PATH_CRAWLAB_BACKEND }}
           push: true
           tags: ${{ env.IMAGE_NAME_CRAWLAB_BACKEND }}:${{ needs.setup.outputs.version }}
       - name: Set output

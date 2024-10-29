@@ -6,4 +6,5 @@ use (
 	grpc
 	trace
 	vcs
+	backend
 )
