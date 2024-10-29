@@ -8,7 +8,7 @@ import (
 )
 
 var statsDefaultQuery = bson.M{
-	"create_ts": bson.M{
+	"created_ts": bson.M{
 		"$gte": time.Now().Add(-30 * 24 * time.Hour),
 	},
 }

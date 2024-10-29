@@ -198,7 +198,7 @@ func (svc *ServiceV2) cleanupTasks() {
 	for {
 		// task stats over 30 days ago
 		taskStats, err := service.NewModelServiceV2[models2.TaskStatV2]().GetMany(bson.M{
-			"create_ts": bson.M{
+			"created_ts": bson.M{
 				"$lt": time.Now().Add(-30 * 24 * time.Hour),
 			},
 		}, nil)

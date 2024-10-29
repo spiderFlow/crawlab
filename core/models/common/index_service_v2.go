@@ -1,6 +1,9 @@
 package common
 
 import (
+	"fmt"
+
+	"github.com/apex/log"
 	models2 "github.com/crawlab-team/crawlab/core/models/models/v2"
 	"github.com/crawlab-team/crawlab/core/models/service"
 	"github.com/crawlab-team/crawlab/db/mongo"
@@ -10,8 +13,58 @@ import (
 )
 
 func CreateIndexesV2() {
+	// Helper function to recreate indexes only if different
+	recreateIndexes := func(col *mongo.Col, desiredIndexes []mongo2.IndexModel) {
+		cur, err := col.GetCollection().Indexes().List(col.GetContext())
+		if err != nil {
+			log.Errorf("error listing indexes: %v", err)
+			return
+		}
+
+		var existingIndexes []bson.M
+		err = cur.All(col.GetContext(), &existingIndexes)
+		if err != nil {
+			log.Errorf("error listing indexes: %v", err)
+			return
+		}
+
+		// Compare and recreate only if different
+		needsUpdate := false
+		existingKeys := make(map[string]bool)
+
+		// Skip _id index when comparing
+		for _, idx := range existingIndexes {
+			if name, ok := idx["name"].(string); ok && name != "_id_" {
+				key := idx["key"].(bson.M)
+				keyStr := fmt.Sprintf("%v", key)
+				existingKeys[keyStr] = true
+			}
+		}
+
+		// Check if desired indexes exist
+		for _, idx := range desiredIndexes {
+			keyStr := fmt.Sprintf("%v", idx.Keys)
+			if !existingKeys[keyStr] {
+				needsUpdate = true
+				break
+			}
+		}
+
+		if needsUpdate {
+			// Drop all existing indexes (except _id)
+			err := col.DeleteAllIndexes()
+			if err != nil {
+				log.Errorf("error dropping indexes: %v", err)
+			}
+
+			// Create new indexes
+			col.MustCreateIndexes(desiredIndexes)
+			log.Infof("recreated indexes for collection: %s", col.GetCollection().Name())
+		}
+	}
+
 	// nodes
-	mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.NodeV2{})).MustCreateIndexes([]mongo2.IndexModel{
+	recreateIndexes(mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.NodeV2{})), []mongo2.IndexModel{
 		{Keys: bson.M{"key": 1}},       // key
 		{Keys: bson.M{"name": 1}},      // name
 		{Keys: bson.M{"is_master": 1}}, // is_master
@@ -21,12 +74,12 @@ func CreateIndexesV2() {
 	})
 
 	// projects
-	mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.ProjectV2{})).MustCreateIndexes([]mongo2.IndexModel{
+	recreateIndexes(mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.ProjectV2{})), []mongo2.IndexModel{
 		{Keys: bson.M{"name": 1}},
 	})
 
 	// spiders
-	mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.SpiderV2{})).MustCreateIndexes([]mongo2.IndexModel{
+	recreateIndexes(mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.SpiderV2{})), []mongo2.IndexModel{
 		{Keys: bson.M{"name": 1}},
 		{Keys: bson.M{"type": 1}},
 		{Keys: bson.M{"col_id": 1}},
@@ -34,7 +87,7 @@ func CreateIndexesV2() {
 	})
 
 	// tasks
-	mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.TaskV2{})).MustCreateIndexes([]mongo2.IndexModel{
+	recreateIndexes(mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.TaskV2{})), []mongo2.IndexModel{
 		{Keys: bson.M{"spider_id": 1}},
 		{Keys: bson.M{"status": 1}},
 		{Keys: bson.M{"node_id": 1}},
@@ -44,72 +97,72 @@ func CreateIndexesV2() {
 		{Keys: bson.M{"priority": 1}},
 		{Keys: bson.M{"parent_id": 1}},
 		{Keys: bson.M{"has_sub": 1}},
-		{Keys: bson.M{"create_ts": -1}},
+		{Keys: bson.M{"created_ts": -1}, Options: (&options.IndexOptions{}).SetExpireAfterSeconds(60 * 60 * 24 * 30)},
 	})
 
 	// task stats
-	mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.TaskStatV2{})).MustCreateIndexes([]mongo2.IndexModel{
-		{Keys: bson.M{"create_ts": 1}},
+	recreateIndexes(mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.TaskStatV2{})), []mongo2.IndexModel{
+		{Keys: bson.M{"created_ts": -1}, Options: (&options.IndexOptions{}).SetExpireAfterSeconds(60 * 60 * 24 * 30)},
 	})
 
 	// schedules
-	mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.ScheduleV2{})).MustCreateIndexes([]mongo2.IndexModel{
+	recreateIndexes(mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.ScheduleV2{})), []mongo2.IndexModel{
 		{Keys: bson.M{"name": 1}},
 		{Keys: bson.M{"spider_id": 1}},
 		{Keys: bson.M{"enabled": 1}},
 	})
 
 	// users
-	mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.UserV2{})).MustCreateIndexes([]mongo2.IndexModel{
+	recreateIndexes(mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.UserV2{})), []mongo2.IndexModel{
 		{Keys: bson.M{"username": 1}},
 		{Keys: bson.M{"role": 1}},
 		{Keys: bson.M{"email": 1}},
 	})
 
 	// settings
-	mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.SettingV2{})).MustCreateIndexes([]mongo2.IndexModel{
+	recreateIndexes(mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.SettingV2{})), []mongo2.IndexModel{
 		{Keys: bson.D{{"key", 1}}, Options: options.Index().SetUnique(true)},
 	})
 
 	// tokens
-	mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.TokenV2{})).MustCreateIndexes([]mongo2.IndexModel{
+	recreateIndexes(mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.TokenV2{})), []mongo2.IndexModel{
 		{Keys: bson.M{"name": 1}},
 	})
 
 	// data sources
-	mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.DatabaseV2{})).MustCreateIndexes([]mongo2.IndexModel{
+	recreateIndexes(mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.DatabaseV2{})), []mongo2.IndexModel{
 		{Keys: bson.M{"name": 1}},
 	})
 
 	// data collections
-	mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.DataCollectionV2{})).MustCreateIndexes([]mongo2.IndexModel{
+	recreateIndexes(mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.DataCollectionV2{})), []mongo2.IndexModel{
 		{Keys: bson.M{"name": 1}},
 	})
 
 	// roles
-	mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.RoleV2{})).MustCreateIndexes([]mongo2.IndexModel{
+	recreateIndexes(mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.RoleV2{})), []mongo2.IndexModel{
 		{Keys: bson.D{{"key", 1}}, Options: options.Index().SetUnique(true)},
 	})
 
 	// user role relations
-	mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.UserRoleV2{})).MustCreateIndexes([]mongo2.IndexModel{
+	recreateIndexes(mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.UserRoleV2{})), []mongo2.IndexModel{
 		{Keys: bson.D{{"user_id", 1}, {"role_id", 1}}, Options: options.Index().SetUnique(true)},
 		{Keys: bson.D{{"role_id", 1}, {"user_id", 1}}, Options: options.Index().SetUnique(true)},
 	})
 
 	// permissions
-	mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.PermissionV2{})).MustCreateIndexes([]mongo2.IndexModel{
+	recreateIndexes(mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.PermissionV2{})), []mongo2.IndexModel{
 		{Keys: bson.D{{"key", 1}}, Options: options.Index().SetUnique(true)},
 	})
 
 	// role permission relations
-	mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.RolePermissionV2{})).MustCreateIndexes([]mongo2.IndexModel{
+	recreateIndexes(mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.RolePermissionV2{})), []mongo2.IndexModel{
 		{Keys: bson.D{{"role_id", 1}, {"permission_id", 1}}, Options: options.Index().SetUnique(true)},
 		{Keys: bson.D{{"permission_id", 1}, {"role_id", 1}}, Options: options.Index().SetUnique(true)},
 	})
 
 	// dependencies
-	mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.DependencyV2{})).MustCreateIndexes([]mongo2.IndexModel{
+	recreateIndexes(mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.DependencyV2{})), []mongo2.IndexModel{
 		{
 			Keys: bson.D{
 				{"type", 1},
@@ -121,7 +174,7 @@ func CreateIndexesV2() {
 	})
 
 	// dependency settings
-	mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.DependencySettingV2{})).MustCreateIndexes([]mongo2.IndexModel{
+	recreateIndexes(mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.DependencySettingV2{})), []mongo2.IndexModel{
 		{
 			Keys: bson.D{
 				{"type", 1},
@@ -133,7 +186,7 @@ func CreateIndexesV2() {
 	})
 
 	// dependency logs
-	mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.DependencyLogV2{})).MustCreateIndexes([]mongo2.IndexModel{
+	recreateIndexes(mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.DependencyLogV2{})), []mongo2.IndexModel{
 		{
 			Keys: bson.D{{"task_id", 1}},
 		},
@@ -144,7 +197,7 @@ func CreateIndexesV2() {
 	})
 
 	// dependency tasks
-	mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.DependencyTaskV2{})).MustCreateIndexes([]mongo2.IndexModel{
+	recreateIndexes(mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.DependencyTaskV2{})), []mongo2.IndexModel{
 		{
 			Keys: bson.D{
 				{"update_ts", 1},
@@ -154,7 +207,7 @@ func CreateIndexesV2() {
 	})
 
 	// metrics
-	mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.MetricV2{})).MustCreateIndexes([]mongo2.IndexModel{
+	recreateIndexes(mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.MetricV2{})), []mongo2.IndexModel{
 		{
 			Keys: bson.D{
 				{"created_ts", -1},
@@ -174,7 +227,7 @@ func CreateIndexesV2() {
 	})
 
 	// notification requests
-	mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.NotificationRequestV2{})).MustCreateIndexes([]mongo2.IndexModel{
+	recreateIndexes(mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.NotificationRequestV2{})), []mongo2.IndexModel{
 		{
 			Keys: bson.D{
 				{"created_ts", -1},
@@ -199,7 +252,7 @@ func CreateIndexesV2() {
 	})
 
 	// databases
-	mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.DatabaseV2{})).MustCreateIndexes([]mongo2.IndexModel{
+	recreateIndexes(mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.DatabaseV2{})), []mongo2.IndexModel{
 		{
 			Keys: bson.D{
 				{"data_source_id", 1},
@@ -208,7 +261,7 @@ func CreateIndexesV2() {
 	})
 
 	// database metrics
-	mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.DatabaseMetricV2{})).MustCreateIndexes([]mongo2.IndexModel{
+	recreateIndexes(mongo.GetMongoCol(service.GetCollectionNameByInstance(models2.DatabaseMetricV2{})), []mongo2.IndexModel{
 		{
 			Keys: bson.D{
 				{"created_ts", -1},
