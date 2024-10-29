@@ -50,7 +50,7 @@ func (svc *MasterServiceV2) Init() (err error) {
 
 func (svc *MasterServiceV2) Start() {
 	// create indexes
-	common.CreateIndexesV2()
+	common.InitIndexes()
 
 	// start grpc server
 	if err := svc.server.Start(); err != nil {
@@ -390,5 +390,4 @@ func GetMasterServiceV2() (res *MasterServiceV2, err error) {
 		}
 	})
 	return masterServiceV2, err
-
 }
