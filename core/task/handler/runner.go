@@ -6,6 +6,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/apex/log"
 	"github.com/crawlab-team/crawlab/core/constants"
 	"github.com/crawlab-team/crawlab/core/entity"
@@ -23,14 +32,6 @@ import (
 	"github.com/spf13/viper"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"io"
-	"net/http"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"strings"
-	"sync"
-	"time"
 )
 
 type Runner struct {
@@ -286,7 +287,7 @@ func (r *Runner) startHealthCheck() {
 }
 
 func (r *Runner) configureEnv() {
-	// 默认把Node.js的全局node_modules加入环境变量
+	// By default, add Node.js's global node_modules to PATH
 	envPath := os.Getenv("PATH")
 	nodePath := "/usr/lib/node_modules"
 	if !strings.Contains(envPath, nodePath) {
@@ -294,7 +295,7 @@ func (r *Runner) configureEnv() {
 	}
 	_ = os.Setenv("NODE_PATH", nodePath)
 
-	// default envs
+	// Default envs
 	r.cmd.Env = append(os.Environ(), "CRAWLAB_TASK_ID="+r.tid.Hex())
 	if viper.GetString("grpc.address") != "" {
 		r.cmd.Env = append(r.cmd.Env, "CRAWLAB_GRPC_ADDRESS="+viper.GetString("grpc.address"))
@@ -305,7 +306,7 @@ func (r *Runner) configureEnv() {
 		r.cmd.Env = append(r.cmd.Env, "CRAWLAB_GRPC_AUTH_KEY="+constants.DefaultGrpcAuthKey)
 	}
 
-	// global environment variables
+	// Global environment variables
 	envs, err := client.NewModelService[models.EnvironmentV2]().GetMany(nil, nil)
 	if err != nil {
 		trace.PrintError(err)
