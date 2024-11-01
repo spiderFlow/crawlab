@@ -34,7 +34,6 @@ jobs:
       workflow_changed: ${{ steps.check_changed_files.outputs.workflow_changed }}
       base_image_changed: ${{ steps.check_changed_files.outputs.base_image_changed }}
       version: ${{ steps.version.outputs.version }}
-      test_script: ${{ steps.test_config.outputs.test_script }}
 
     steps:
       - uses: actions/checkout@v4
@@ -330,3 +329,4 @@ jobs:
         run: |
           docker tag ${{ env.IMAGE_NAME_CRAWLAB }}:${{ needs.setup.outputs.version }} ${{ (matrix.registry == 'dockerhub' && env.IMAGE_NAME_CRAWLAB_DOCKERHUB) || (matrix.registry == 'tencent' && env.IMAGE_NAME_CRAWLAB_TENCENT) }}:${{ needs.setup.outputs.version }}
           docker push ${{ (matrix.registry == 'dockerhub' && env.IMAGE_NAME_CRAWLAB_DOCKERHUB) || (matrix.registry == 'tencent' && env.IMAGE_NAME_CRAWLAB_TENCENT) }}:${{ needs.setup.outputs.version }}
+
