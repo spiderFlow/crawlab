@@ -151,21 +151,15 @@ func (svr NodeServiceServer) GetSubscribeStream(nodeId primitive.ObjectID) (stre
 var nodeSvr *NodeServiceServer
 var nodeSvrOnce = new(sync.Once)
 
-func NewNodeServiceServer() (res *NodeServiceServer, err error) {
+func NewNodeServiceServer() *NodeServiceServer {
 	if nodeSvr != nil {
-		return nodeSvr, nil
+		return nodeSvr
 	}
 	nodeSvrOnce.Do(func() {
 		nodeSvr = &NodeServiceServer{
 			subs: make(map[primitive.ObjectID]grpc.NodeService_SubscribeServer),
 		}
 		nodeSvr.cfgSvc = nodeconfig.GetNodeConfigService()
-		if err != nil {
-			log.Errorf("[NodeServiceServer] error: %s", err.Error())
-		}
 	})
-	if err != nil {
-		return nil, err
-	}
-	return nodeSvr, nil
+	return nodeSvr
 }

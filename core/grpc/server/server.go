@@ -16,6 +16,7 @@ import (
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 	"net"
+	"sync"
 )
 
 type GrpcServer struct {
@@ -49,9 +50,7 @@ func (svr *GrpcServer) SetConfigPath(path string) {
 
 func (svr *GrpcServer) Init() (err error) {
 	// register
-	if err := svr.register(); err != nil {
-		return err
-	}
+	svr.register()
 
 	return nil
 }
@@ -131,16 +130,14 @@ func NewGrpcServer() (svr *GrpcServer, err error) {
 	if viper.GetString("grpc.server.address") != "" {
 		svr.address, err = entity.NewAddressFromString(viper.GetString("grpc.server.address"))
 		if err != nil {
-			return nil, err
+			log.Fatalf("[NewGrpcServer] failed to parse grpc server address: %v", err)
+			panic(err)
 		}
 	}
 
 	svr.nodeCfgSvc = nodeconfig.GetNodeConfigService()
 
-	svr.NodeSvr, err = NewNodeServiceServer()
-	if err != nil {
-		return nil, err
-	}
+	svr.NodeSvr = NewNodeServiceServer()
 	svr.ModelBaseServiceSvr = NewModelBaseServiceServer()
 	svr.TaskSvr, err = NewTaskServiceServer()
 	if err != nil {
@@ -167,22 +164,20 @@ func NewGrpcServer() (svr *GrpcServer, err error) {
 	)
 
 	// initialize
-	if err := svr.Init(); err != nil {
-		return nil, err
-	}
+	svr.Init()
 
 	return svr, nil
 }
 
-var _serverV2 *GrpcServer
+var _server *GrpcServer
+var _serverOnce sync.Once
 
-func GetGrpcServerV2() (svr *GrpcServer, err error) {
-	if _serverV2 != nil {
-		return _serverV2, nil
-	}
-	_serverV2, err = NewGrpcServer()
+func GetGrpcServer() (svr *GrpcServer, err error) {
+	_serverOnce.Do(func() {
+		_server, err = NewGrpcServer()
+	})
 	if err != nil {
 		return nil, err
 	}
-	return _serverV2, nil
+	return _server, nil
 }

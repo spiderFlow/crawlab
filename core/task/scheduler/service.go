@@ -241,7 +241,7 @@ func NewTaskSchedulerService() (svc2 *Service, err error) {
 		interval: 5 * time.Second,
 	}
 	svc.nodeCfgSvc = nodeconfig.GetNodeConfigService()
-	svc.svr, err = server.GetGrpcServerV2()
+	svc.svr, err = server.GetGrpcServer()
 	if err != nil {
 		log.Errorf("failed to get grpc server: %v", err)
 		return nil, err

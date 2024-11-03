@@ -333,7 +333,7 @@ func newMasterServiceV2() (res *MasterService, err error) {
 	svc.cfgSvc = config.GetNodeConfigService()
 
 	// grpc server
-	svc.server, err = server.GetGrpcServerV2()
+	svc.server, err = server.GetGrpcServer()
 	if err != nil {
 		return nil, err
 	}
