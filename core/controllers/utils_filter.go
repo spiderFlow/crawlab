@@ -57,6 +57,8 @@ func GetFilter(c *gin.Context) (f *entity.Filter, err error) {
 				items = append(items, item)
 			}
 			conditions[i].Value = items
+		default:
+			return nil, errors2.New("invalid type")
 		}
 	}
 
