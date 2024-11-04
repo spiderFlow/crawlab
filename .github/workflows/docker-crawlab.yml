@@ -287,9 +287,11 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Pull and run e2e test image
+      - name: Pull e2e test image
         run: |
           docker pull ${{ env.E2E_TESTS_IMAGE_NAME }}:latest
+      - name: Run e2e test image
+        run: |
           docker run --network host \
             -e BASE_URL=http://localhost:8080 \
             -e TEST_SCRIPT=${{ needs.setup.outputs.test_script }} \
