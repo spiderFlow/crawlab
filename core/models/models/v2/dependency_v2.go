@@ -11,8 +11,10 @@ type DependencyV2 struct {
 	Description               string               `json:"description" bson:"description"`
 	NodeId                    primitive.ObjectID   `json:"node_id" bson:"node_id"`
 	Type                      string               `json:"type" bson:"type"`
-	LatestVersion             string               `json:"latest_version" bson:"latest_version"`
 	Version                   string               `json:"version" bson:"version"`
+	Status                    string               `json:"status" bson:"status"`
+	Error                     string               `json:"error,omitempty" bson:"error,omitempty"`
+	Logs                      []string             `json:"logs,omitempty" bson:"logs,omitempty"`
 	NodeIds                   []primitive.ObjectID `json:"node_ids,omitempty" bson:"-"`
 	Versions                  []string             `json:"versions,omitempty" bson:"-"`
 }

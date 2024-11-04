@@ -34,13 +34,15 @@ message DependencyServiceSyncRequest {
   repeated Dependency dependencies = 3;
 }
 
-message DependencyServiceUpdateTaskLogRequest {
-  string task_id = 1;
-  repeated string log_lines = 2;
+message DependencyServiceUpdateLogsRequest {
+  string node_key = 1;
+  string lang = 2;
+  string name = 3;
+  repeated string logs = 4;
 }
 
 service DependencyService {
   rpc Connect(DependencyServiceConnectRequest) returns (stream DependencyServiceConnectResponse){};
   rpc Sync(DependencyServiceSyncRequest) returns (Response){};
-  rpc UpdateTaskLog(stream DependencyServiceUpdateTaskLogRequest) returns (Response){};
+  rpc UpdateLogs(stream DependencyServiceUpdateLogsRequest) returns (Response){};
 }
