@@ -115,9 +115,11 @@ func (svr DependencyServiceServer) Sync(ctx context.Context, request *grpc.Depen
 	return nil, err
 }
 
-func (svr DependencyServiceServer) UpdateTaskLog(stream grpc.DependencyService_UpdateTaskLogServer) (err error) {
-	var t *models2.DependencyTaskV2
+func (svr DependencyServiceServer) UpdateLogs(stream grpc.DependencyService_UpdateLogsServer) (err error) {
+	var n *models2.NodeV2
+	var dep *models2.DependencyV2
 	for {
+		// receive message
 		req, err := stream.Recv()
 		if err == io.EOF {
 			// all messages have been received
@@ -126,29 +128,44 @@ func (svr DependencyServiceServer) UpdateTaskLog(stream grpc.DependencyService_U
 		if err != nil {
 			return err
 		}
-		taskId, err := primitive.ObjectIDFromHex(req.TaskId)
-		if err != nil {
-			return err
-		}
-		if t == nil {
-			t, err = service.NewModelService[models2.DependencyTaskV2]().GetById(taskId)
+
+		// if node is nil, get node
+		if n == nil {
+			n, err = service.NewModelService[models2.NodeV2]().GetOne(bson.M{"key": req.NodeKey}, nil)
 			if err != nil {
+				log.Errorf("[DependencyServiceServer] get node error: %v", err)
 				return err
 			}
 		}
-		var logs []models2.DependencyLogV2
-		for _, line := range req.LogLines {
-			l := models2.DependencyLogV2{
-				TaskId:  taskId,
-				Content: line,
+
+		// if dependency is nil, get dependency
+		if dep == nil {
+			dep, err = service.NewModelService[models2.DependencyV2]().GetOne(bson.M{
+				"node_id": n.Id,
+				"name":    req.Name,
+				"type":    req.Lang,
+			}, nil)
+			if err != nil {
+				if !errors.Is(err, mongo.ErrNoDocuments) {
+					log.Errorf("[DependencyServiceServer] get dependency error: %v", err)
+					return err
+				}
+				// create dependency if not found
+				dep = &models2.DependencyV2{
+					NodeId: n.Id,
+					Name:   req.Name,
+					Type:   req.Lang,
+				}
+				dep.SetCreatedAt(time.Now())
+				dep.SetUpdatedAt(time.Now())
+				dep.Id, err = service.NewModelService[models2.DependencyV2]().InsertOne(*dep)
+				if err != nil {
+					log.Errorf("[DependencyServiceServer] insert dependency error: %v", err)
+					return err
+				}
 			}
-			l.SetCreated(t.CreatedBy)
-			logs = append(logs, l)
 		}
-		_, err = service.NewModelService[models2.DependencyLogV2]().InsertMany(logs)
-		if err != nil {
-			return err
-		}
+
 	}
 }
 

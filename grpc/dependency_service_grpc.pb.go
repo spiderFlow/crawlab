@@ -19,9 +19,9 @@ import (
 const _ = grpc.SupportPackageIsVersion8
 
 const (
-	DependencyService_Connect_FullMethodName       = "/grpc.DependencyService/Connect"
-	DependencyService_Sync_FullMethodName          = "/grpc.DependencyService/Sync"
-	DependencyService_UpdateTaskLog_FullMethodName = "/grpc.DependencyService/UpdateTaskLog"
+	DependencyService_Connect_FullMethodName    = "/grpc.DependencyService/Connect"
+	DependencyService_Sync_FullMethodName       = "/grpc.DependencyService/Sync"
+	DependencyService_UpdateLogs_FullMethodName = "/grpc.DependencyService/UpdateLogs"
 )
 
 // DependencyServiceClient is the client API for DependencyService service.
@@ -30,7 +30,7 @@ const (
 type DependencyServiceClient interface {
 	Connect(ctx context.Context, in *DependencyServiceConnectRequest, opts ...grpc.CallOption) (DependencyService_ConnectClient, error)
 	Sync(ctx context.Context, in *DependencyServiceSyncRequest, opts ...grpc.CallOption) (*Response, error)
-	UpdateTaskLog(ctx context.Context, opts ...grpc.CallOption) (DependencyService_UpdateTaskLogClient, error)
+	UpdateLogs(ctx context.Context, opts ...grpc.CallOption) (DependencyService_UpdateLogsClient, error)
 }
 
 type dependencyServiceClient struct {
@@ -84,31 +84,31 @@ func (c *dependencyServiceClient) Sync(ctx context.Context, in *DependencyServic
 	return out, nil
 }
 
-func (c *dependencyServiceClient) UpdateTaskLog(ctx context.Context, opts ...grpc.CallOption) (DependencyService_UpdateTaskLogClient, error) {
+func (c *dependencyServiceClient) UpdateLogs(ctx context.Context, opts ...grpc.CallOption) (DependencyService_UpdateLogsClient, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &DependencyService_ServiceDesc.Streams[1], DependencyService_UpdateTaskLog_FullMethodName, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &DependencyService_ServiceDesc.Streams[1], DependencyService_UpdateLogs_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &dependencyServiceUpdateTaskLogClient{ClientStream: stream}
+	x := &dependencyServiceUpdateLogsClient{ClientStream: stream}
 	return x, nil
 }
 
-type DependencyService_UpdateTaskLogClient interface {
-	Send(*DependencyServiceUpdateTaskLogRequest) error
+type DependencyService_UpdateLogsClient interface {
+	Send(*DependencyServiceUpdateLogsRequest) error
 	CloseAndRecv() (*Response, error)
 	grpc.ClientStream
 }
 
-type dependencyServiceUpdateTaskLogClient struct {
+type dependencyServiceUpdateLogsClient struct {
 	grpc.ClientStream
 }
 
-func (x *dependencyServiceUpdateTaskLogClient) Send(m *DependencyServiceUpdateTaskLogRequest) error {
+func (x *dependencyServiceUpdateLogsClient) Send(m *DependencyServiceUpdateLogsRequest) error {
 	return x.ClientStream.SendMsg(m)
 }
 
-func (x *dependencyServiceUpdateTaskLogClient) CloseAndRecv() (*Response, error) {
+func (x *dependencyServiceUpdateLogsClient) CloseAndRecv() (*Response, error) {
 	if err := x.ClientStream.CloseSend(); err != nil {
 		return nil, err
 	}
@@ -125,7 +125,7 @@ func (x *dependencyServiceUpdateTaskLogClient) CloseAndRecv() (*Response, error)
 type DependencyServiceServer interface {
 	Connect(*DependencyServiceConnectRequest, DependencyService_ConnectServer) error
 	Sync(context.Context, *DependencyServiceSyncRequest) (*Response, error)
-	UpdateTaskLog(DependencyService_UpdateTaskLogServer) error
+	UpdateLogs(DependencyService_UpdateLogsServer) error
 	mustEmbedUnimplementedDependencyServiceServer()
 }
 
@@ -139,8 +139,8 @@ func (UnimplementedDependencyServiceServer) Connect(*DependencyServiceConnectReq
 func (UnimplementedDependencyServiceServer) Sync(context.Context, *DependencyServiceSyncRequest) (*Response, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Sync not implemented")
 }
-func (UnimplementedDependencyServiceServer) UpdateTaskLog(DependencyService_UpdateTaskLogServer) error {
-	return status.Errorf(codes.Unimplemented, "method UpdateTaskLog not implemented")
+func (UnimplementedDependencyServiceServer) UpdateLogs(DependencyService_UpdateLogsServer) error {
+	return status.Errorf(codes.Unimplemented, "method UpdateLogs not implemented")
 }
 func (UnimplementedDependencyServiceServer) mustEmbedUnimplementedDependencyServiceServer() {}
 
@@ -194,26 +194,26 @@ func _DependencyService_Sync_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
-func _DependencyService_UpdateTaskLog_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(DependencyServiceServer).UpdateTaskLog(&dependencyServiceUpdateTaskLogServer{ServerStream: stream})
+func _DependencyService_UpdateLogs_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(DependencyServiceServer).UpdateLogs(&dependencyServiceUpdateLogsServer{ServerStream: stream})
 }
 
-type DependencyService_UpdateTaskLogServer interface {
+type DependencyService_UpdateLogsServer interface {
 	SendAndClose(*Response) error
-	Recv() (*DependencyServiceUpdateTaskLogRequest, error)
+	Recv() (*DependencyServiceUpdateLogsRequest, error)
 	grpc.ServerStream
 }
 
-type dependencyServiceUpdateTaskLogServer struct {
+type dependencyServiceUpdateLogsServer struct {
 	grpc.ServerStream
 }
 
-func (x *dependencyServiceUpdateTaskLogServer) SendAndClose(m *Response) error {
+func (x *dependencyServiceUpdateLogsServer) SendAndClose(m *Response) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func (x *dependencyServiceUpdateTaskLogServer) Recv() (*DependencyServiceUpdateTaskLogRequest, error) {
-	m := new(DependencyServiceUpdateTaskLogRequest)
+func (x *dependencyServiceUpdateLogsServer) Recv() (*DependencyServiceUpdateLogsRequest, error) {
+	m := new(DependencyServiceUpdateLogsRequest)
 	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -239,8 +239,8 @@ var DependencyService_ServiceDesc = grpc.ServiceDesc{
 			ServerStreams: true,
 		},
 		{
-			StreamName:    "UpdateTaskLog",
-			Handler:       _DependencyService_UpdateTaskLog_Handler,
+			StreamName:    "UpdateLogs",
+			Handler:       _DependencyService_UpdateLogs_Handler,
 			ClientStreams: true,
 		},
 	},
