@@ -30,13 +30,10 @@ func (svr DependencyServiceServer) Connect(req *grpc.DependencyServiceConnectReq
 	log.Info("[DependencyServiceServer] connected: " + req.NodeKey)
 
 	// Keep this scope alive because once this scope exits - the stream is closed
-	for {
-		select {
-		case <-stream.Context().Done():
-			log.Info("[DependencyServiceServer] disconnected: " + req.NodeKey)
-			return nil
-		}
-	}
+	<-stream.Context().Done()
+	log.Info("[DependencyServiceServer] disconnected: " + req.NodeKey)
+
+	return nil
 }
 
 func (svr DependencyServiceServer) Sync(ctx context.Context, request *grpc.DependencyServiceSyncRequest) (response *grpc.Response, err error) {
