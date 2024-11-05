@@ -173,12 +173,12 @@ func newGrpcClient() (c *GrpcClient) {
 	return client
 }
 
-var clientV2 *GrpcClient
-var clientV2Once sync.Once
+var _client *GrpcClient
+var _clientOnce sync.Once
 
 func GetGrpcClient() *GrpcClient {
-	clientV2Once.Do(func() {
-		clientV2 = newGrpcClient()
+	_clientOnce.Do(func() {
+		_client = newGrpcClient()
 	})
-	return clientV2
+	return _client
 }

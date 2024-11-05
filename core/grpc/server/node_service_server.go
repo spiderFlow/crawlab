@@ -6,7 +6,7 @@ import (
 	"github.com/crawlab-team/crawlab/core/constants"
 	"github.com/crawlab-team/crawlab/core/errors"
 	"github.com/crawlab-team/crawlab/core/interfaces"
-	"github.com/crawlab-team/crawlab/core/models/models/v2"
+	"github.com/crawlab-team/crawlab/core/models/models"
 	"github.com/crawlab-team/crawlab/core/models/service"
 	nodeconfig "github.com/crawlab-team/crawlab/core/node/config"
 	"github.com/crawlab-team/crawlab/core/notification"
@@ -40,21 +40,21 @@ func (svr NodeServiceServer) Register(_ context.Context, req *grpc.NodeServiceRe
 	}
 
 	// find in db
-	var node *models.NodeV2
-	node, err = service.NewModelService[models.NodeV2]().GetOne(bson.M{"key": req.NodeKey}, nil)
+	var node *models.Node
+	node, err = service.NewModelService[models.Node]().GetOne(bson.M{"key": req.NodeKey}, nil)
 	if err == nil {
 		// register existing
 		node.Status = constants.NodeStatusOnline
 		node.Active = true
 		node.ActiveAt = time.Now()
-		err = service.NewModelService[models.NodeV2]().ReplaceById(node.Id, *node)
+		err = service.NewModelService[models.Node]().ReplaceById(node.Id, *node)
 		if err != nil {
 			return HandleError(err)
 		}
 		log.Infof("[NodeServiceServer] updated worker[%s] in db. id: %s", req.NodeKey, node.Id.Hex())
 	} else if errors2.Is(err, mongo.ErrNoDocuments) {
 		// register new
-		node = &models.NodeV2{
+		node = &models.Node{
 			Key:        req.NodeKey,
 			Name:       req.NodeName,
 			Status:     constants.NodeStatusOnline,
@@ -65,7 +65,7 @@ func (svr NodeServiceServer) Register(_ context.Context, req *grpc.NodeServiceRe
 		}
 		node.SetCreated(primitive.NilObjectID)
 		node.SetUpdated(primitive.NilObjectID)
-		node.Id, err = service.NewModelService[models.NodeV2]().InsertOne(*node)
+		node.Id, err = service.NewModelService[models.Node]().InsertOne(*node)
 		if err != nil {
 			return HandleError(err)
 		}
@@ -83,7 +83,7 @@ func (svr NodeServiceServer) Register(_ context.Context, req *grpc.NodeServiceRe
 // SendHeartbeat from worker to master
 func (svr NodeServiceServer) SendHeartbeat(_ context.Context, req *grpc.NodeServiceSendHeartbeatRequest) (res *grpc.Response, err error) {
 	// find in db
-	node, err := service.NewModelService[models.NodeV2]().GetOne(bson.M{"key": req.NodeKey}, nil)
+	node, err := service.NewModelService[models.Node]().GetOne(bson.M{"key": req.NodeKey}, nil)
 	if err != nil {
 		if errors2.Is(err, mongo.ErrNoDocuments) {
 			return HandleError(errors.ErrorNodeNotExists)
@@ -96,7 +96,7 @@ func (svr NodeServiceServer) SendHeartbeat(_ context.Context, req *grpc.NodeServ
 	node.Status = constants.NodeStatusOnline
 	node.Active = true
 	node.ActiveAt = time.Now()
-	err = service.NewModelService[models.NodeV2]().ReplaceById(node.Id, *node)
+	err = service.NewModelService[models.Node]().ReplaceById(node.Id, *node)
 	if err != nil {
 		return HandleError(err)
 	}
@@ -105,7 +105,7 @@ func (svr NodeServiceServer) SendHeartbeat(_ context.Context, req *grpc.NodeServ
 	// send notification if status changed
 	if utils.IsPro() {
 		if oldStatus != newStatus {
-			go notification.GetNotificationServiceV2().SendNodeNotification(node)
+			go notification.GetNotificationService().SendNodeNotification(node)
 		}
 	}
 
@@ -116,7 +116,7 @@ func (svr NodeServiceServer) Subscribe(request *grpc.NodeServiceSubscribeRequest
 	log.Infof("[NodeServiceServer] master received subscribe request from node[%s]", request.NodeKey)
 
 	// find in db
-	node, err := service.NewModelService[models.NodeV2]().GetOne(bson.M{"key": request.NodeKey}, nil)
+	node, err := service.NewModelService[models.Node]().GetOne(bson.M{"key": request.NodeKey}, nil)
 	if err != nil {
 		log.Errorf("[NodeServiceServer] error getting node: %v", err)
 		return err
@@ -148,18 +148,19 @@ func (svr NodeServiceServer) GetSubscribeStream(nodeId primitive.ObjectID) (stre
 	return stream, ok
 }
 
-var nodeSvr *NodeServiceServer
-var nodeSvrOnce = new(sync.Once)
-
-func NewNodeServiceServer() *NodeServiceServer {
-	if nodeSvr != nil {
-		return nodeSvr
+func newNodeServiceServer() *NodeServiceServer {
+	return &NodeServiceServer{
+		cfgSvc: nodeconfig.GetNodeConfigService(),
+		subs:   make(map[primitive.ObjectID]grpc.NodeService_SubscribeServer),
 	}
+}
+
+var nodeSvr *NodeServiceServer
+var nodeSvrOnce sync.Once
+
+func GetNodeServiceServer() *NodeServiceServer {
 	nodeSvrOnce.Do(func() {
-		nodeSvr = &NodeServiceServer{
-			subs: make(map[primitive.ObjectID]grpc.NodeService_SubscribeServer),
-		}
-		nodeSvr.cfgSvc = nodeconfig.GetNodeConfigService()
+		nodeSvr = newNodeServiceServer()
 	})
 	return nodeSvr
 }

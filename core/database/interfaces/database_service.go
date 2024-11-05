@@ -2,7 +2,7 @@ package interfaces
 
 import (
 	"github.com/crawlab-team/crawlab/core/database/entity"
-	"github.com/crawlab-team/crawlab/core/models/models/v2"
+	"github.com/crawlab-team/crawlab/core/models/models"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -23,5 +23,5 @@ type DatabaseService interface {
 	UpdateRow(id primitive.ObjectID, databaseName, tableName string, filter map[string]interface{}, update map[string]interface{}) error
 	DeleteRow(id primitive.ObjectID, databaseName, tableName string, filter map[string]interface{}) error
 	Query(id primitive.ObjectID, databaseName, query string) (results *entity.DatabaseQueryResults, err error)
-	GetCurrentMetric(id primitive.ObjectID) (m *models.DatabaseMetricV2, err error)
+	GetCurrentMetric(id primitive.ObjectID) (m *models.DatabaseMetric, err error)
 }

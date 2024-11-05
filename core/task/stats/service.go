@@ -6,7 +6,7 @@ import (
 	"github.com/crawlab-team/crawlab/core/database"
 	interfaces2 "github.com/crawlab-team/crawlab/core/database/interfaces"
 	"github.com/crawlab-team/crawlab/core/interfaces"
-	models2 "github.com/crawlab-team/crawlab/core/models/models/v2"
+	"github.com/crawlab-team/crawlab/core/models/models"
 	"github.com/crawlab-team/crawlab/core/models/service"
 	nodeconfig "github.com/crawlab-team/crawlab/core/node/config"
 	"github.com/crawlab-team/crawlab/core/task/log"
@@ -98,13 +98,13 @@ func (svc *Service) getDatabaseServiceItem(taskId primitive.ObjectID) (item *dat
 	}
 
 	// task
-	t, err := service.NewModelService[models2.TaskV2]().GetById(taskId)
+	t, err := service.NewModelService[models.Task]().GetById(taskId)
 	if err != nil {
 		return nil, err
 	}
 
 	// spider
-	s, err := service.NewModelService[models2.SpiderV2]().GetById(t.SpiderId)
+	s, err := service.NewModelService[models.Spider]().GetById(t.SpiderId)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +137,7 @@ func (svc *Service) getDatabaseServiceItem(taskId primitive.ObjectID) (item *dat
 }
 
 func (svc *Service) updateTaskStats(id primitive.ObjectID, resultCount int) {
-	err := service.NewModelService[models2.TaskStatV2]().UpdateById(id, bson.M{
+	err := service.NewModelService[models.TaskStat]().UpdateById(id, bson.M{
 		"$inc": bson.M{
 			"result_count": resultCount,
 		},
@@ -176,7 +176,7 @@ func (svc *Service) normalizeRecord(item *databaseServiceItem, record map[string
 	return res
 }
 
-func NewTaskStatsServiceV2() (svc2 *Service, err error) {
+func NewTaskStatsService() *Service {
 	// service
 	svc := &Service{
 		mu:                   sync.Mutex{},
@@ -187,23 +187,17 @@ func NewTaskStatsServiceV2() (svc2 *Service, err error) {
 	svc.nodeCfgSvc = nodeconfig.GetNodeConfigService()
 
 	// log driver
-	svc.logDriver, err = log.GetLogDriver(log.DriverTypeFile)
-	if err != nil {
-		return nil, err
-	}
+	svc.logDriver = log.GetLogDriver(log.DriverTypeFile)
 
-	return svc, nil
+	return svc
 }
 
-var _serviceV2 *Service
+var _service *Service
+var _serviceOnce sync.Once
 
-func GetTaskStatsServiceV2() (svr *Service, err error) {
-	if _serviceV2 != nil {
-		return _serviceV2, nil
-	}
-	_serviceV2, err = NewTaskStatsServiceV2()
-	if err != nil {
-		return nil, err
-	}
-	return _serviceV2, nil
+func GetTaskStatsService() *Service {
+	_serviceOnce.Do(func() {
+		_service = NewTaskStatsService()
+	})
+	return _service
 }

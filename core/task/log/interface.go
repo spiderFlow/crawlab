@@ -1,7 +1,7 @@
 package log
 
 type Driver interface {
-	Init() (err error)
+	Init()
 	Close() (err error)
 	WriteLine(id string, line string) (err error)
 	WriteLines(id string, lines []string) (err error)

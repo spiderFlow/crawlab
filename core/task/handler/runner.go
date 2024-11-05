@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/crawlab-team/crawlab/core/models/models"
 	"io"
 	"net/http"
 	"os"
@@ -22,7 +23,6 @@ import (
 	client2 "github.com/crawlab-team/crawlab/core/grpc/client"
 	"github.com/crawlab-team/crawlab/core/interfaces"
 	"github.com/crawlab-team/crawlab/core/models/client"
-	"github.com/crawlab-team/crawlab/core/models/models/v2"
 	"github.com/crawlab-team/crawlab/core/models/service"
 	"github.com/crawlab-team/crawlab/core/sys_exec"
 	"github.com/crawlab-team/crawlab/core/utils"
@@ -47,8 +47,8 @@ type Runner struct {
 	cmd  *exec.Cmd                      // process command instance
 	pid  int                            // process id
 	tid  primitive.ObjectID             // task id
-	t    *models.TaskV2                 // task model.Task
-	s    *models.SpiderV2               // spider model.Spider
+	t    *models.Task                   // task model.Task
+	s    *models.Spider                 // spider model.Spider
 	ch   chan constants.TaskSignal      // channel to communicate between Service and Runner
 	err  error                          // standard process error
 	cwd  string                         // working directory
@@ -307,7 +307,7 @@ func (r *Runner) configureEnv() {
 	}
 
 	// Global environment variables
-	envs, err := client.NewModelService[models.EnvironmentV2]().GetMany(nil, nil)
+	envs, err := client.NewModelService[models.Environment]().GetMany(nil, nil)
 	if err != nil {
 		trace.PrintError(err)
 		return
@@ -502,12 +502,12 @@ func (r *Runner) updateTask(status string, e error) (err error) {
 			r.t.Error = e.Error()
 		}
 		if r.svc.GetNodeConfigService().IsMaster() {
-			err = service.NewModelService[models.TaskV2]().ReplaceById(r.t.Id, *r.t)
+			err = service.NewModelService[models.Task]().ReplaceById(r.t.Id, *r.t)
 			if err != nil {
 				return err
 			}
 		} else {
-			err = client.NewModelService[models.TaskV2]().ReplaceById(r.t.Id, *r.t)
+			err = client.NewModelService[models.Task]().ReplaceById(r.t.Id, *r.t)
 			if err != nil {
 				return err
 			}
@@ -556,7 +556,7 @@ func (r *Runner) writeLogLines(lines []string) {
 }
 
 func (r *Runner) _updateTaskStat(status string) {
-	ts, err := client.NewModelService[models.TaskStatV2]().GetById(r.tid)
+	ts, err := client.NewModelService[models.TaskStat]().GetById(r.tid)
 	if err != nil {
 		trace.PrintError(err)
 		return
@@ -566,24 +566,24 @@ func (r *Runner) _updateTaskStat(status string) {
 		// do nothing
 	case constants.TaskStatusRunning:
 		ts.StartTs = time.Now()
-		ts.WaitDuration = ts.StartTs.Sub(ts.BaseModelV2.CreatedAt).Milliseconds()
+		ts.WaitDuration = ts.StartTs.Sub(ts.CreatedAt).Milliseconds()
 	case constants.TaskStatusFinished, constants.TaskStatusError, constants.TaskStatusCancelled:
 		if ts.StartTs.IsZero() {
 			ts.StartTs = time.Now()
-			ts.WaitDuration = ts.StartTs.Sub(ts.BaseModelV2.CreatedAt).Milliseconds()
+			ts.WaitDuration = ts.StartTs.Sub(ts.CreatedAt).Milliseconds()
 		}
 		ts.EndTs = time.Now()
 		ts.RuntimeDuration = ts.EndTs.Sub(ts.StartTs).Milliseconds()
-		ts.TotalDuration = ts.EndTs.Sub(ts.BaseModelV2.CreatedAt).Milliseconds()
+		ts.TotalDuration = ts.EndTs.Sub(ts.CreatedAt).Milliseconds()
 	}
 	if r.svc.GetNodeConfigService().IsMaster() {
-		err = service.NewModelService[models.TaskStatV2]().ReplaceById(ts.Id, *ts)
+		err = service.NewModelService[models.TaskStat]().ReplaceById(ts.Id, *ts)
 		if err != nil {
 			trace.PrintError(err)
 			return
 		}
 	} else {
-		err = client.NewModelService[models.TaskStatV2]().ReplaceById(ts.Id, *ts)
+		err = client.NewModelService[models.TaskStat]().ReplaceById(ts.Id, *ts)
 		if err != nil {
 			trace.PrintError(err)
 			return
@@ -606,7 +606,7 @@ func (r *Runner) sendNotification() {
 
 func (r *Runner) _updateSpiderStat(status string) {
 	// task stat
-	ts, err := client.NewModelService[models.TaskStatV2]().GetById(r.tid)
+	ts, err := client.NewModelService[models.TaskStat]().GetById(r.tid)
 	if err != nil {
 		trace.PrintError(err)
 		return
@@ -644,13 +644,13 @@ func (r *Runner) _updateSpiderStat(status string) {
 
 	// perform update
 	if r.svc.GetNodeConfigService().IsMaster() {
-		err = service.NewModelService[models.SpiderStatV2]().UpdateById(r.s.Id, update)
+		err = service.NewModelService[models.SpiderStat]().UpdateById(r.s.Id, update)
 		if err != nil {
 			trace.PrintError(err)
 			return
 		}
 	} else {
-		err = client.NewModelService[models.SpiderStatV2]().UpdateById(r.s.Id, update)
+		err = client.NewModelService[models.SpiderStat]().UpdateById(r.s.Id, update)
 		if err != nil {
 			trace.PrintError(err)
 			return
@@ -669,7 +669,7 @@ func (r *Runner) configureCwd() {
 	}
 }
 
-func NewTaskRunnerV2(id primitive.ObjectID, svc *Service) (r2 *Runner, err error) {
+func newTaskRunner(id primitive.ObjectID, svc *Service) (r2 *Runner, err error) {
 	// validate options
 	if id.IsZero() {
 		return nil, constants.ErrInvalidOptions
@@ -698,7 +698,7 @@ func NewTaskRunnerV2(id primitive.ObjectID, svc *Service) (r2 *Runner, err error
 	}
 
 	// task fs service
-	r.fsSvc = fs.NewFsServiceV2(filepath.Join(viper.GetString("workspace"), r.s.Id.Hex()))
+	r.fsSvc = fs.NewFsService(filepath.Join(viper.GetString("workspace"), r.s.Id.Hex()))
 
 	// grpc client
 	r.c = client2.GetGrpcClient()

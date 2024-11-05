@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/apex/log"
-	models2 "github.com/crawlab-team/crawlab/core/models/models/v2"
+	"github.com/crawlab-team/crawlab/core/models/models"
 	"github.com/crawlab-team/crawlab/core/models/service"
 	mongo2 "github.com/crawlab-team/crawlab/db/mongo"
 	"github.com/crawlab-team/crawlab/grpc"
@@ -40,12 +40,12 @@ func (svr DependencyServiceServer) Connect(req *grpc.DependencyServiceConnectReq
 }
 
 func (svr DependencyServiceServer) Sync(ctx context.Context, request *grpc.DependencyServiceSyncRequest) (response *grpc.Response, err error) {
-	n, err := service.NewModelService[models2.NodeV2]().GetOne(bson.M{"key": request.NodeKey}, nil)
+	n, err := service.NewModelService[models.Node]().GetOne(bson.M{"key": request.NodeKey}, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	depsDb, err := service.NewModelService[models2.DependencyV2]().GetMany(bson.M{
+	depsDb, err := service.NewModelService[models.Dependency]().GetMany(bson.M{
 		"node_id": n.Id,
 		"type":    request.Lang,
 	}, nil)
@@ -56,15 +56,15 @@ func (svr DependencyServiceServer) Sync(ctx context.Context, request *grpc.Depen
 		}
 	}
 
-	depsDbMap := make(map[string]*models2.DependencyV2)
+	depsDbMap := make(map[string]*models.Dependency)
 	for _, d := range depsDb {
 		depsDbMap[d.Name] = &d
 	}
 
-	var depsToInsert []models2.DependencyV2
-	depsMap := make(map[string]*models2.DependencyV2)
+	var depsToInsert []models.Dependency
+	depsMap := make(map[string]*models.Dependency)
 	for _, dep := range request.Dependencies {
-		d := models2.DependencyV2{
+		d := models.Dependency{
 			Name:    dep.Name,
 			NodeId:  n.Id,
 			Type:    request.Lang,
@@ -90,7 +90,7 @@ func (svr DependencyServiceServer) Sync(ctx context.Context, request *grpc.Depen
 
 	err = mongo2.RunTransaction(func(ctx mongo.SessionContext) (err error) {
 		if len(depIdsToDelete) > 0 {
-			err = service.NewModelService[models2.DependencyV2]().DeleteMany(bson.M{
+			err = service.NewModelService[models.Dependency]().DeleteMany(bson.M{
 				"_id": bson.M{"$in": depIdsToDelete},
 			})
 			if err != nil {
@@ -101,7 +101,7 @@ func (svr DependencyServiceServer) Sync(ctx context.Context, request *grpc.Depen
 		}
 
 		if len(depsToInsert) > 0 {
-			_, err = service.NewModelService[models2.DependencyV2]().InsertMany(depsToInsert)
+			_, err = service.NewModelService[models.Dependency]().InsertMany(depsToInsert)
 			if err != nil {
 				log.Errorf("[DependencyServiceServer] insert dependencies in db error: %v", err)
 				trace.PrintError(err)
@@ -116,8 +116,8 @@ func (svr DependencyServiceServer) Sync(ctx context.Context, request *grpc.Depen
 }
 
 func (svr DependencyServiceServer) UpdateLogs(stream grpc.DependencyService_UpdateLogsServer) (err error) {
-	var n *models2.NodeV2
-	var dep *models2.DependencyV2
+	var n *models.Node
+	var dep *models.Dependency
 	for {
 		// receive message
 		req, err := stream.Recv()
@@ -131,7 +131,7 @@ func (svr DependencyServiceServer) UpdateLogs(stream grpc.DependencyService_Upda
 
 		// if node is nil, get node
 		if n == nil {
-			n, err = service.NewModelService[models2.NodeV2]().GetOne(bson.M{"key": req.NodeKey}, nil)
+			n, err = service.NewModelService[models.Node]().GetOne(bson.M{"key": req.NodeKey}, nil)
 			if err != nil {
 				log.Errorf("[DependencyServiceServer] get node error: %v", err)
 				return err
@@ -140,7 +140,7 @@ func (svr DependencyServiceServer) UpdateLogs(stream grpc.DependencyService_Upda
 
 		// if dependency is nil, get dependency
 		if dep == nil {
-			dep, err = service.NewModelService[models2.DependencyV2]().GetOne(bson.M{
+			dep, err = service.NewModelService[models.Dependency]().GetOne(bson.M{
 				"node_id": n.Id,
 				"name":    req.Name,
 				"type":    req.Lang,
@@ -151,14 +151,14 @@ func (svr DependencyServiceServer) UpdateLogs(stream grpc.DependencyService_Upda
 					return err
 				}
 				// create dependency if not found
-				dep = &models2.DependencyV2{
+				dep = &models.Dependency{
 					NodeId: n.Id,
 					Name:   req.Name,
 					Type:   req.Lang,
 				}
 				dep.SetCreatedAt(time.Now())
 				dep.SetUpdatedAt(time.Now())
-				dep.Id, err = service.NewModelService[models2.DependencyV2]().InsertOne(*dep)
+				dep.Id, err = service.NewModelService[models.Dependency]().InsertOne(*dep)
 				if err != nil {
 					log.Errorf("[DependencyServiceServer] insert dependency error: %v", err)
 					return err
@@ -179,7 +179,7 @@ func (svr DependencyServiceServer) GetStream(key string) (stream *grpc.Dependenc
 	return stream, nil
 }
 
-func NewDependencyServerV2() *DependencyServiceServer {
+func newDependencyServer() *DependencyServiceServer {
 	return &DependencyServiceServer{
 		mu:      new(sync.Mutex),
 		streams: make(map[string]*grpc.DependencyService_ConnectServer),
@@ -187,11 +187,11 @@ func NewDependencyServerV2() *DependencyServiceServer {
 }
 
 var depSvc *DependencyServiceServer
+var depSvcOnce sync.Once
 
-func GetDependencyServerV2() *DependencyServiceServer {
-	if depSvc != nil {
-		return depSvc
-	}
-	depSvc = NewDependencyServerV2()
+func GetDependencyServer() *DependencyServiceServer {
+	depSvcOnce.Do(func() {
+		depSvc = newDependencyServer()
+	})
 	return depSvc
 }

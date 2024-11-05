@@ -7,7 +7,7 @@ import (
 	"github.com/apex/log"
 	"github.com/crawlab-team/crawlab/core/constants"
 	"github.com/crawlab-team/crawlab/core/interfaces"
-	models2 "github.com/crawlab-team/crawlab/core/models/models/v2"
+	"github.com/crawlab-team/crawlab/core/models/models"
 	"github.com/crawlab-team/crawlab/core/models/service"
 	nodeconfig "github.com/crawlab-team/crawlab/core/node/config"
 	"github.com/crawlab-team/crawlab/core/notification"
@@ -110,7 +110,7 @@ func (svr TaskServiceServer) FetchTask(ctx context.Context, request *grpc.TaskSe
 	if nodeKey == "" {
 		return nil, errors.New("invalid node key")
 	}
-	n, err := service.NewModelService[models2.NodeV2]().GetOne(bson.M{"key": nodeKey}, nil)
+	n, err := service.NewModelService[models.Node]().GetOne(bson.M{"key": nodeKey}, nil)
 	if err != nil {
 		return nil, trace.TraceError(err)
 	}
@@ -124,7 +124,7 @@ func (svr TaskServiceServer) FetchTask(ctx context.Context, request *grpc.TaskSe
 	}
 	if err := mongo.RunTransactionWithContext(ctx, func(sc mongo2.SessionContext) (err error) {
 		// fetch task for the given node
-		t, err := service.NewModelService[models2.TaskV2]().GetOne(bson.M{
+		t, err := service.NewModelService[models.Task]().GetOne(bson.M{
 			"node_id": n.Id,
 			"status":  constants.TaskStatusPending,
 		}, opts)
@@ -138,7 +138,7 @@ func (svr TaskServiceServer) FetchTask(ctx context.Context, request *grpc.TaskSe
 		}
 
 		// fetch task for any node
-		t, err = service.NewModelService[models2.TaskV2]().GetOne(bson.M{
+		t, err = service.NewModelService[models.Task]().GetOne(bson.M{
 			"node_id": primitive.NilObjectID,
 			"status":  constants.TaskStatusPending,
 		}, opts)
@@ -177,7 +177,7 @@ func (svr TaskServiceServer) SendNotification(_ context.Context, request *grpc.T
 	var args []any
 
 	// task
-	task, err := service.NewModelService[models2.TaskV2]().GetById(taskId)
+	task, err := service.NewModelService[models.Task]().GetById(taskId)
 	if err != nil {
 		log.Errorf("task not found: %s", request.TaskId)
 		return nil, trace.TraceError(err)
@@ -185,7 +185,7 @@ func (svr TaskServiceServer) SendNotification(_ context.Context, request *grpc.T
 	args = append(args, task)
 
 	// task stat
-	taskStat, err := service.NewModelService[models2.TaskStatV2]().GetById(task.Id)
+	taskStat, err := service.NewModelService[models.TaskStat]().GetById(task.Id)
 	if err != nil {
 		log.Errorf("task stat not found for task: %s", request.TaskId)
 		return nil, trace.TraceError(err)
@@ -193,7 +193,7 @@ func (svr TaskServiceServer) SendNotification(_ context.Context, request *grpc.T
 	args = append(args, taskStat)
 
 	// spider
-	spider, err := service.NewModelService[models2.SpiderV2]().GetById(task.SpiderId)
+	spider, err := service.NewModelService[models.Spider]().GetById(task.SpiderId)
 	if err != nil {
 		log.Errorf("spider not found for task: %s", request.TaskId)
 		return nil, trace.TraceError(err)
@@ -201,16 +201,16 @@ func (svr TaskServiceServer) SendNotification(_ context.Context, request *grpc.T
 	args = append(args, spider)
 
 	// node
-	node, err := service.NewModelService[models2.NodeV2]().GetById(task.NodeId)
+	node, err := service.NewModelService[models.Node]().GetById(task.NodeId)
 	if err != nil {
 		return nil, trace.TraceError(err)
 	}
 	args = append(args, node)
 
 	// schedule
-	var schedule *models2.ScheduleV2
+	var schedule *models.Schedule
 	if !task.ScheduleId.IsZero() {
-		schedule, err = service.NewModelService[models2.ScheduleV2]().GetById(task.ScheduleId)
+		schedule, err = service.NewModelService[models.Schedule]().GetById(task.ScheduleId)
 		if err != nil {
 			log.Errorf("schedule not found for task: %s", request.TaskId)
 			return nil, trace.TraceError(err)
@@ -219,7 +219,7 @@ func (svr TaskServiceServer) SendNotification(_ context.Context, request *grpc.T
 	}
 
 	// settings
-	settings, err := service.NewModelService[models2.NotificationSettingV2]().GetMany(bson.M{
+	settings, err := service.NewModelService[models.NotificationSetting]().GetMany(bson.M{
 		"enabled": true,
 		"trigger": bson.M{
 			"$regex": constants.NotificationTriggerPatternTask,
@@ -230,7 +230,7 @@ func (svr TaskServiceServer) SendNotification(_ context.Context, request *grpc.T
 	}
 
 	// notification service
-	svc := notification.GetNotificationServiceV2()
+	svc := notification.GetNotificationService()
 
 	for _, s := range settings {
 		// compatible with old settings
@@ -286,23 +286,25 @@ func (svr TaskServiceServer) handleInsertLogs(taskId primitive.ObjectID, msg *gr
 	return svr.statsSvc.InsertLogs(taskId, logs...)
 }
 
-func (svr TaskServiceServer) saveTask(t *models2.TaskV2) (err error) {
+func (svr TaskServiceServer) saveTask(t *models.Task) (err error) {
 	t.SetUpdated(t.CreatedBy)
-	return service.NewModelService[models2.TaskV2]().ReplaceById(t.Id, *t)
+	return service.NewModelService[models.Task]().ReplaceById(t.Id, *t)
 }
 
-func NewTaskServiceServer() (res *TaskServiceServer, err error) {
-	// task server
-	svr := &TaskServiceServer{
-		subs: make(map[primitive.ObjectID]grpc.TaskService_SubscribeServer),
+func newTaskServiceServer() *TaskServiceServer {
+	return &TaskServiceServer{
+		cfgSvc:   nodeconfig.GetNodeConfigService(),
+		subs:     make(map[primitive.ObjectID]grpc.TaskService_SubscribeServer),
+		statsSvc: stats.GetTaskStatsService(),
 	}
+}
 
-	svr.cfgSvc = nodeconfig.GetNodeConfigService()
+var _taskServiceServer *TaskServiceServer
+var _taskServiceServerOnce sync.Once
 
-	svr.statsSvc, err = stats.GetTaskStatsServiceV2()
-	if err != nil {
-		return nil, err
-	}
-
-	return svr, nil
+func GetTaskServiceServer() *TaskServiceServer {
+	_taskServiceServerOnce.Do(func() {
+		_taskServiceServer = newTaskServiceServer()
+	})
+	return _taskServiceServer
 }

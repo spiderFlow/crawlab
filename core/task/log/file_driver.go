@@ -26,10 +26,8 @@ type FileLogDriver struct {
 	mu sync.Mutex
 }
 
-func (d *FileLogDriver) Init() (err error) {
+func (d *FileLogDriver) Init() {
 	go d.cleanup()
-
-	return nil
 }
 
 func (d *FileLogDriver) Close() (err error) {
@@ -255,30 +253,25 @@ func (d *FileLogDriver) cleanup() {
 	}
 }
 
-var logDriver Driver
-
-func newFileLogDriver() (driver Driver, err error) {
+func newFileLogDriver() Driver {
 	// driver
-	driver = &FileLogDriver{
+	driver := &FileLogDriver{
 		logFileName: "log.txt",
 		mu:          sync.Mutex{},
 	}
 
 	// init
-	if err := driver.Init(); err != nil {
-		return nil, err
-	}
+	driver.Init()
 
-	return driver, nil
+	return driver
 }
 
-func GetFileLogDriver() (driver Driver, err error) {
-	if logDriver != nil {
-		return logDriver, nil
-	}
-	logDriver, err = newFileLogDriver()
-	if err != nil {
-		return nil, err
-	}
-	return logDriver, nil
+var logDriver Driver
+var logDriverOnce sync.Once
+
+func GetFileLogDriver() Driver {
+	logDriverOnce.Do(func() {
+		logDriver = newFileLogDriver()
+	})
+	return logDriver
 }

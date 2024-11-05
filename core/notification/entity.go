@@ -1,13 +1,15 @@
 package notification
 
-import "github.com/crawlab-team/crawlab/core/models/models/v2"
+import (
+	"github.com/crawlab-team/crawlab/core/models/models"
+)
 
 type VariableData struct {
-	Task     *models.TaskV2              `json:"task"`
-	TaskStat *models.TaskStatV2          `json:"task_stat"`
-	Spider   *models.SpiderV2            `json:"spider"`
-	Node     *models.NodeV2              `json:"node"`
-	Schedule *models.ScheduleV2          `json:"schedule"`
-	Alert    *models.NotificationAlertV2 `json:"alert"`
-	Metric   *models.MetricV2            `json:"metric"`
+	Task     *models.Task              `json:"task"`
+	TaskStat *models.TaskStat          `json:"task_stat"`
+	Spider   *models.Spider            `json:"spider"`
+	Node     *models.Node              `json:"node"`
+	Schedule *models.Schedule          `json:"schedule"`
+	Alert    *models.NotificationAlert `json:"alert"`
+	Metric   *models.Metric            `json:"metric"`
 }

@@ -2,10 +2,9 @@ package client_test
 
 import (
 	"context"
+	"github.com/crawlab-team/crawlab/core/models/models"
 	"testing"
 	"time"
-
-	"github.com/crawlab-team/crawlab/core/models/models/v2"
 
 	"github.com/apex/log"
 	"github.com/crawlab-team/crawlab/core/grpc/server"
@@ -51,10 +50,10 @@ func TestModelService_GetById(t *testing.T) {
 	go startSvr(svr)
 	defer stopSvr(svr)
 
-	m := models.TestModelV2{
+	m := models.TestModel{
 		Name: "Test Name",
 	}
-	modelSvc := service.NewModelService[models.TestModelV2]()
+	modelSvc := service.NewModelService[models.TestModel]()
 	id, err := modelSvc.InsertOne(m)
 	require.Nil(t, err)
 	m.SetId(id)
@@ -64,7 +63,7 @@ func TestModelService_GetById(t *testing.T) {
 	require.Nil(t, err)
 	c.Connect()
 
-	clientSvc := client.NewModelService[models.TestModelV2]()
+	clientSvc := client.NewModelService[models.TestModel]()
 	res, err := clientSvc.GetById(m.Id)
 	require.Nil(t, err)
 	assert.Equal(t, res.Id, m.Id)
@@ -79,10 +78,10 @@ func TestModelService_GetOne(t *testing.T) {
 	go startSvr(svr)
 	defer stopSvr(svr)
 
-	m := models.TestModelV2{
+	m := models.TestModel{
 		Name: "Test Name",
 	}
-	modelSvc := service.NewModelService[models.TestModelV2]()
+	modelSvc := service.NewModelService[models.TestModel]()
 	id, err := modelSvc.InsertOne(m)
 	require.Nil(t, err)
 	m.SetId(id)
@@ -92,7 +91,7 @@ func TestModelService_GetOne(t *testing.T) {
 	require.Nil(t, err)
 	c.Connect()
 
-	clientSvc := client.NewModelService[models.TestModelV2]()
+	clientSvc := client.NewModelService[models.TestModel]()
 	res, err := clientSvc.GetOne(bson.M{"name": m.Name}, nil)
 	require.Nil(t, err)
 	assert.Equal(t, res.Id, m.Id)
@@ -107,10 +106,10 @@ func TestModelService_GetMany(t *testing.T) {
 	go startSvr(svr)
 	defer stopSvr(svr)
 
-	m := models.TestModelV2{
+	m := models.TestModel{
 		Name: "Test Name",
 	}
-	modelSvc := service.NewModelService[models.TestModelV2]()
+	modelSvc := service.NewModelService[models.TestModel]()
 	id, err := modelSvc.InsertOne(m)
 	require.Nil(t, err)
 	m.SetId(id)
@@ -120,7 +119,7 @@ func TestModelService_GetMany(t *testing.T) {
 	require.Nil(t, err)
 	c.Connect()
 
-	clientSvc := client.NewModelService[models.TestModelV2]()
+	clientSvc := client.NewModelService[models.TestModel]()
 	res, err := clientSvc.GetMany(bson.M{"name": m.Name}, nil)
 	require.Nil(t, err)
 	assert.Equal(t, len(res), 1)
@@ -136,10 +135,10 @@ func TestModelService_DeleteById(t *testing.T) {
 	go startSvr(svr)
 	defer stopSvr(svr)
 
-	m := models.TestModelV2{
+	m := models.TestModel{
 		Name: "Test Name",
 	}
-	modelSvc := service.NewModelService[models.TestModelV2]()
+	modelSvc := service.NewModelService[models.TestModel]()
 	id, err := modelSvc.InsertOne(m)
 	require.Nil(t, err)
 	m.SetId(id)
@@ -149,7 +148,7 @@ func TestModelService_DeleteById(t *testing.T) {
 	require.Nil(t, err)
 	c.Connect()
 
-	clientSvc := client.NewModelService[models.TestModelV2]()
+	clientSvc := client.NewModelService[models.TestModel]()
 	err = clientSvc.DeleteById(m.Id)
 	require.Nil(t, err)
 
@@ -166,10 +165,10 @@ func TestModelService_DeleteOne(t *testing.T) {
 	go startSvr(svr)
 	defer stopSvr(svr)
 
-	m := models.TestModelV2{
+	m := models.TestModel{
 		Name: "Test Name",
 	}
-	modelSvc := service.NewModelService[models.TestModelV2]()
+	modelSvc := service.NewModelService[models.TestModel]()
 	id, err := modelSvc.InsertOne(m)
 	require.Nil(t, err)
 	m.SetId(id)
@@ -179,7 +178,7 @@ func TestModelService_DeleteOne(t *testing.T) {
 	require.Nil(t, err)
 	c.Connect()
 
-	clientSvc := client.NewModelService[models.TestModelV2]()
+	clientSvc := client.NewModelService[models.TestModel]()
 	err = clientSvc.DeleteOne(bson.M{"name": m.Name})
 	require.Nil(t, err)
 
@@ -196,10 +195,10 @@ func TestModelService_DeleteMany(t *testing.T) {
 	go startSvr(svr)
 	defer stopSvr(svr)
 
-	m := models.TestModelV2{
+	m := models.TestModel{
 		Name: "Test Name",
 	}
-	modelSvc := service.NewModelService[models.TestModelV2]()
+	modelSvc := service.NewModelService[models.TestModel]()
 	id, err := modelSvc.InsertOne(m)
 	require.Nil(t, err)
 	m.SetId(id)
@@ -209,7 +208,7 @@ func TestModelService_DeleteMany(t *testing.T) {
 	require.Nil(t, err)
 	c.Connect()
 
-	clientSvc := client.NewModelService[models.TestModelV2]()
+	clientSvc := client.NewModelService[models.TestModel]()
 	err = clientSvc.DeleteMany(bson.M{"name": m.Name})
 	require.Nil(t, err)
 
@@ -226,10 +225,10 @@ func TestModelService_UpdateById(t *testing.T) {
 	go startSvr(svr)
 	defer stopSvr(svr)
 
-	m := models.TestModelV2{
+	m := models.TestModel{
 		Name: "Test Name",
 	}
-	modelSvc := service.NewModelService[models.TestModelV2]()
+	modelSvc := service.NewModelService[models.TestModel]()
 	id, err := modelSvc.InsertOne(m)
 	require.Nil(t, err)
 	m.SetId(id)
@@ -239,7 +238,7 @@ func TestModelService_UpdateById(t *testing.T) {
 	require.Nil(t, err)
 	c.Connect()
 
-	clientSvc := client.NewModelService[models.TestModelV2]()
+	clientSvc := client.NewModelService[models.TestModel]()
 	err = clientSvc.UpdateById(m.Id, bson.M{"$set": bson.M{"name": "New Name"}})
 	require.Nil(t, err)
 
@@ -256,10 +255,10 @@ func TestModelService_UpdateOne(t *testing.T) {
 	go startSvr(svr)
 	defer stopSvr(svr)
 
-	m := models.TestModelV2{
+	m := models.TestModel{
 		Name: "Test Name",
 	}
-	modelSvc := service.NewModelService[models.TestModelV2]()
+	modelSvc := service.NewModelService[models.TestModel]()
 	id, err := modelSvc.InsertOne(m)
 	require.Nil(t, err)
 	m.SetId(id)
@@ -269,7 +268,7 @@ func TestModelService_UpdateOne(t *testing.T) {
 	require.Nil(t, err)
 	c.Connect()
 
-	clientSvc := client.NewModelService[models.TestModelV2]()
+	clientSvc := client.NewModelService[models.TestModel]()
 	err = clientSvc.UpdateOne(bson.M{"name": m.Name}, bson.M{"$set": bson.M{"name": "New Name"}})
 	require.Nil(t, err)
 
@@ -286,13 +285,13 @@ func TestModelService_UpdateMany(t *testing.T) {
 	go startSvr(svr)
 	defer stopSvr(svr)
 
-	m1 := models.TestModelV2{
+	m1 := models.TestModel{
 		Name: "Test Name",
 	}
-	m2 := models.TestModelV2{
+	m2 := models.TestModel{
 		Name: "Test Name",
 	}
-	modelSvc := service.NewModelService[models.TestModelV2]()
+	modelSvc := service.NewModelService[models.TestModel]()
 	_, err = modelSvc.InsertOne(m1)
 	require.Nil(t, err)
 	_, err = modelSvc.InsertOne(m2)
@@ -303,7 +302,7 @@ func TestModelService_UpdateMany(t *testing.T) {
 	require.Nil(t, err)
 	c.Connect()
 
-	clientSvc := client.NewModelService[models.TestModelV2]()
+	clientSvc := client.NewModelService[models.TestModel]()
 	err = clientSvc.UpdateMany(bson.M{"name": "Test Name"}, bson.M{"$set": bson.M{"name": "New Name"}})
 	require.Nil(t, err)
 
@@ -320,10 +319,10 @@ func TestModelService_ReplaceById(t *testing.T) {
 	go startSvr(svr)
 	defer stopSvr(svr)
 
-	m := models.TestModelV2{
+	m := models.TestModel{
 		Name: "Test Name",
 	}
-	modelSvc := service.NewModelService[models.TestModelV2]()
+	modelSvc := service.NewModelService[models.TestModel]()
 	id, err := modelSvc.InsertOne(m)
 	require.Nil(t, err)
 	m.SetId(id)
@@ -333,7 +332,7 @@ func TestModelService_ReplaceById(t *testing.T) {
 	require.Nil(t, err)
 	c.Connect()
 
-	clientSvc := client.NewModelService[models.TestModelV2]()
+	clientSvc := client.NewModelService[models.TestModel]()
 	m.Name = "New Name"
 	err = clientSvc.ReplaceById(m.Id, m)
 	require.Nil(t, err)
@@ -351,10 +350,10 @@ func TestModelService_ReplaceOne(t *testing.T) {
 	go startSvr(svr)
 	defer stopSvr(svr)
 
-	m := models.TestModelV2{
+	m := models.TestModel{
 		Name: "Test Name",
 	}
-	modelSvc := service.NewModelService[models.TestModelV2]()
+	modelSvc := service.NewModelService[models.TestModel]()
 	id, err := modelSvc.InsertOne(m)
 	require.Nil(t, err)
 	m.SetId(id)
@@ -364,7 +363,7 @@ func TestModelService_ReplaceOne(t *testing.T) {
 	require.Nil(t, err)
 	c.Connect()
 
-	clientSvc := client.NewModelService[models.TestModelV2]()
+	clientSvc := client.NewModelService[models.TestModel]()
 	m.Name = "New Name"
 	err = clientSvc.ReplaceOne(bson.M{"name": "Test Name"}, m)
 	require.Nil(t, err)
@@ -386,8 +385,8 @@ func TestModelService_InsertOne(t *testing.T) {
 	require.Nil(t, err)
 	c.Connect()
 
-	clientSvc := client.NewModelService[models.TestModelV2]()
-	m := models.TestModelV2{
+	clientSvc := client.NewModelService[models.TestModel]()
+	m := models.TestModel{
 		Name: "Test Name",
 	}
 	id, err := clientSvc.InsertOne(m)
@@ -410,8 +409,8 @@ func TestModelService_InsertMany(t *testing.T) {
 	require.Nil(t, err)
 	c.Connect()
 
-	clientSvc := client.NewModelService[models.TestModelV2]()
-	testModels := []models.TestModelV2{
+	clientSvc := client.NewModelService[models.TestModel]()
+	testModels := []models.TestModel{
 		{Name: "Test Name 1"},
 		{Name: "Test Name 2"},
 	}
@@ -433,9 +432,9 @@ func TestModelService_Count(t *testing.T) {
 	go startSvr(svr)
 	defer stopSvr(svr)
 
-	modelSvc := service.NewModelService[models.TestModelV2]()
+	modelSvc := service.NewModelService[models.TestModel]()
 	for i := 0; i < 5; i++ {
-		_, err = modelSvc.InsertOne(models.TestModelV2{
+		_, err = modelSvc.InsertOne(models.TestModel{
 			Name: "Test Name",
 		})
 		require.Nil(t, err)
@@ -446,7 +445,7 @@ func TestModelService_Count(t *testing.T) {
 	require.Nil(t, err)
 	c.Connect()
 
-	clientSvc := client.NewModelService[models.TestModelV2]()
+	clientSvc := client.NewModelService[models.TestModel]()
 	count, err := clientSvc.Count(bson.M{})
 	require.Nil(t, err)
 

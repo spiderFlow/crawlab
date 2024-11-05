@@ -279,7 +279,7 @@ func NewModelService[T any]() *ModelService[T] {
 	defer mu.Unlock()
 
 	if _, exists := onceMap[typeName]; !exists {
-		onceMap[typeName] = new(sync.Once)
+		onceMap[typeName] = &sync.Once{}
 	}
 
 	var instance *ModelService[T]
