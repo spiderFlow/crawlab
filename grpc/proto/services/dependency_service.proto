@@ -22,10 +22,9 @@ enum DependencyServiceCode {
 
 message DependencyServiceConnectResponse {
   DependencyServiceCode code = 1;
-  string task_id = 2;
-  string lang = 3;
-  string proxy = 4;
-  repeated Dependency dependencies = 5;
+  string lang = 2;
+  string proxy = 3;
+  Dependency dependency = 4;
 }
 
 message DependencyServiceSyncRequest {
