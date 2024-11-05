@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"reflect"
 	"sync"
 
@@ -267,6 +268,30 @@ func (svr ModelBaseServiceServer) InsertMany(_ context.Context, req *grpc.ModelS
 		return HandleError(err)
 	}
 	return HandleSuccessWithData(r.InsertedIDs)
+}
+
+func (svr ModelBaseServiceServer) UpsertOne(_ context.Context, req *grpc.ModelServiceUpsertOneRequest) (res *grpc.Response, err error) {
+	model := GetOneInstanceModel(req.ModelType)
+	modelType := reflect.TypeOf(model)
+	modelValuePtr := reflect.New(modelType).Interface()
+	err = json.Unmarshal(req.Model, modelValuePtr)
+	if err != nil {
+		return HandleError(err)
+	}
+	var query bson.M
+	err = json.Unmarshal(req.Query, &query)
+	if err != nil {
+		return HandleError(err)
+	}
+	modelSvc := GetModelService[bson.M](req.ModelType)
+	opts := &options.ReplaceOptions{}
+	opts.SetUpsert(true)
+	id, err := modelSvc.GetCol().GetCollection().ReplaceOne(modelSvc.GetCol().GetContext(), query, modelValuePtr, opts)
+	if err != nil {
+		return HandleError(err)
+	}
+
+	return HandleSuccessWithData(id)
 }
 
 func (svr ModelBaseServiceServer) Count(_ context.Context, req *grpc.ModelServiceCountRequest) (res *grpc.Response, err error) {

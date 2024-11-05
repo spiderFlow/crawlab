@@ -32,6 +32,7 @@ const (
 	ModelBaseService_ReplaceOne_FullMethodName  = "/grpc.ModelBaseService/ReplaceOne"
 	ModelBaseService_InsertOne_FullMethodName   = "/grpc.ModelBaseService/InsertOne"
 	ModelBaseService_InsertMany_FullMethodName  = "/grpc.ModelBaseService/InsertMany"
+	ModelBaseService_UpsertOne_FullMethodName   = "/grpc.ModelBaseService/UpsertOne"
 	ModelBaseService_Count_FullMethodName       = "/grpc.ModelBaseService/Count"
 )
 
@@ -52,6 +53,7 @@ type ModelBaseServiceClient interface {
 	ReplaceOne(ctx context.Context, in *ModelServiceReplaceOneRequest, opts ...grpc.CallOption) (*Response, error)
 	InsertOne(ctx context.Context, in *ModelServiceInsertOneRequest, opts ...grpc.CallOption) (*Response, error)
 	InsertMany(ctx context.Context, in *ModelServiceInsertManyRequest, opts ...grpc.CallOption) (*Response, error)
+	UpsertOne(ctx context.Context, in *ModelServiceUpsertOneRequest, opts ...grpc.CallOption) (*Response, error)
 	Count(ctx context.Context, in *ModelServiceCountRequest, opts ...grpc.CallOption) (*Response, error)
 }
 
@@ -193,6 +195,16 @@ func (c *modelBaseServiceClient) InsertMany(ctx context.Context, in *ModelServic
 	return out, nil
 }
 
+func (c *modelBaseServiceClient) UpsertOne(ctx context.Context, in *ModelServiceUpsertOneRequest, opts ...grpc.CallOption) (*Response, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Response)
+	err := c.cc.Invoke(ctx, ModelBaseService_UpsertOne_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *modelBaseServiceClient) Count(ctx context.Context, in *ModelServiceCountRequest, opts ...grpc.CallOption) (*Response, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Response)
@@ -220,6 +232,7 @@ type ModelBaseServiceServer interface {
 	ReplaceOne(context.Context, *ModelServiceReplaceOneRequest) (*Response, error)
 	InsertOne(context.Context, *ModelServiceInsertOneRequest) (*Response, error)
 	InsertMany(context.Context, *ModelServiceInsertManyRequest) (*Response, error)
+	UpsertOne(context.Context, *ModelServiceUpsertOneRequest) (*Response, error)
 	Count(context.Context, *ModelServiceCountRequest) (*Response, error)
 	mustEmbedUnimplementedModelBaseServiceServer()
 }
@@ -266,6 +279,9 @@ func (UnimplementedModelBaseServiceServer) InsertOne(context.Context, *ModelServ
 }
 func (UnimplementedModelBaseServiceServer) InsertMany(context.Context, *ModelServiceInsertManyRequest) (*Response, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method InsertMany not implemented")
+}
+func (UnimplementedModelBaseServiceServer) UpsertOne(context.Context, *ModelServiceUpsertOneRequest) (*Response, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpsertOne not implemented")
 }
 func (UnimplementedModelBaseServiceServer) Count(context.Context, *ModelServiceCountRequest) (*Response, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Count not implemented")
@@ -517,6 +533,24 @@ func _ModelBaseService_InsertMany_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ModelBaseService_UpsertOne_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ModelServiceUpsertOneRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ModelBaseServiceServer).UpsertOne(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ModelBaseService_UpsertOne_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ModelBaseServiceServer).UpsertOne(ctx, req.(*ModelServiceUpsertOneRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _ModelBaseService_Count_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ModelServiceCountRequest)
 	if err := dec(in); err != nil {
@@ -593,6 +627,10 @@ var ModelBaseService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "InsertMany",
 			Handler:    _ModelBaseService_InsertMany_Handler,
+		},
+		{
+			MethodName: "UpsertOne",
+			Handler:    _ModelBaseService_UpsertOne_Handler,
 		},
 		{
 			MethodName: "Count",
