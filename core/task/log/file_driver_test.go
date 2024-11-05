@@ -34,13 +34,12 @@ func TestFileDriver_WriteLine(t *testing.T) {
 	setupFileDriverTest()
 	t.Cleanup(cleanupFileDriverTest)
 
-	d, err := newFileLogDriver()
-	require.Nil(t, err)
+	d := newFileLogDriver()
 	defer d.Close()
 
 	id := primitive.NewObjectID()
 
-	err = d.WriteLine(id.Hex(), "it works")
+	err := d.WriteLine(id.Hex(), "it works")
 	require.Nil(t, err)
 
 	logFilePath := filepath.Join(testLogDir, id.Hex(), "log.txt")
@@ -54,14 +53,13 @@ func TestFileDriver_WriteLines(t *testing.T) {
 	setupFileDriverTest()
 	t.Cleanup(cleanupFileDriverTest)
 
-	d, err := newFileLogDriver()
-	require.Nil(t, err)
+	d := newFileLogDriver()
 	defer d.Close()
 
 	id := primitive.NewObjectID()
 
 	for i := 0; i < 100; i++ {
-		err = d.WriteLine(id.Hex(), "it works")
+		err := d.WriteLine(id.Hex(), "it works")
 		require.Nil(t, err)
 	}
 
@@ -78,8 +76,7 @@ func TestFileDriver_Find(t *testing.T) {
 	setupFileDriverTest()
 	t.Cleanup(cleanupFileDriverTest)
 
-	d, err := newFileLogDriver()
-	require.Nil(t, err)
+	d := newFileLogDriver()
 	defer d.Close()
 
 	id := primitive.NewObjectID()
@@ -91,14 +88,14 @@ func TestFileDriver_Find(t *testing.T) {
 			line := fmt.Sprintf("line: %d", i*batch+j+1)
 			lines = append(lines, line)
 		}
-		err = d.WriteLines(id.Hex(), lines)
+		err := d.WriteLines(id.Hex(), lines)
 		require.Nil(t, err)
 		lines = []string{}
 	}
 
 	driver := d
 
-	lines, err = driver.Find(id.Hex(), "", 0, 10)
+	lines, err := driver.Find(id.Hex(), "", 0, 10)
 	require.Nil(t, err)
 	require.Equal(t, 10, len(lines))
 	require.Equal(t, "line: 1", lines[0])
