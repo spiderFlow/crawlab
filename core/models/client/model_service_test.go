@@ -45,8 +45,7 @@ func stopSvr(svr *server.GrpcServer) {
 func TestModelService_GetById(t *testing.T) {
 	setupTestDB()
 	defer teardownTestDB()
-	svr, err := server.NewGrpcServer()
-	require.Nil(t, err)
+	svr := server.GetGrpcServer()
 	go startSvr(svr)
 	defer stopSvr(svr)
 
@@ -73,8 +72,7 @@ func TestModelService_GetById(t *testing.T) {
 func TestModelService_GetOne(t *testing.T) {
 	setupTestDB()
 	defer teardownTestDB()
-	svr, err := server.NewGrpcServer()
-	require.Nil(t, err)
+	svr := server.GetGrpcServer()
 	go startSvr(svr)
 	defer stopSvr(svr)
 
@@ -101,8 +99,7 @@ func TestModelService_GetOne(t *testing.T) {
 func TestModelService_GetMany(t *testing.T) {
 	setupTestDB()
 	defer teardownTestDB()
-	svr, err := server.NewGrpcServer()
-	require.Nil(t, err)
+	svr := server.GetGrpcServer()
 	go startSvr(svr)
 	defer stopSvr(svr)
 
@@ -130,8 +127,7 @@ func TestModelService_GetMany(t *testing.T) {
 func TestModelService_DeleteById(t *testing.T) {
 	setupTestDB()
 	defer teardownTestDB()
-	svr, err := server.NewGrpcServer()
-	require.Nil(t, err)
+	svr := server.GetGrpcServer()
 	go startSvr(svr)
 	defer stopSvr(svr)
 
@@ -160,8 +156,7 @@ func TestModelService_DeleteById(t *testing.T) {
 func TestModelService_DeleteOne(t *testing.T) {
 	setupTestDB()
 	defer teardownTestDB()
-	svr, err := server.NewGrpcServer()
-	require.Nil(t, err)
+	svr := server.GetGrpcServer()
 	go startSvr(svr)
 	defer stopSvr(svr)
 
@@ -190,8 +185,7 @@ func TestModelService_DeleteOne(t *testing.T) {
 func TestModelService_DeleteMany(t *testing.T) {
 	setupTestDB()
 	defer teardownTestDB()
-	svr, err := server.NewGrpcServer()
-	require.Nil(t, err)
+	svr := server.GetGrpcServer()
 	go startSvr(svr)
 	defer stopSvr(svr)
 
@@ -220,8 +214,7 @@ func TestModelService_DeleteMany(t *testing.T) {
 func TestModelService_UpdateById(t *testing.T) {
 	setupTestDB()
 	defer teardownTestDB()
-	svr, err := server.NewGrpcServer()
-	require.Nil(t, err)
+	svr := server.GetGrpcServer()
 	go startSvr(svr)
 	defer stopSvr(svr)
 
@@ -250,8 +243,7 @@ func TestModelService_UpdateById(t *testing.T) {
 func TestModelService_UpdateOne(t *testing.T) {
 	setupTestDB()
 	defer teardownTestDB()
-	svr, err := server.NewGrpcServer()
-	require.Nil(t, err)
+	svr := server.GetGrpcServer()
 	go startSvr(svr)
 	defer stopSvr(svr)
 
@@ -280,8 +272,7 @@ func TestModelService_UpdateOne(t *testing.T) {
 func TestModelService_UpdateMany(t *testing.T) {
 	setupTestDB()
 	defer teardownTestDB()
-	svr, err := server.NewGrpcServer()
-	require.Nil(t, err)
+	svr := server.GetGrpcServer()
 	go startSvr(svr)
 	defer stopSvr(svr)
 
@@ -292,7 +283,7 @@ func TestModelService_UpdateMany(t *testing.T) {
 		Name: "Test Name",
 	}
 	modelSvc := service.NewModelService[models.TestModel]()
-	_, err = modelSvc.InsertOne(m1)
+	_, err := modelSvc.InsertOne(m1)
 	require.Nil(t, err)
 	_, err = modelSvc.InsertOne(m2)
 	require.Nil(t, err)
@@ -314,8 +305,7 @@ func TestModelService_UpdateMany(t *testing.T) {
 func TestModelService_ReplaceById(t *testing.T) {
 	setupTestDB()
 	defer teardownTestDB()
-	svr, err := server.NewGrpcServer()
-	require.Nil(t, err)
+	svr := server.GetGrpcServer()
 	go startSvr(svr)
 	defer stopSvr(svr)
 
@@ -345,8 +335,7 @@ func TestModelService_ReplaceById(t *testing.T) {
 func TestModelService_ReplaceOne(t *testing.T) {
 	setupTestDB()
 	defer teardownTestDB()
-	svr, err := server.NewGrpcServer()
-	require.Nil(t, err)
+	svr := server.GetGrpcServer()
 	go startSvr(svr)
 	defer stopSvr(svr)
 
@@ -376,8 +365,7 @@ func TestModelService_ReplaceOne(t *testing.T) {
 func TestModelService_InsertOne(t *testing.T) {
 	setupTestDB()
 	defer teardownTestDB()
-	svr, err := server.NewGrpcServer()
-	require.Nil(t, err)
+	svr := server.GetGrpcServer()
 	go startSvr(svr)
 	defer stopSvr(svr)
 
@@ -400,8 +388,7 @@ func TestModelService_InsertOne(t *testing.T) {
 func TestModelService_InsertMany(t *testing.T) {
 	setupTestDB()
 	defer teardownTestDB()
-	svr, err := server.NewGrpcServer()
-	require.Nil(t, err)
+	svr := server.GetGrpcServer()
 	go startSvr(svr)
 	defer stopSvr(svr)
 
@@ -427,14 +414,13 @@ func TestModelService_InsertMany(t *testing.T) {
 func TestModelService_Count(t *testing.T) {
 	setupTestDB()
 	defer teardownTestDB()
-	svr, err := server.NewGrpcServer()
-	require.Nil(t, err)
+	svr := server.GetGrpcServer()
 	go startSvr(svr)
 	defer stopSvr(svr)
 
 	modelSvc := service.NewModelService[models.TestModel]()
 	for i := 0; i < 5; i++ {
-		_, err = modelSvc.InsertOne(models.TestModel{
+		_, err := modelSvc.InsertOne(models.TestModel{
 			Name: "Test Name",
 		})
 		require.Nil(t, err)
