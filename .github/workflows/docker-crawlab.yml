@@ -113,6 +113,8 @@ jobs:
     needs: [ setup ]
     if: needs.setup.outputs.base_image_changed == 'true' || needs.setup.outputs.workflow_changed == 'true'
     runs-on: ubuntu-latest
+    outputs:
+      failed: ${{ steps.set_output.outputs.failed }}
     steps:
       - uses: actions/checkout@v4
       - name: Set up Docker Buildx
@@ -129,11 +131,17 @@ jobs:
           context: ./docker/base-image
           push: true
           tags: ${{ env.IMAGE_NAME_CRAWLAB_BASE }}:${{ needs.setup.outputs.version }}
+      - name: Set output
+        id: set_output
+        if: failure()
+        run: echo "failed=true" >> $GITHUB_OUTPUT
 
   test_backend:
     needs: [ setup ]
     if: needs.setup.outputs.backend_changed == 'true' || needs.setup.outputs.workflow_changed == 'true'
     runs-on: ubuntu-latest
+    outputs:
+      failed: ${{ steps.set_output.outputs.failed }}
     services:
       mongo:
         image: mongo:5
@@ -157,6 +165,10 @@ jobs:
             echo "Running tests in $dir"
             go test ./$dir
           done
+      - name: Set output
+        id: set_output
+        if: failure()
+        run: echo "failed=true" >> $GITHUB_OUTPUT
 
   build_backend:
     needs: [ setup, test_backend ]
@@ -211,10 +223,15 @@ jobs:
         run: echo "failed=true" >> $GITHUB_OUTPUT
 
   build_crawlab:
-    needs: [setup, build_base_image, build_backend, build_frontend]
+    needs: [setup, build_base_image, test_backend, build_backend, build_frontend]
     if: |
       always() &&
-      (needs.build_backend.outputs.failed != 'true' && needs.build_frontend.outputs.failed != 'true') &&
+      (
+        needs.test_backend.outputs.failed != 'true' &&
+        needs.build_backend.outputs.failed != 'true' &&
+        needs.build_frontend.outputs.failed != 'true' &&
+        needs.build_base_image.outputs.failed != 'true'
+      ) &&
       (
         needs.setup.outputs.backend_changed == 'true' ||
         needs.setup.outputs.frontend_changed == 'true' ||
