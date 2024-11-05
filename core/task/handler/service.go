@@ -10,7 +10,7 @@ import (
 	grpcclient "github.com/crawlab-team/crawlab/core/grpc/client"
 	"github.com/crawlab-team/crawlab/core/interfaces"
 	"github.com/crawlab-team/crawlab/core/models/client"
-	models2 "github.com/crawlab-team/crawlab/core/models/models/v2"
+	"github.com/crawlab-team/crawlab/core/models/models"
 	"github.com/crawlab-team/crawlab/core/models/service"
 	nodeconfig "github.com/crawlab-team/crawlab/core/node/config"
 	"github.com/crawlab-team/crawlab/grpc"
@@ -110,7 +110,7 @@ func (svc *Service) fetchAndRunTasks() {
 					t.Error = err.Error()
 					t.Status = constants.TaskStatusError
 					t.SetUpdated(t.CreatedBy)
-					_ = client.NewModelService[models2.TaskV2]().ReplaceById(t.Id, *t)
+					_ = client.NewModelService[models.Task]().ReplaceById(t.Id, *t)
 					continue
 				}
 				continue
@@ -148,15 +148,15 @@ func (svc *Service) GetNodeConfigService() (cfgSvc interfaces.NodeConfigService)
 	return svc.cfgSvc
 }
 
-func (svc *Service) GetCurrentNode() (n *models2.NodeV2, err error) {
+func (svc *Service) GetCurrentNode() (n *models.Node, err error) {
 	// node key
 	nodeKey := svc.cfgSvc.GetNodeKey()
 
 	// current node
 	if svc.cfgSvc.IsMaster() {
-		n, err = service.NewModelService[models2.NodeV2]().GetOne(bson.M{"key": nodeKey}, nil)
+		n, err = service.NewModelService[models.Node]().GetOne(bson.M{"key": nodeKey}, nil)
 	} else {
-		n, err = client.NewModelService[models2.NodeV2]().GetOne(bson.M{"key": nodeKey}, nil)
+		n, err = client.NewModelService[models.Node]().GetOne(bson.M{"key": nodeKey}, nil)
 	}
 	if err != nil {
 		return nil, err
@@ -165,11 +165,11 @@ func (svc *Service) GetCurrentNode() (n *models2.NodeV2, err error) {
 	return n, nil
 }
 
-func (svc *Service) GetTaskById(id primitive.ObjectID) (t *models2.TaskV2, err error) {
+func (svc *Service) GetTaskById(id primitive.ObjectID) (t *models.Task, err error) {
 	if svc.cfgSvc.IsMaster() {
-		t, err = service.NewModelService[models2.TaskV2]().GetById(id)
+		t, err = service.NewModelService[models.Task]().GetById(id)
 	} else {
-		t, err = client.NewModelService[models2.TaskV2]().GetById(id)
+		t, err = client.NewModelService[models.Task]().GetById(id)
 	}
 	if err != nil {
 		return nil, err
@@ -178,12 +178,12 @@ func (svc *Service) GetTaskById(id primitive.ObjectID) (t *models2.TaskV2, err e
 	return t, nil
 }
 
-func (svc *Service) UpdateTask(t *models2.TaskV2) (err error) {
+func (svc *Service) UpdateTask(t *models.Task) (err error) {
 	t.SetUpdated(t.CreatedBy)
 	if svc.cfgSvc.IsMaster() {
-		err = service.NewModelService[models2.TaskV2]().ReplaceById(t.Id, *t)
+		err = service.NewModelService[models.Task]().ReplaceById(t.Id, *t)
 	} else {
-		err = client.NewModelService[models2.TaskV2]().ReplaceById(t.Id, *t)
+		err = client.NewModelService[models.Task]().ReplaceById(t.Id, *t)
 	}
 	if err != nil {
 		return err
@@ -191,11 +191,11 @@ func (svc *Service) UpdateTask(t *models2.TaskV2) (err error) {
 	return nil
 }
 
-func (svc *Service) GetSpiderById(id primitive.ObjectID) (s *models2.SpiderV2, err error) {
+func (svc *Service) GetSpiderById(id primitive.ObjectID) (s *models.Spider, err error) {
 	if svc.cfgSvc.IsMaster() {
-		s, err = service.NewModelService[models2.SpiderV2]().GetById(id)
+		s, err = service.NewModelService[models.Spider]().GetById(id)
 	} else {
-		s, err = client.NewModelService[models2.SpiderV2]().GetById(id)
+		s, err = client.NewModelService[models.Spider]().GetById(id)
 	}
 	if err != nil {
 		return nil, err
@@ -217,13 +217,13 @@ func (svc *Service) getRunnerCount() (count int) {
 		},
 	}
 	if svc.cfgSvc.IsMaster() {
-		count, err = service.NewModelService[models2.TaskV2]().Count(query)
+		count, err = service.NewModelService[models.Task]().Count(query)
 		if err != nil {
 			trace.PrintError(err)
 			return
 		}
 	} else {
-		count, err = client.NewModelService[models2.TaskV2]().Count(query)
+		count, err = client.NewModelService[models.Task]().Count(query)
 		if err != nil {
 			trace.PrintError(err)
 			return
@@ -273,9 +273,9 @@ func (svc *Service) updateNodeStatus() (err error) {
 	// save node
 	n.SetUpdated(n.CreatedBy)
 	if svc.cfgSvc.IsMaster() {
-		err = service.NewModelService[models2.NodeV2]().ReplaceById(n.Id, *n)
+		err = service.NewModelService[models.Node]().ReplaceById(n.Id, *n)
 	} else {
-		err = client.NewModelService[models2.NodeV2]().ReplaceById(n.Id, *n)
+		err = client.NewModelService[models.Node]().ReplaceById(n.Id, *n)
 	}
 	if err != nil {
 		return err
@@ -311,7 +311,7 @@ func (svc *Service) runTask(taskId primitive.ObjectID) (err error) {
 	}
 
 	// create a new task runner
-	r, err := NewTaskRunnerV2(taskId, svc)
+	r, err := newTaskRunner(taskId, svc)
 	if err != nil {
 		err = fmt.Errorf("failed to create task runner: %v", err)
 		log.Errorf("run task error: %v", err)
@@ -439,7 +439,7 @@ func (svc *Service) cancelTask(taskId primitive.ObjectID, force bool) (err error
 	return nil
 }
 
-func newTaskHandlerService() (svc2 *Service, err error) {
+func newTaskHandlerService() *Service {
 	// service
 	svc := &Service{
 		exitWatchDuration: 60 * time.Second,
@@ -459,24 +459,15 @@ func newTaskHandlerService() (svc2 *Service, err error) {
 
 	log.Debugf("[NewTaskHandlerService] svc[cfgPath: %s]", svc.cfgSvc.GetConfigPath())
 
-	return svc, nil
+	return svc
 }
 
-var _serviceV2 *Service
-var _serviceV2Once = new(sync.Once)
+var _service *Service
+var _serviceOnce sync.Once
 
-func GetTaskHandlerService() (svr *Service, err error) {
-	if _serviceV2 != nil {
-		return _serviceV2, nil
-	}
-	_serviceV2Once.Do(func() {
-		_serviceV2, err = newTaskHandlerService()
-		if err != nil {
-			log.Errorf("failed to create task handler service: %v", err)
-		}
+func GetTaskHandlerService() *Service {
+	_serviceOnce.Do(func() {
+		_service = newTaskHandlerService()
 	})
-	if err != nil {
-		return nil, err
-	}
-	return _serviceV2, nil
+	return _service
 }

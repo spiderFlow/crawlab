@@ -4,14 +4,14 @@ import (
 	"context"
 	"encoding/base64"
 	"github.com/apex/log"
-	"github.com/crawlab-team/crawlab/core/models/models/v2"
+	"github.com/crawlab-team/crawlab/core/models/models"
 	"github.com/crawlab-team/crawlab/trace"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/gmail/v1"
 	"strings"
 )
 
-func sendMailGmail(ch *models.NotificationChannelV2, smtpConfig smtpAuthentication, options sendOptions, htmlBody, txtBody string) error {
+func sendMailGmail(ch *models.NotificationChannel, smtpConfig smtpAuthentication, options sendOptions, htmlBody, txtBody string) error {
 	// 读取服务账户 JSON 密钥
 	b := []byte(ch.GoogleOAuth2Json)
 

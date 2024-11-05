@@ -4,7 +4,7 @@ import (
 	"errors"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/apex/log"
-	"github.com/crawlab-team/crawlab/core/models/models/v2"
+	"github.com/crawlab-team/crawlab/core/models/models"
 	"github.com/crawlab-team/crawlab/trace"
 	"gopkg.in/gomail.v2"
 	"net/mail"
@@ -12,7 +12,7 @@ import (
 	"strings"
 )
 
-func SendMail(s *models.NotificationSettingV2, ch *models.NotificationChannelV2, to, cc, bcc []string, title, content string) error {
+func SendMail(s *models.NotificationSetting, ch *models.NotificationChannel, to, cc, bcc []string, title, content string) error {
 	// sender email
 	senderEmail := ch.SMTPUsername
 	if s.UseCustomSenderEmail {

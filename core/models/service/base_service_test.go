@@ -3,10 +3,10 @@ package service_test
 import (
 	"context"
 	"github.com/apex/log"
+	"github.com/crawlab-team/crawlab/core/models/models"
 	"testing"
 	"time"
 
-	"github.com/crawlab-team/crawlab/core/models/models/v2"
 	"github.com/crawlab-team/crawlab/core/models/service"
 	"github.com/crawlab-team/crawlab/db/mongo"
 	"github.com/spf13/viper"
@@ -17,9 +17,9 @@ import (
 )
 
 type TestModel struct {
-	Id                            primitive.ObjectID `bson:"_id,omitempty" collection:"testmodels"`
-	models.BaseModelV2[TestModel] `bson:",inline"`
-	Name                          string `bson:"name"`
+	Id                          primitive.ObjectID `bson:"_id,omitempty" collection:"testmodels"`
+	models.BaseModel[TestModel] `bson:",inline"`
+	Name                        string `bson:"name"`
 }
 
 func setupTestDB() {
@@ -36,7 +36,7 @@ func teardownTestDB() {
 	log.Infof("dropped test db")
 }
 
-func TestModelServiceV2(t *testing.T) {
+func TestModelService(t *testing.T) {
 	setupTestDB()
 	defer teardownTestDB()
 

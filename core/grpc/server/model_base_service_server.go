@@ -4,8 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"reflect"
+	"sync"
 
-	models2 "github.com/crawlab-team/crawlab/core/models/models/v2"
+	"github.com/crawlab-team/crawlab/core/models/models"
 	"github.com/crawlab-team/crawlab/core/models/service"
 	"github.com/crawlab-team/crawlab/db/mongo"
 	"github.com/crawlab-team/crawlab/grpc"
@@ -16,7 +17,7 @@ import (
 var (
 	typeNameColNameMap  = make(map[string]string)
 	typeOneNameModelMap = make(map[string]any)
-	typeOneInstances    = models2.GetModelInstances()
+	typeOneInstances    = models.GetModelInstances()
 )
 
 func init() {
@@ -285,6 +286,16 @@ func GetModelService[T any](typeName string) *service.ModelService[T] {
 	return service.NewModelServiceWithColName[T](typeNameColNameMap[typeName])
 }
 
-func NewModelBaseServiceServer() *ModelBaseServiceServer {
+var modelBaseServiceServer *ModelBaseServiceServer
+var modelBaseServiceServerOnce = &sync.Once{}
+
+func newModelBaseServiceServer() *ModelBaseServiceServer {
 	return &ModelBaseServiceServer{}
+}
+
+func GetModelBaseServiceServer() *ModelBaseServiceServer {
+	modelBaseServiceServerOnce.Do(func() {
+		modelBaseServiceServer = newModelBaseServiceServer()
+	})
+	return modelBaseServiceServer
 }

@@ -48,11 +48,8 @@ func (svr *GrpcServer) SetConfigPath(path string) {
 	svr.cfgPath = path
 }
 
-func (svr *GrpcServer) Init() (err error) {
-	// register
+func (svr *GrpcServer) Init() {
 	svr.register()
-
-	return nil
 }
 
 func (svr *GrpcServer) Start() (err error) {
@@ -103,14 +100,12 @@ func (svr *GrpcServer) Stop() (err error) {
 	return nil
 }
 
-func (svr *GrpcServer) register() (err error) {
+func (svr *GrpcServer) register() {
 	grpc2.RegisterNodeServiceServer(svr.svr, *svr.NodeSvr)
 	grpc2.RegisterModelBaseServiceServer(svr.svr, *svr.ModelBaseServiceSvr)
 	grpc2.RegisterTaskServiceServer(svr.svr, *svr.TaskSvr)
 	grpc2.RegisterDependencyServiceServer(svr.svr, *svr.DependencySvr)
 	grpc2.RegisterMetricServiceServer(svr.svr, *svr.MetricSvr)
-
-	return nil
 }
 
 func (svr *GrpcServer) recoveryHandlerFunc(p interface{}) (err error) {
@@ -118,9 +113,9 @@ func (svr *GrpcServer) recoveryHandlerFunc(p interface{}) (err error) {
 	return fmt.Errorf("recovered from panic: %v", p)
 }
 
-func NewGrpcServer() (svr *GrpcServer, err error) {
+func newGrpcServer() *GrpcServer {
 	// server
-	svr = &GrpcServer{
+	svr := &GrpcServer{
 		address: entity.NewAddress(&entity.AddressOptions{
 			Host: constants.DefaultGrpcServerHost,
 			Port: constants.DefaultGrpcServerPort,
@@ -128,23 +123,23 @@ func NewGrpcServer() (svr *GrpcServer, err error) {
 	}
 
 	if viper.GetString("grpc.server.address") != "" {
-		svr.address, err = entity.NewAddressFromString(viper.GetString("grpc.server.address"))
+		address, err := entity.NewAddressFromString(viper.GetString("grpc.server.address"))
 		if err != nil {
-			log.Fatalf("[NewGrpcServer] failed to parse grpc server address: %v", err)
+			log.Fatalf("[GrpcServer] failed to parse grpc server address: %v", err)
 			panic(err)
 		}
+		svr.address = address
 	}
 
+	// node config service
 	svr.nodeCfgSvc = nodeconfig.GetNodeConfigService()
 
-	svr.NodeSvr = NewNodeServiceServer()
-	svr.ModelBaseServiceSvr = NewModelBaseServiceServer()
-	svr.TaskSvr, err = NewTaskServiceServer()
-	if err != nil {
-		return nil, err
-	}
-	svr.DependencySvr = GetDependencyServerV2()
-	svr.MetricSvr = GetMetricsServerV2()
+	// servers
+	svr.NodeSvr = GetNodeServiceServer()
+	svr.ModelBaseServiceSvr = GetModelBaseServiceServer()
+	svr.TaskSvr = GetTaskServiceServer()
+	svr.DependencySvr = GetDependencyServer()
+	svr.MetricSvr = GetMetricsServer()
 
 	// recovery options
 	recoveryOpts := []grpcrecovery.Option{
@@ -166,18 +161,15 @@ func NewGrpcServer() (svr *GrpcServer, err error) {
 	// initialize
 	svr.Init()
 
-	return svr, nil
+	return svr
 }
 
 var _server *GrpcServer
 var _serverOnce sync.Once
 
-func GetGrpcServer() (svr *GrpcServer, err error) {
+func GetGrpcServer() *GrpcServer {
 	_serverOnce.Do(func() {
-		_server, err = NewGrpcServer()
+		_server = newGrpcServer()
 	})
-	if err != nil {
-		return nil, err
-	}
-	return _server, nil
+	return _server
 }

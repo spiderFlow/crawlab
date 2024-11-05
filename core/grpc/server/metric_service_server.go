@@ -3,7 +3,7 @@ package server
 import (
 	"context"
 	"github.com/apex/log"
-	models2 "github.com/crawlab-team/crawlab/core/models/models/v2"
+	"github.com/crawlab-team/crawlab/core/models/models"
 	"github.com/crawlab-team/crawlab/core/models/service"
 	"github.com/crawlab-team/crawlab/grpc"
 	"go.mongodb.org/mongo-driver/bson"
@@ -17,12 +17,12 @@ type MetricServiceServer struct {
 
 func (svr MetricServiceServer) Send(_ context.Context, req *grpc.MetricServiceSendRequest) (res *grpc.Response, err error) {
 	log.Info("[MetricServiceServer] received metric from node: " + req.NodeKey)
-	n, err := service.NewModelService[models2.NodeV2]().GetOne(bson.M{"key": req.NodeKey}, nil)
+	n, err := service.NewModelService[models.Node]().GetOne(bson.M{"key": req.NodeKey}, nil)
 	if err != nil {
 		log.Errorf("[MetricServiceServer] error getting node: %v", err)
 		return HandleError(err)
 	}
-	metric := models2.MetricV2{
+	metric := models.Metric{
 		Type:                 req.Type,
 		NodeId:               n.Id,
 		CpuUsagePercent:      req.CpuUsagePercent,
@@ -40,7 +40,7 @@ func (svr MetricServiceServer) Send(_ context.Context, req *grpc.MetricServiceSe
 		NetworkBytesRecvRate: req.NetworkBytesRecvRate,
 	}
 	metric.CreatedAt = time.Unix(req.Timestamp, 0)
-	_, err = service.NewModelService[models2.MetricV2]().InsertOne(metric)
+	_, err = service.NewModelService[models.Metric]().InsertOne(metric)
 	if err != nil {
 		log.Errorf("[MetricServiceServer] error inserting metric: %v", err)
 		return HandleError(err)
@@ -48,19 +48,16 @@ func (svr MetricServiceServer) Send(_ context.Context, req *grpc.MetricServiceSe
 	return HandleSuccess()
 }
 
-func newMetricsServerV2() *MetricServiceServer {
+func newMetricsServer() *MetricServiceServer {
 	return &MetricServiceServer{}
 }
 
-var metricsServerV2 *MetricServiceServer
-var metricsServerV2Once = &sync.Once{}
+var metricsServer *MetricServiceServer
+var metricsServerOnce = &sync.Once{}
 
-func GetMetricsServerV2() *MetricServiceServer {
-	if metricsServerV2 != nil {
-		return metricsServerV2
-	}
-	metricsServerV2Once.Do(func() {
-		metricsServerV2 = newMetricsServerV2()
+func GetMetricsServer() *MetricServiceServer {
+	metricsServerOnce.Do(func() {
+		metricsServer = newMetricsServer()
 	})
-	return metricsServerV2
+	return metricsServer
 }

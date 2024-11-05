@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/apex/log"
-	"github.com/crawlab-team/crawlab/core/models/models/v2"
+	"github.com/crawlab-team/crawlab/core/models/models"
 	"github.com/crawlab-team/crawlab/trace"
 	"github.com/imroc/req"
 	"regexp"
@@ -16,7 +16,7 @@ type ResBody struct {
 	ErrMsg  string `json:"errmsg"`
 }
 
-func SendIMNotification(ch *models.NotificationChannelV2, title, content string) error {
+func SendIMNotification(ch *models.NotificationChannel, title, content string) error {
 	switch ch.Provider {
 	case ChannelIMProviderLark:
 		return sendIMLark(ch, title, content)
@@ -192,7 +192,7 @@ func convertMarkdownToTelegram(markdownText string) string {
 	return markdownText
 }
 
-func sendIMLark(ch *models.NotificationChannelV2, title, content string) error {
+func sendIMLark(ch *models.NotificationChannel, title, content string) error {
 	data := req.Param{
 		"msg_type": "interactive",
 		"card": req.Param{
@@ -220,7 +220,7 @@ func sendIMLark(ch *models.NotificationChannelV2, title, content string) error {
 	return nil
 }
 
-func sendIMDingTalk(ch *models.NotificationChannelV2, title string, content string) error {
+func sendIMDingTalk(ch *models.NotificationChannel, title string, content string) error {
 	data := req.Param{
 		"msgtype": "markdown",
 		"markdown": req.Param{
@@ -238,7 +238,7 @@ func sendIMDingTalk(ch *models.NotificationChannelV2, title string, content stri
 	return nil
 }
 
-func sendIMWechatWork(ch *models.NotificationChannelV2, title string, content string) error {
+func sendIMWechatWork(ch *models.NotificationChannel, title string, content string) error {
 	data := req.Param{
 		"msgtype": "markdown",
 		"markdown": req.Param{
@@ -255,7 +255,7 @@ func sendIMWechatWork(ch *models.NotificationChannelV2, title string, content st
 	return nil
 }
 
-func sendIMSlack(ch *models.NotificationChannelV2, title, content string) error {
+func sendIMSlack(ch *models.NotificationChannel, title, content string) error {
 	data := req.Param{
 		"blocks": []req.Param{
 			{"type": "header", "text": req.Param{"type": "plain_text", "text": title}},
@@ -269,7 +269,7 @@ func sendIMSlack(ch *models.NotificationChannelV2, title, content string) error 
 	return nil
 }
 
-func sendIMTelegram(ch *models.NotificationChannelV2, title string, content string) error {
+func sendIMTelegram(ch *models.NotificationChannel, title string, content string) error {
 	type ResBody struct {
 		Ok          bool   `json:"ok"`
 		Description string `json:"description"`
@@ -305,7 +305,7 @@ func sendIMTelegram(ch *models.NotificationChannelV2, title string, content stri
 	return nil
 }
 
-func sendIMDiscord(ch *models.NotificationChannelV2, title string, content string) error {
+func sendIMDiscord(ch *models.NotificationChannel, title string, content string) error {
 	data := req.Param{
 		"embeds": []req.Param{
 			{
@@ -321,7 +321,7 @@ func sendIMDiscord(ch *models.NotificationChannelV2, title string, content strin
 	return nil
 }
 
-func sendIMMSTeams(ch *models.NotificationChannelV2, title string, content string) error {
+func sendIMMSTeams(ch *models.NotificationChannel, title string, content string) error {
 	data := req.Param{
 		"type": "message",
 		"attachments": []req.Param{{

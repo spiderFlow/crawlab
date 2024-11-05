@@ -2,11 +2,9 @@ package admin
 
 import (
 	"errors"
-	log2 "github.com/apex/log"
-	config2 "github.com/crawlab-team/crawlab/core/config"
 	"github.com/crawlab-team/crawlab/core/constants"
 	"github.com/crawlab-team/crawlab/core/interfaces"
-	models2 "github.com/crawlab-team/crawlab/core/models/models/v2"
+	"github.com/crawlab-team/crawlab/core/models/models"
 	"github.com/crawlab-team/crawlab/core/models/service"
 	"github.com/crawlab-team/crawlab/core/node/config"
 	"github.com/crawlab-team/crawlab/core/task/scheduler"
@@ -18,17 +16,12 @@ import (
 
 type Service struct {
 	// dependencies
-	nodeCfgSvc   interfaces.NodeConfigService
 	schedulerSvc *scheduler.Service
-	syncLock     bool
-
-	// settings
-	cfgPath string
 }
 
 func (svc *Service) Schedule(id primitive.ObjectID, opts *interfaces.SpiderRunOptions) (taskIds []primitive.ObjectID, err error) {
 	// spider
-	s, err := service.NewModelService[models2.SpiderV2]().GetById(id)
+	s, err := service.NewModelService[models.Spider]().GetById(id)
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +30,7 @@ func (svc *Service) Schedule(id primitive.ObjectID, opts *interfaces.SpiderRunOp
 	return svc.scheduleTasks(s, opts)
 }
 
-func (svc *Service) scheduleTasks(s *models2.SpiderV2, opts *interfaces.SpiderRunOptions) (taskIds []primitive.ObjectID, err error) {
+func (svc *Service) scheduleTasks(s *models.Spider, opts *interfaces.SpiderRunOptions) (taskIds []primitive.ObjectID, err error) {
 	// get node ids
 	nodeIds, err := svc.getNodeIds(opts)
 	if err != nil {
@@ -47,7 +40,7 @@ func (svc *Service) scheduleTasks(s *models2.SpiderV2, opts *interfaces.SpiderRu
 	// iterate node ids
 	for _, nodeId := range nodeIds {
 		// task
-		t := &models2.TaskV2{
+		t := &models.Task{
 			SpiderId:   s.Id,
 			NodeId:     nodeId,
 			NodeIds:    opts.NodeIds,
@@ -95,7 +88,7 @@ func (svc *Service) getNodeIds(opts *interfaces.SpiderRunOptions) (nodeIds []pri
 			"enabled": true,
 			"status":  constants.NodeStatusOnline,
 		}
-		nodes, err := service.NewModelService[models2.NodeV2]().GetMany(query, nil)
+		nodes, err := service.NewModelService[models.Node]().GetMany(query, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -119,7 +112,7 @@ func (svc *Service) isMultiTask(opts *interfaces.SpiderRunOptions) (res bool) {
 			"enabled": true,
 			"status":  constants.NodeStatusOnline,
 		}
-		nodes, err := service.NewModelService[models2.NodeV2]().GetMany(query, nil)
+		nodes, err := service.NewModelService[models.Node]().GetMany(query, nil)
 		if err != nil {
 			trace.PrintError(err)
 			return false
@@ -134,39 +127,23 @@ func (svc *Service) isMultiTask(opts *interfaces.SpiderRunOptions) (res bool) {
 	}
 }
 
-func newSpiderAdminService() (svc2 *Service, err error) {
-	svc := &Service{
-		nodeCfgSvc: config.GetNodeConfigService(),
-		cfgPath:    config2.GetConfigPath(),
-	}
-	svc.schedulerSvc, err = scheduler.GetTaskSchedulerService()
-	if err != nil {
-		return nil, err
-	}
-
+func newSpiderAdminService() *Service {
+	nodeCfgSvc := config.GetNodeConfigService()
 	// validate node type
-	if !svc.nodeCfgSvc.IsMaster() {
-		return nil, errors.New("only master node can run spider admin service")
+	if !nodeCfgSvc.IsMaster() {
+		panic("only master node can run spider admin service")
 	}
-
-	return svc, nil
+	return &Service{
+		schedulerSvc: scheduler.GetTaskSchedulerService(),
+	}
 }
 
-var svc *Service
-var svcOnce = new(sync.Once)
+var _service *Service
+var _serviceOnce sync.Once
 
-func GetSpiderAdminService() (svc2 *Service, err error) {
-	if svc != nil {
-		return svc, nil
-	}
-	svcOnce.Do(func() {
-		svc, err = newSpiderAdminService()
-		if err != nil {
-			log2.Errorf("[GetSpiderAdminService] error: %v", err)
-		}
+func GetSpiderAdminService() *Service {
+	_serviceOnce.Do(func() {
+		_service = newSpiderAdminService()
 	})
-	if err != nil {
-		return nil, err
-	}
-	return svc, nil
+	return _service
 }

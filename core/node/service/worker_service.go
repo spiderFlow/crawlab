@@ -5,13 +5,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/crawlab-team/crawlab/core/models/models"
+
 	"github.com/apex/log"
 	"github.com/cenkalti/backoff/v4"
 	"github.com/crawlab-team/crawlab/core/config"
 	"github.com/crawlab-team/crawlab/core/grpc/client"
 	"github.com/crawlab-team/crawlab/core/interfaces"
 	client2 "github.com/crawlab-team/crawlab/core/models/client"
-	"github.com/crawlab-team/crawlab/core/models/models/v2"
 	nodeconfig "github.com/crawlab-team/crawlab/core/node/config"
 	"github.com/crawlab-team/crawlab/core/task/handler"
 	"github.com/crawlab-team/crawlab/core/utils"
@@ -33,13 +34,8 @@ type WorkerService struct {
 
 	// internals
 	stopped bool
-	n       *models.NodeV2
+	n       *models.Node
 	s       grpc.NodeService_SubscribeClient
-}
-
-func (svc *WorkerService) Init() (err error) {
-	// do nothing
-	return nil
 }
 
 func (svc *WorkerService) Start() {
@@ -90,7 +86,7 @@ func (svc *WorkerService) register() {
 		log.Fatalf("failed to register worker[%s] to master: %v", svc.cfgSvc.GetNodeKey(), err)
 		panic(err)
 	}
-	svc.n, err = client2.NewModelService[models.NodeV2]().GetOne(bson.M{"key": svc.GetConfigService().GetNodeKey()}, nil)
+	svc.n, err = client2.NewModelService[models.Node]().GetOne(bson.M{"key": svc.GetConfigService().GetNodeKey()}, nil)
 	if err != nil {
 		log.Fatalf("failed to get node: %v", err)
 		panic(err)
@@ -197,42 +193,22 @@ func (svc *WorkerService) sendHeartbeat() {
 	}
 }
 
-var workerServiceV2 *WorkerService
-var workerServiceV2Once = new(sync.Once)
-
-func newWorkerService() (res *WorkerService, err error) {
-	svc := &WorkerService{
+func newWorkerService() *WorkerService {
+	return &WorkerService{
 		cfgPath:           config.GetConfigPath(),
 		heartbeatInterval: 15 * time.Second,
+		cfgSvc:            nodeconfig.GetNodeConfigService(),
+		client:            client.GetGrpcClient(),
+		handlerSvc:        handler.GetTaskHandlerService(),
 	}
-
-	// node config service
-	svc.cfgSvc = nodeconfig.GetNodeConfigService()
-
-	// grpc client
-	svc.client = client.GetGrpcClient()
-
-	// handler service
-	svc.handlerSvc, err = handler.GetTaskHandlerService()
-	if err != nil {
-		return nil, err
-	}
-
-	// init
-	err = svc.Init()
-	if err != nil {
-		return nil, err
-	}
-
-	return svc, nil
 }
 
-func GetWorkerService() (res *WorkerService, err error) {
-	workerServiceV2Once.Do(func() {
-		workerServiceV2, err = newWorkerService()
-		if err != nil {
-			log.Errorf("failed to get worker service: %v", err)
-		}
+var workerService *WorkerService
+var workerServiceOnce sync.Once
+
+func GetWorkerService() *WorkerService {
+	workerServiceOnce.Do(func() {
+		workerService = newWorkerService()
 	})
-	return workerServiceV2, err
+	return workerService
 }

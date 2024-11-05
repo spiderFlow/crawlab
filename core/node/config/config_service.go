@@ -116,7 +116,7 @@ func newNodeConfigService() (svc2 interfaces.NodeConfigService, err error) {
 }
 
 var _service interfaces.NodeConfigService
-var _serviceOnce = new(sync.Once)
+var _serviceOnce sync.Once
 
 func GetNodeConfigService() interfaces.NodeConfigService {
 	_serviceOnce.Do(func() {
