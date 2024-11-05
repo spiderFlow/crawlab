@@ -2,6 +2,9 @@ package client
 
 import (
 	"encoding/json"
+	"reflect"
+	"sync"
+
 	"github.com/crawlab-team/crawlab/core/grpc/client"
 	"github.com/crawlab-team/crawlab/core/interfaces"
 	nodeconfig "github.com/crawlab-team/crawlab/core/node/config"
@@ -9,8 +12,6 @@ import (
 	"github.com/crawlab-team/crawlab/grpc"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"reflect"
-	"sync"
 )
 
 var (
@@ -255,11 +256,6 @@ func (svc *ModelService[T]) InsertOne(model T) (id primitive.ObjectID, err error
 		return primitive.NilObjectID, err
 	}
 	return deserialize[primitive.ObjectID](res)
-	//idStr, err := deserialize[string](res)
-	//if err != nil {
-	//	return primitive.NilObjectID, err
-	//}
-	//return primitive.ObjectIDFromHex(idStr)
 }
 
 func (svc *ModelService[T]) InsertMany(models []T) (ids []primitive.ObjectID, err error) {
@@ -278,6 +274,30 @@ func (svc *ModelService[T]) InsertMany(models []T) (ids []primitive.ObjectID, er
 		return nil, err
 	}
 	return deserialize[[]primitive.ObjectID](res)
+}
+
+func (svc *ModelService[T]) UpsertOne(query bson.M, model T) (id primitive.ObjectID, err error) {
+	ctx, cancel := svc.c.Context()
+	defer cancel()
+	queryData, err := json.Marshal(query)
+	if err != nil {
+		return primitive.NilObjectID, err
+	}
+	modelData, err := json.Marshal(model)
+	if err != nil {
+		return primitive.NilObjectID, err
+	}
+	res, err := svc.c.ModelBaseServiceClient.UpsertOne(ctx, &grpc.ModelServiceUpsertOneRequest{
+		NodeKey:   svc.cfg.GetNodeKey(),
+		ModelType: svc.modelType,
+		Query:     queryData,
+		Model:     modelData,
+	})
+	if err != nil {
+		return primitive.NilObjectID, err
+	}
+
+	return deserialize[primitive.ObjectID](res)
 }
 
 func (svc *ModelService[T]) Count(query bson.M) (total int, err error) {

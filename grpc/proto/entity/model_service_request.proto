@@ -88,6 +88,13 @@ message ModelServiceInsertManyRequest {
   bytes models = 3;
 }
 
+message ModelServiceUpsertOneRequest {
+  string node_key = 1;
+  string model_type = 2;
+  bytes query = 3;
+  bytes model = 4;
+}
+
 message ModelServiceCountRequest {
   string node_key = 1;
   string model_type = 2;

@@ -3,9 +3,10 @@ package service
 import (
 	"context"
 	"fmt"
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"reflect"
 	"sync"
+
+	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"github.com/crawlab-team/crawlab/core/interfaces"
 	"github.com/crawlab-team/crawlab/db/mongo"
@@ -248,6 +249,44 @@ func (svc *ModelService[T]) InsertManyContext(ctx context.Context, models []T) (
 		ids = append(ids, v.(primitive.ObjectID))
 	}
 	return ids, nil
+}
+func (svc *ModelService[T]) UpsertOne(query bson.M, model T) (id primitive.ObjectID, err error) {
+	opts := options.ReplaceOptions{}
+	opts.SetUpsert(true)
+	result, err := svc.col.GetCollection().ReplaceOne(svc.col.GetContext(), query, model, &opts)
+	if err != nil {
+		return primitive.NilObjectID, err
+	}
+
+	if result.UpsertedID != nil {
+		// If document was inserted
+		return result.UpsertedID.(primitive.ObjectID), nil
+	}
+
+	// If document was updated, get its ID from the model
+	m := any(&model).(interfaces.Model)
+	return m.GetId(), nil
+}
+
+func (svc *ModelService[T]) UpsertOneContext(ctx context.Context, query bson.M, model T) (id primitive.ObjectID, err error) {
+	opts := options.ReplaceOptions{}
+	opts.SetUpsert(true)
+	result, err := svc.col.GetCollection().ReplaceOne(ctx, query, model, &opts)
+	if err != nil {
+		return primitive.NilObjectID, err
+	}
+
+	if result.UpsertedID != nil {
+		// If document was inserted
+		return result.UpsertedID.(primitive.ObjectID), nil
+	}
+
+	// If document was updated, get its ID from the query or model
+	if id, ok := query["_id"].(primitive.ObjectID); ok {
+		return id, nil
+	}
+	m := any(&model).(interfaces.Model)
+	return m.GetId(), nil
 }
 
 func (svc *ModelService[T]) Count(query bson.M) (total int, err error) {

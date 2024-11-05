@@ -20,5 +20,6 @@ service ModelBaseService {
   rpc ReplaceOne(ModelServiceReplaceOneRequest) returns (Response){};
   rpc InsertOne(ModelServiceInsertOneRequest) returns (Response){};
   rpc InsertMany(ModelServiceInsertManyRequest) returns (Response){};
+  rpc UpsertOne(ModelServiceUpsertOneRequest) returns (Response){};
   rpc Count(ModelServiceCountRequest) returns (Response){};
 }

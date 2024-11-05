@@ -34,10 +34,8 @@ message DependencyServiceSyncRequest {
 }
 
 message DependencyServiceUpdateLogsRequest {
-  string node_key = 1;
-  string lang = 2;
-  string name = 3;
-  repeated string logs = 4;
+  string dependency_id = 1;
+  repeated string logs = 2;
 }
 
 service DependencyService {
