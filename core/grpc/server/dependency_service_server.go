@@ -143,7 +143,6 @@ func (svr DependencyServiceServer) Sync(_ context.Context, request *grpc.Depende
 }
 
 func (svr DependencyServiceServer) UpdateLogs(stream grpc.DependencyService_UpdateLogsServer) (err error) {
-	var n *models.Node
 	var dep *models.Dependency
 	for {
 		// receive message
@@ -154,15 +153,6 @@ func (svr DependencyServiceServer) UpdateLogs(stream grpc.DependencyService_Upda
 		}
 		if err != nil {
 			return err
-		}
-
-		// if node is nil, get node
-		if n == nil {
-			n, err = service.NewModelService[models.Node]().GetOne(bson.M{"key": req.NodeKey}, nil)
-			if err != nil {
-				log.Errorf("[DependencyServiceServer] get node error: %v", err)
-				return err
-			}
 		}
 
 		// if dependency is nil, get dependency
