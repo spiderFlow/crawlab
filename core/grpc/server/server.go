@@ -173,3 +173,7 @@ func GetGrpcServer() *GrpcServer {
 	})
 	return _server
 }
+
+func NewGrpcServer() *GrpcServer {
+	return newGrpcServer()
+}
