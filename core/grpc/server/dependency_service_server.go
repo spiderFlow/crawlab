@@ -7,9 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/crawlab-team/crawlab-pro/core/dependency/constants"
-
 	"github.com/apex/log"
+	"github.com/crawlab-team/crawlab/core/constants"
 	"github.com/crawlab-team/crawlab/core/models/models"
 	"github.com/crawlab-team/crawlab/core/models/service"
 	mongo2 "github.com/crawlab-team/crawlab/db/mongo"
