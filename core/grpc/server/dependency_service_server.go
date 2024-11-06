@@ -100,7 +100,10 @@ func (svr DependencyServiceServer) Sync(_ context.Context, request *grpc.Depende
 	for _, d := range depsDb {
 		_, ok := depsMap[d.Name]
 		if !ok {
-			depIdsToDelete = append(depIdsToDelete, d.Id)
+			// Only delete dependencies that are uninstalled/error/abnormal and older than 7 days
+			if d.Status != constants.DependencyStatusInstalled && time.Since(d.UpdatedAt) > 7*24*time.Hour {
+				depIdsToDelete = append(depIdsToDelete, d.Id)
+			}
 		}
 	}
 
