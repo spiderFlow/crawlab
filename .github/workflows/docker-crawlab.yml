@@ -345,6 +345,7 @@ jobs:
           username: ${{ (matrix.registry == 'dockerhub' && secrets.DOCKER_USERNAME) || (matrix.registry == 'tencent' && secrets.DOCKER_TENCENT_USERNAME) }}
           password: ${{ (matrix.registry == 'dockerhub' && secrets.DOCKER_PASSWORD) || (matrix.registry == 'tencent' && secrets.DOCKER_TENCENT_PASSWORD) }}
       - name: Tag and push image
+        if: ${{ matrix.registry == 'dockerhub' || (matrix.registry == 'tencent' && github.ref != 'refs/heads/develop') }}
         run: |
           docker tag ${{ env.IMAGE_NAME_CRAWLAB }}:${{ needs.setup.outputs.version }} ${{ (matrix.registry == 'dockerhub' && env.IMAGE_NAME_CRAWLAB_DOCKERHUB) || (matrix.registry == 'tencent' && env.IMAGE_NAME_CRAWLAB_TENCENT) }}:${{ needs.setup.outputs.version }}
           docker push ${{ (matrix.registry == 'dockerhub' && env.IMAGE_NAME_CRAWLAB_DOCKERHUB) || (matrix.registry == 'tencent' && env.IMAGE_NAME_CRAWLAB_TENCENT) }}:${{ needs.setup.outputs.version }}
