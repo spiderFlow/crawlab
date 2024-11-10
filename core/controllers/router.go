@@ -1,10 +1,11 @@
 package controllers
 
 import (
+	"net/http"
+
 	"github.com/crawlab-team/crawlab/core/middlewares"
 	"github.com/crawlab-team/crawlab/core/models/models"
 	"github.com/gin-gonic/gin"
-	"net/http"
 )
 
 type RouterGroups struct {
@@ -229,6 +230,16 @@ func InitRoutes(app *gin.Engine) (err error) {
 		},
 	}...))
 	RegisterController(groups.AuthGroup, "/users", NewController[models.User]([]Action{
+		{
+			Method:      http.MethodPost,
+			Path:        "/:id",
+			HandlerFunc: GetUserById,
+		},
+		{
+			Method:      http.MethodGet,
+			Path:        "",
+			HandlerFunc: GetUserList,
+		},
 		{
 			Method:      http.MethodPost,
 			Path:        "",
