@@ -62,8 +62,9 @@ func InitIndexes() {
 
 	// users
 	RecreateIndexes(mongo.GetMongoCol(service.GetCollectionNameByInstance(models.User{})), []mongo2.IndexModel{
-		{Keys: bson.M{"username": 1}},
+		{Keys: bson.M{"username": 1}, Options: (&options.IndexOptions{}).SetUnique(true)},
 		{Keys: bson.M{"role": 1}},
+		{Keys: bson.M{"role_id": 1}},
 		{Keys: bson.M{"email": 1}},
 	})
 
@@ -74,11 +75,6 @@ func InitIndexes() {
 
 	// tokens
 	RecreateIndexes(mongo.GetMongoCol(service.GetCollectionNameByInstance(models.Token{})), []mongo2.IndexModel{
-		{Keys: bson.M{"name": 1}},
-	})
-
-	// data collections
-	RecreateIndexes(mongo.GetMongoCol(service.GetCollectionNameByInstance(models.DataCollection{})), []mongo2.IndexModel{
 		{Keys: bson.M{"name": 1}},
 	})
 }

@@ -27,14 +27,16 @@ func GetUserById(c *gin.Context) {
 	}
 
 	// get role
-	if !user.RoleId.IsZero() {
-		role, err := service.NewModelService[models.Role]().GetById(user.RoleId)
-		if err != nil {
-			HandleErrorInternalServerError(c, err)
-			return
+	if utils.IsPro() {
+		if !user.RoleId.IsZero() {
+			role, err := service.NewModelService[models.Role]().GetById(user.RoleId)
+			if err != nil {
+				HandleErrorInternalServerError(c, err)
+				return
+			}
+			user.Role = role.Name
+			user.IsAdmin = role.Admin
 		}
-		user.Role = role.Name
-		user.IsAdmin = role.Admin
 	}
 
 	HandleSuccessWithData(c, user)
@@ -62,31 +64,33 @@ func GetUserList(c *gin.Context) {
 	}
 
 	// get roles
-	var roleIds []primitive.ObjectID
-	for _, user := range users {
-		if !user.RoleId.IsZero() {
-			roleIds = append(roleIds, user.RoleId)
-		}
-	}
-	if len(roleIds) > 0 {
-		roles, err := service.NewModelService[models.Role]().GetMany(bson.M{
-			"_id": bson.M{"$in": roleIds},
-		}, nil)
-		if err != nil {
-			HandleErrorInternalServerError(c, err)
-			return
-		}
-		rolesMap := make(map[primitive.ObjectID]models.Role)
-		for _, role := range roles {
-			rolesMap[role.Id] = role
-		}
-		for i, user := range users {
-			if user.RoleId.IsZero() {
-				continue
+	if utils.IsPro() {
+		var roleIds []primitive.ObjectID
+		for _, user := range users {
+			if !user.RoleId.IsZero() {
+				roleIds = append(roleIds, user.RoleId)
 			}
-			if role, ok := rolesMap[user.RoleId]; ok {
-				users[i].Role = role.Name
-				users[i].IsAdmin = role.Admin
+		}
+		if len(roleIds) > 0 {
+			roles, err := service.NewModelService[models.Role]().GetMany(bson.M{
+				"_id": bson.M{"$in": roleIds},
+			}, nil)
+			if err != nil {
+				HandleErrorInternalServerError(c, err)
+				return
+			}
+			rolesMap := make(map[primitive.ObjectID]models.Role)
+			for _, role := range roles {
+				rolesMap[role.Id] = role
+			}
+			for i, user := range users {
+				if user.RoleId.IsZero() {
+					continue
+				}
+				if role, ok := rolesMap[user.RoleId]; ok {
+					users[i].Role = role.Name
+					users[i].IsAdmin = role.Admin
+				}
 			}
 		}
 	}
@@ -144,7 +148,6 @@ func PostUser(c *gin.Context) {
 	}
 
 	HandleSuccessWithData(c, result)
-
 }
 
 func PostUserChangePassword(c *gin.Context) {
@@ -163,20 +166,24 @@ func PostUserChangePassword(c *gin.Context) {
 		HandleErrorBadRequest(c, err)
 		return
 	}
+	if len(payload.Password) < 5 {
+		HandleErrorBadRequest(c, errors.New("password must be at least 5 characters"))
+		return
+	}
 
 	// get user
 	u := GetUserFromContext(c)
 	modelSvc := service.NewModelService[models.User]()
 
 	// update password
-	user, err := modelSvc.GetById(id)
+	userDb, err := modelSvc.GetById(id)
 	if err != nil {
 		HandleErrorInternalServerError(c, err)
 		return
 	}
-	user.SetUpdated(u.Id)
-	user.Password = utils.EncryptMd5(payload.Password)
-	if err := modelSvc.ReplaceById(user.Id, *user); err != nil {
+	userDb.SetUpdated(u.Id)
+	userDb.Password = utils.EncryptMd5(payload.Password)
+	if err := modelSvc.ReplaceById(userDb.Id, *userDb); err != nil {
 		HandleErrorInternalServerError(c, err)
 		return
 	}
@@ -192,6 +199,20 @@ func GetUserMe(c *gin.Context) {
 		HandleErrorInternalServerError(c, err)
 		return
 	}
+
+	if utils.IsPro() {
+		if !_u.RoleId.IsZero() {
+			r, err := service.NewModelService[models.Role]().GetById(_u.RoleId)
+			if err != nil {
+				HandleErrorInternalServerError(c, err)
+				return
+			}
+			_u.Role = r.Name
+			_u.IsAdmin = r.Admin
+			_u.Routes = r.Routes
+		}
+	}
+
 	HandleSuccessWithData(c, _u)
 }
 
@@ -206,6 +227,7 @@ func PutUserById(c *gin.Context) {
 	// get user
 	u := GetUserFromContext(c)
 
+	// model service
 	modelSvc := service.NewModelService[models.User]()
 
 	// update user
@@ -214,7 +236,17 @@ func PutUserById(c *gin.Context) {
 		HandleErrorInternalServerError(c, err)
 		return
 	}
+
+	// if root admin, disallow changing username and role
+	if userDb.RootAdmin {
+		user.Username = userDb.Username
+		user.RoleId = userDb.RoleId
+	}
+
+	// disallow changing password
 	user.Password = userDb.Password
+
+	// update user
 	user.SetUpdated(u.Id)
 	if user.Id.IsZero() {
 		user.Id = u.Id
