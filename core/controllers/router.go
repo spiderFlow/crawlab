@@ -256,6 +256,16 @@ func InitRoutes(app *gin.Engine) (err error) {
 			HandlerFunc: PostUserChangePassword,
 		},
 		{
+			Method:      http.MethodDelete,
+			Path:        "/:id",
+			HandlerFunc: DeleteUserById,
+		},
+		{
+			Method:      http.MethodDelete,
+			Path:        "",
+			HandlerFunc: DeleteUserList,
+		},
+		{
 			Method:      http.MethodGet,
 			Path:        "/me",
 			HandlerFunc: GetUserMe,
