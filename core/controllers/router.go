@@ -258,7 +258,12 @@ func InitRoutes(app *gin.Engine) (err error) {
 		{
 			Method:      http.MethodPut,
 			Path:        "/me",
-			HandlerFunc: PutUserById,
+			HandlerFunc: PutUserMe,
+		},
+		{
+			Method:      http.MethodPost,
+			Path:        "/me/change-password",
+			HandlerFunc: PostUserMeChangePassword,
 		},
 	}...))
 
