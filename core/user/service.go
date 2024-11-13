@@ -2,6 +2,7 @@ package user
 
 import (
 	errors2 "errors"
+	"fmt"
 	"github.com/apex/log"
 	"github.com/crawlab-team/crawlab/core/constants"
 	"github.com/crawlab-team/crawlab/core/errors"
@@ -181,37 +182,35 @@ func (svc *Service) makeToken(user *models.User) (tokenStr string, err error) {
 func (svc *Service) checkToken(tokenStr string) (user *models.User, err error) {
 	token, err := jwt.Parse(tokenStr, svc.getSecretFunc())
 	if err != nil {
-		return
+		return nil, errors2.New("invalid token")
 	}
 
 	claim, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		err = errors.ErrorUserInvalidType
-		return
+		return nil, errors2.New("invalid type")
 	}
 
 	if !token.Valid {
-		err = errors.ErrorUserInvalidToken
-		return
+		return nil, errors2.New("invalid token")
 	}
 
 	id, err := primitive.ObjectIDFromHex(claim["id"].(string))
 	if err != nil {
-		return user, err
+		return nil, errors2.New("invalid token")
 	}
+	fmt.Println(id)
 	username := claim["username"].(string)
-	user, err = service.NewModelService[models.User]().GetById(id)
+	u, err := service.NewModelService[models.User]().GetById(id)
 	if err != nil {
-		err = errors.ErrorUserNotExists
-		return
+		return nil, errors2.New("user not exists")
+	}
+	fmt.Println(fmt.Sprintf("%v", u))
+
+	if username != u.Username {
+		return nil, errors2.New("username mismatch")
 	}
 
-	if username != user.Username {
-		err = errors.ErrorUserMismatch
-		return
-	}
-
-	return
+	return u, nil
 }
 
 func (svc *Service) getSecretFunc() jwt.Keyfunc {

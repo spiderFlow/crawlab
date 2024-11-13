@@ -2,6 +2,9 @@ package controllers
 
 import (
 	"errors"
+	"fmt"
+	"regexp"
+
 	"github.com/crawlab-team/crawlab/core/models/models"
 	"github.com/crawlab-team/crawlab/core/models/service"
 	"github.com/crawlab-team/crawlab/core/utils"
@@ -97,6 +100,16 @@ func PostUser(c *gin.Context) {
 		HandleErrorBadRequest(c, err)
 		return
 	}
+
+	// Validate email format
+	if payload.Email != "" {
+		emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
+		if !emailRegex.MatchString(payload.Email) {
+			HandleErrorBadRequest(c, fmt.Errorf("invalid email format"))
+			return
+		}
+	}
+
 	if !payload.RoleId.IsZero() {
 		_, err := service.NewModelService[models.Role]().GetById(payload.RoleId)
 		if err != nil {
@@ -221,9 +234,9 @@ func putUser(userId primitive.ObjectID, c *gin.Context) {
 	// update user
 	user.SetUpdated(u.Id)
 	if user.Id.IsZero() {
-		user.Id = u.Id
+		user.Id = userId
 	}
-	if err := modelSvc.ReplaceById(u.Id, user); err != nil {
+	if err := modelSvc.ReplaceById(userId, user); err != nil {
 		HandleErrorInternalServerError(c, err)
 		return
 	}
