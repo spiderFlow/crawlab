@@ -231,7 +231,7 @@ func InitRoutes(app *gin.Engine) (err error) {
 	}...))
 	RegisterController(groups.AuthGroup, "/users", NewController[models.User]([]Action{
 		{
-			Method:      http.MethodPost,
+			Method:      http.MethodGet,
 			Path:        "/:id",
 			HandlerFunc: GetUserById,
 		},
@@ -244,6 +244,11 @@ func InitRoutes(app *gin.Engine) (err error) {
 			Method:      http.MethodPost,
 			Path:        "",
 			HandlerFunc: PostUser,
+		},
+		{
+			Method:      http.MethodPut,
+			Path:        "/:id",
+			HandlerFunc: PutUserById,
 		},
 		{
 			Method:      http.MethodPost,
