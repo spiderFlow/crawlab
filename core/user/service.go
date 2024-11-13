@@ -2,7 +2,6 @@ package user
 
 import (
 	errors2 "errors"
-	"fmt"
 	"github.com/apex/log"
 	"github.com/crawlab-team/crawlab/core/constants"
 	"github.com/crawlab-team/crawlab/core/errors"
@@ -198,13 +197,11 @@ func (svc *Service) checkToken(tokenStr string) (user *models.User, err error) {
 	if err != nil {
 		return nil, errors2.New("invalid token")
 	}
-	fmt.Println(id)
 	username := claim["username"].(string)
 	u, err := service.NewModelService[models.User]().GetById(id)
 	if err != nil {
 		return nil, errors2.New("user not exists")
 	}
-	fmt.Println(fmt.Sprintf("%v", u))
 
 	if username != u.Username {
 		return nil, errors2.New("username mismatch")
