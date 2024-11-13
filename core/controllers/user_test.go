@@ -423,7 +423,7 @@ func TestDeleteUserById_Success(t *testing.T) {
 
 	w = httptest.NewRecorder()
 	router.ServeHTTP(w, req)
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Equal(t, http.StatusForbidden, w.Code)
 
 	// Test deleting with invalid ID
 	req, err = http.NewRequest(http.MethodDelete, "/users/invalid-id", nil)
@@ -492,7 +492,7 @@ func TestDeleteUserList_Success(t *testing.T) {
 
 	w = httptest.NewRecorder()
 	router.ServeHTTP(w, req)
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Equal(t, http.StatusForbidden, w.Code)
 
 	// Test with mix of valid and invalid ids
 	reqBody = strings.NewReader(fmt.Sprintf(`{"ids":["%s","invalid-id"]}`, normalUserIds[0].Hex()))
