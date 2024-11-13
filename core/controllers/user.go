@@ -18,28 +18,7 @@ func GetUserById(c *gin.Context) {
 		HandleErrorBadRequest(c, err)
 		return
 	}
-
-	// get user
-	user, err := service.NewModelService[models.User]().GetById(id)
-	if err != nil {
-		HandleErrorInternalServerError(c, err)
-		return
-	}
-
-	// get role
-	if utils.IsPro() {
-		if !user.RoleId.IsZero() {
-			role, err := service.NewModelService[models.Role]().GetById(user.RoleId)
-			if err != nil {
-				HandleErrorInternalServerError(c, err)
-				return
-			}
-			user.Role = role.Name
-			user.IsAdmin = role.Admin
-		}
-	}
-
-	HandleSuccessWithData(c, user)
+	getUserById(id, c)
 }
 
 func GetUserList(c *gin.Context) {
@@ -150,6 +129,15 @@ func PostUser(c *gin.Context) {
 	HandleSuccessWithData(c, result)
 }
 
+func PutUserById(c *gin.Context) {
+	id, err := primitive.ObjectIDFromHex(c.Param("id"))
+	if err != nil {
+		HandleErrorBadRequest(c, err)
+		return
+	}
+	putUser(id, c)
+}
+
 func PostUserChangePassword(c *gin.Context) {
 	// get id
 	id, err := primitive.ObjectIDFromHex(c.Param("id"))
@@ -158,65 +146,49 @@ func PostUserChangePassword(c *gin.Context) {
 		return
 	}
 
-	// get payload
-	var payload struct {
-		Password string `json:"password"`
-	}
-	if err := c.ShouldBindJSON(&payload); err != nil {
-		HandleErrorBadRequest(c, err)
-		return
-	}
-	if len(payload.Password) < 5 {
-		HandleErrorBadRequest(c, errors.New("password must be at least 5 characters"))
-		return
-	}
-
-	// get user
-	u := GetUserFromContext(c)
-	modelSvc := service.NewModelService[models.User]()
-
-	// update password
-	userDb, err := modelSvc.GetById(id)
-	if err != nil {
-		HandleErrorInternalServerError(c, err)
-		return
-	}
-	userDb.SetUpdated(u.Id)
-	userDb.Password = utils.EncryptMd5(payload.Password)
-	if err := modelSvc.ReplaceById(userDb.Id, *userDb); err != nil {
-		HandleErrorInternalServerError(c, err)
-		return
-	}
-
-	// handle success
-	HandleSuccess(c)
+	postUserChangePassword(id, c)
 }
 
 func GetUserMe(c *gin.Context) {
 	u := GetUserFromContext(c)
-	_u, err := service.NewModelService[models.User]().GetById(u.Id)
+	getUserById(u.Id, c)
+}
+
+func PutUserMe(c *gin.Context) {
+	u := GetUserFromContext(c)
+	putUser(u.Id, c)
+}
+
+func PostUserMeChangePassword(c *gin.Context) {
+	u := GetUserFromContext(c)
+	postUserChangePassword(u.Id, c)
+}
+
+func getUserById(userId primitive.ObjectID, c *gin.Context) {
+	// get user
+	user, err := service.NewModelService[models.User]().GetById(userId)
 	if err != nil {
 		HandleErrorInternalServerError(c, err)
 		return
 	}
 
+	// get role
 	if utils.IsPro() {
-		if !_u.RoleId.IsZero() {
-			r, err := service.NewModelService[models.Role]().GetById(_u.RoleId)
+		if !user.RoleId.IsZero() {
+			role, err := service.NewModelService[models.Role]().GetById(user.RoleId)
 			if err != nil {
 				HandleErrorInternalServerError(c, err)
 				return
 			}
-			_u.Role = r.Name
-			_u.IsAdmin = r.Admin
-			_u.Routes = r.Routes
+			user.Role = role.Name
+			user.IsAdmin = role.Admin
 		}
 	}
 
-	HandleSuccessWithData(c, _u)
+	HandleSuccessWithData(c, user)
 }
 
-func PutUserById(c *gin.Context) {
+func putUser(userId primitive.ObjectID, c *gin.Context) {
 	// get payload
 	var user models.User
 	if err := c.ShouldBindJSON(&user); err != nil {
@@ -224,14 +196,11 @@ func PutUserById(c *gin.Context) {
 		return
 	}
 
-	// get user
-	u := GetUserFromContext(c)
-
 	// model service
 	modelSvc := service.NewModelService[models.User]()
 
 	// update user
-	userDb, err := modelSvc.GetById(u.Id)
+	userDb, err := modelSvc.GetById(userId)
 	if err != nil {
 		HandleErrorInternalServerError(c, err)
 		return
@@ -246,12 +215,49 @@ func PutUserById(c *gin.Context) {
 	// disallow changing password
 	user.Password = userDb.Password
 
+	// current user
+	u := GetUserFromContext(c)
+
 	// update user
 	user.SetUpdated(u.Id)
 	if user.Id.IsZero() {
 		user.Id = u.Id
 	}
 	if err := modelSvc.ReplaceById(u.Id, user); err != nil {
+		HandleErrorInternalServerError(c, err)
+		return
+	}
+
+	// handle success
+	HandleSuccess(c)
+}
+
+func postUserChangePassword(userId primitive.ObjectID, c *gin.Context) {
+	// get payload
+	var payload struct {
+		Password string `json:"password"`
+	}
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		HandleErrorBadRequest(c, err)
+		return
+	}
+	if len(payload.Password) < 5 {
+		HandleErrorBadRequest(c, errors.New("password must be at least 5 characters"))
+		return
+	}
+
+	// current user
+	u := GetUserFromContext(c)
+
+	// update password
+	userDb, err := service.NewModelService[models.User]().GetById(userId)
+	if err != nil {
+		HandleErrorInternalServerError(c, err)
+		return
+	}
+	userDb.SetUpdated(u.Id)
+	userDb.Password = utils.EncryptMd5(payload.Password)
+	if err := service.NewModelService[models.User]().ReplaceById(userDb.Id, *userDb); err != nil {
 		HandleErrorInternalServerError(c, err)
 		return
 	}

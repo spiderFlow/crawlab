@@ -53,8 +53,6 @@ func GetProjectList(c *gin.Context) {
 
 	// count cache
 	cache := map[primitive.ObjectID]int{}
-
-	// iterate
 	for _, p := range projects {
 		ids = append(ids, p.Id)
 		cache[p.Id] = 0
@@ -80,11 +78,9 @@ func GetProjectList(c *gin.Context) {
 	}
 
 	// assign
-	var data []models.Project
-	for _, p := range projects {
-		p.Spiders = cache[p.Id]
-		data = append(data, p)
+	for i, p := range projects {
+		projects[i].Spiders = cache[p.Id]
 	}
 
-	HandleSuccessWithListData(c, data, total)
+	HandleSuccessWithListData(c, projects, total)
 }

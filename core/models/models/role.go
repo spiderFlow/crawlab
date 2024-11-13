@@ -8,4 +8,5 @@ type Role struct {
 	Routes          []string `json:"routes" bson:"routes"`
 	Admin           bool     `json:"-" bson:"admin,omitempty"`
 	IsAdmin         bool     `json:"admin" bson:"-"`
+	Users           int      `json:"users" bson:"-"`
 }
