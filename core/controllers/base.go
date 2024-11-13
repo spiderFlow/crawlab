@@ -153,7 +153,7 @@ func (ctr *BaseController[T]) DeleteById(c *gin.Context) {
 
 func (ctr *BaseController[T]) DeleteList(c *gin.Context) {
 	type Payload struct {
-		Ids []primitive.ObjectID `json:"ids"`
+		Ids []string `json:"ids"`
 	}
 
 	var payload Payload
@@ -162,9 +162,19 @@ func (ctr *BaseController[T]) DeleteList(c *gin.Context) {
 		return
 	}
 
+	var ids []primitive.ObjectID
+	for _, id := range payload.Ids {
+		objectId, err := primitive.ObjectIDFromHex(id)
+		if err != nil {
+			HandleErrorBadRequest(c, err)
+			return
+		}
+		ids = append(ids, objectId)
+	}
+
 	if err := ctr.modelSvc.DeleteMany(bson.M{
 		"_id": bson.M{
-			"$in": payload.Ids,
+			"$in": ids,
 		},
 	}); err != nil {
 		HandleErrorInternalServerError(c, err)

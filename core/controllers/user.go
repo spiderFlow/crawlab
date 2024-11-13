@@ -175,7 +175,7 @@ func DeleteUserById(c *gin.Context) {
 		return
 	}
 	if user.RootAdmin {
-		HandleErrorBadRequest(c, errors.New("root admin cannot be deleted"))
+		HandleErrorForbidden(c, errors.New("root admin cannot be deleted"))
 		return
 	}
 
@@ -217,7 +217,7 @@ func DeleteUserList(c *gin.Context) {
 		"root_admin": true,
 	}, nil)
 	if err == nil {
-		HandleErrorBadRequest(c, errors.New("root admin cannot be deleted"))
+		HandleErrorForbidden(c, errors.New("root admin cannot be deleted"))
 		return
 	}
 	if !errors.Is(err, mongo2.ErrNoDocuments) {
