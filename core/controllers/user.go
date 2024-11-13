@@ -162,6 +162,82 @@ func PostUserChangePassword(c *gin.Context) {
 	postUserChangePassword(id, c)
 }
 
+func DeleteUserById(c *gin.Context) {
+	id, err := primitive.ObjectIDFromHex(c.Param("id"))
+	if err != nil {
+		HandleErrorBadRequest(c, err)
+		return
+	}
+
+	user, err := service.NewModelService[models.User]().GetById(id)
+	if err != nil {
+		HandleErrorInternalServerError(c, err)
+		return
+	}
+	if user.RootAdmin {
+		HandleErrorBadRequest(c, errors.New("root admin cannot be deleted"))
+		return
+	}
+
+	if err := service.NewModelService[models.User]().DeleteById(id); err != nil {
+		HandleErrorInternalServerError(c, err)
+		return
+	}
+
+	HandleSuccess(c)
+}
+
+func DeleteUserList(c *gin.Context) {
+	type Payload struct {
+		Ids []string `json:"ids"`
+	}
+
+	var payload Payload
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		HandleErrorBadRequest(c, err)
+		return
+	}
+
+	// Convert string IDs to ObjectIDs
+	var ids []primitive.ObjectID
+	for _, id := range payload.Ids {
+		objectId, err := primitive.ObjectIDFromHex(id)
+		if err != nil {
+			HandleErrorBadRequest(c, err)
+			return
+		}
+		ids = append(ids, objectId)
+	}
+
+	// Check if root admin is in the list
+	_, err := service.NewModelService[models.User]().GetOne(bson.M{
+		"_id": bson.M{
+			"$in": ids,
+		},
+		"root_admin": true,
+	}, nil)
+	if err == nil {
+		HandleErrorBadRequest(c, errors.New("root admin cannot be deleted"))
+		return
+	}
+	if !errors.Is(err, mongo2.ErrNoDocuments) {
+		HandleErrorInternalServerError(c, err)
+		return
+	}
+
+	// Delete users
+	if err := service.NewModelService[models.User]().DeleteMany(bson.M{
+		"_id": bson.M{
+			"$in": ids,
+		},
+	}); err != nil {
+		HandleErrorInternalServerError(c, err)
+		return
+	}
+
+	HandleSuccess(c)
+}
+
 func GetUserMe(c *gin.Context) {
 	u := GetUserFromContext(c)
 	getUserById(u.Id, c)

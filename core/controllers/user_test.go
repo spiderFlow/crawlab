@@ -1,6 +1,12 @@
 package controllers_test
 
 import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+
 	"github.com/crawlab-team/crawlab/core/controllers"
 	"github.com/crawlab-team/crawlab/core/middlewares"
 	"github.com/crawlab-team/crawlab/core/models/models"
@@ -10,10 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/bson"
-	"net/http"
-	"net/http/httptest"
-	"strings"
-	"testing"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/crawlab-team/crawlab/core/utils"
 )
@@ -361,6 +364,139 @@ func TestPostUserMeChangePassword_Success(t *testing.T) {
 	shortPassword := "123"
 	reqBody = strings.NewReader(`{"password":"` + shortPassword + `"}`)
 	req, err = http.NewRequest(http.MethodPost, "/users/me/change-password", reqBody)
+	assert.Nil(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", TestToken)
+
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestDeleteUserById_Success(t *testing.T) {
+	SetupTestDB()
+	defer CleanupTestDB()
+
+	// Create test user
+	modelSvc := service.NewModelService[models.User]()
+	u := models.User{
+		Username: "testuser",
+		Email:    "test@example.com",
+		Password: utils.EncryptMd5("testpassword"),
+	}
+	id, err := modelSvc.InsertOne(u)
+	require.Nil(t, err)
+	u.SetId(id)
+
+	router := gin.Default()
+	router.Use(middlewares.AuthorizationMiddleware())
+	router.DELETE("/users/:id", controllers.DeleteUserById)
+
+	// Test deleting normal user
+	req, err := http.NewRequest(http.MethodDelete, "/users/"+id.Hex(), nil)
+	assert.Nil(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", TestToken)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	// Verify user was deleted
+	_, err = modelSvc.GetById(id)
+	assert.NotNil(t, err)
+
+	// Test deleting root admin user
+	rootAdmin := models.User{
+		Username:  "rootadmin",
+		Email:     "root@example.com",
+		Password:  utils.EncryptMd5("rootpass"),
+		RootAdmin: true,
+	}
+	rootId, err := modelSvc.InsertOne(rootAdmin)
+	require.Nil(t, err)
+
+	req, err = http.NewRequest(http.MethodDelete, "/users/"+rootId.Hex(), nil)
+	assert.Nil(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", TestToken)
+
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	// Test deleting with invalid ID
+	req, err = http.NewRequest(http.MethodDelete, "/users/invalid-id", nil)
+	assert.Nil(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", TestToken)
+
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestDeleteUserList_Success(t *testing.T) {
+	SetupTestDB()
+	defer CleanupTestDB()
+
+	modelSvc := service.NewModelService[models.User]()
+
+	// Create test users
+	users := []models.User{
+		{Username: "user1", Email: "user1@example.com", Password: utils.EncryptMd5("pass1")},
+		{Username: "user2", Email: "user2@example.com", Password: utils.EncryptMd5("pass2")},
+		{Username: "rootadmin", Email: "root@example.com", Password: utils.EncryptMd5("rootpass"), RootAdmin: true},
+	}
+
+	var userIds []primitive.ObjectID
+	var normalUserIds []primitive.ObjectID
+	for _, user := range users {
+		id, err := modelSvc.InsertOne(user)
+		require.Nil(t, err)
+		userIds = append(userIds, id)
+		if !user.RootAdmin {
+			normalUserIds = append(normalUserIds, id)
+		}
+	}
+
+	router := gin.Default()
+	router.Use(middlewares.AuthorizationMiddleware())
+	router.DELETE("/users", controllers.DeleteUserList)
+
+	// Test deleting normal users
+	reqBody := strings.NewReader(fmt.Sprintf(`{"ids":["%s","%s"]}`,
+		normalUserIds[0].Hex(),
+		normalUserIds[1].Hex()))
+	req, err := http.NewRequest(http.MethodDelete, "/users", reqBody)
+	assert.Nil(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", TestToken)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	// Verify users were deleted
+	for _, id := range normalUserIds {
+		_, err = modelSvc.GetById(id)
+		assert.NotNil(t, err)
+	}
+
+	// Test attempting to delete list including root admin
+	reqBody = strings.NewReader(fmt.Sprintf(`{"ids":["%s"]}`, userIds[2].Hex()))
+	req, err = http.NewRequest(http.MethodDelete, "/users", reqBody)
+	assert.Nil(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", TestToken)
+
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	// Test with mix of valid and invalid ids
+	reqBody = strings.NewReader(fmt.Sprintf(`{"ids":["%s","invalid-id"]}`, normalUserIds[0].Hex()))
+	req, err = http.NewRequest(http.MethodDelete, "/users", reqBody)
 	assert.Nil(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", TestToken)
