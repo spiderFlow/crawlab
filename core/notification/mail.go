@@ -13,9 +13,15 @@ import (
 )
 
 func SendMail(s *models.NotificationSetting, ch *models.NotificationChannel, to, cc, bcc []string, title, content string) error {
+	// sender identity
+	senderIdentity := ch.SMTPUsername
+
 	// sender email
 	senderEmail := ch.SMTPUsername
-	if s.UseCustomSenderEmail {
+	if s != nil && s.UseCustomSenderEmail {
+		if s.SenderName != "" {
+			senderIdentity = s.SenderName
+		}
 		senderEmail = s.SenderEmail
 	}
 
@@ -23,7 +29,7 @@ func SendMail(s *models.NotificationSetting, ch *models.NotificationChannel, to,
 	smtpConfig := smtpAuthentication{
 		Server:         ch.SMTPServer,
 		Port:           ch.SMTPPort,
-		SenderIdentity: s.SenderName,
+		SenderIdentity: senderIdentity,
 		SenderEmail:    senderEmail,
 		SMTPUser:       ch.SMTPUsername,
 		SMTPPassword:   ch.SMTPPassword,

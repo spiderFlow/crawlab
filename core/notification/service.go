@@ -39,7 +39,7 @@ func (svc *Service) Send(s *models.NotificationSetting, args ...any) {
 			case TypeMail:
 				svc.SendMail(s, ch, title, content)
 			case TypeIM:
-				svc.SendIM(s, ch, title, content)
+				svc.SendIM(ch, title, content)
 			}
 		}(chId)
 	}
@@ -52,7 +52,7 @@ func (svc *Service) SendMail(s *models.NotificationSetting, ch *models.Notificat
 	mailBcc := s.MailBcc
 
 	// request
-	r, _ := svc.createRequest(s, ch, title, content)
+	r, _ := svc.createRequestMail(s, ch, title, content)
 
 	// send mail
 	err := SendMail(s, ch, mailTo, mailCc, mailBcc, title, content)
@@ -64,9 +64,9 @@ func (svc *Service) SendMail(s *models.NotificationSetting, ch *models.Notificat
 	go svc.saveRequest(r, err)
 }
 
-func (svc *Service) SendIM(s *models.NotificationSetting, ch *models.NotificationChannel, title, content string) {
+func (svc *Service) SendIM(ch *models.NotificationChannel, title, content string) {
 	// request
-	r, _ := svc.createRequest(s, ch, title, content)
+	r, _ := svc.createRequestIM(ch, title, content, false)
 
 	// send mobile notification
 	err := SendIMNotification(ch, title, content)
@@ -78,7 +78,7 @@ func (svc *Service) SendIM(s *models.NotificationSetting, ch *models.Notificatio
 	go svc.saveRequest(r, err)
 }
 
-func (svc *Service) SendTestMessage(locale string, ch *models.NotificationChannel) (err error) {
+func (svc *Service) SendTestMessage(locale string, ch *models.NotificationChannel, toMail []string) (err error) {
 	// Test message content
 	var title, content string
 	switch locale {
@@ -90,27 +90,44 @@ func (svc *Service) SendTestMessage(locale string, ch *models.NotificationChanne
 		content = "This is a test notification from Crawlab. If you receive this message, your notification channel is configured correctly."
 	}
 
+	// Notification request
+	var r *models.NotificationRequest
+
 	// Send test message based on channel type
 	switch ch.Type {
 	case TypeMail:
-		// For email, we'll send to the SMTP username as a test
-		err = SendMail(nil, ch, []string{ch.SMTPUsername}, nil, nil, title, content)
+		// If toMail is nil, use the default email address
+		if toMail == nil {
+			toMail = []string{ch.SMTPUsername}
+		}
+
+		// Create request
+		r, _ = svc.createRequestMailTest(ch, title, content, toMail)
+
+		// For email
+		err = SendMail(nil, ch, toMail, nil, nil, title, content)
 		if err != nil {
-			return fmt.Errorf("failed to send test email: %v", err)
+			log.Errorf("failed to send test email: %v", err)
 		}
 
 	case TypeIM:
+		// Create request
+		r, _ = svc.createRequestIM(ch, title, content, true)
+
 		// For instant messaging
 		err = SendIMNotification(ch, title, content)
 		if err != nil {
-			return fmt.Errorf("failed to send test IM notification: %v", err)
+			log.Errorf("failed to send test IM notification: %v", err)
 		}
 
 	default:
 		return fmt.Errorf("unsupported notification channel type: %s", ch.Type)
 	}
 
-	return nil
+	// Save request
+	go svc.saveRequest(r, err)
+
+	return err
 }
 
 func (svc *Service) getContent(s *models.NotificationSetting, ch *models.NotificationChannel, args ...any) (content string) {
@@ -499,7 +516,7 @@ func (svc *Service) SendNodeNotification(node *models.Node) {
 	}
 }
 
-func (svc *Service) createRequest(s *models.NotificationSetting, ch *models.NotificationChannel, title, content string) (res *models.NotificationRequest, err error) {
+func (svc *Service) createRequestMail(s *models.NotificationSetting, ch *models.NotificationChannel, title, content string) (res *models.NotificationRequest, err error) {
 	senderEmail := ch.SMTPUsername
 	if s.UseCustomSenderEmail {
 		senderEmail = s.SenderEmail
@@ -515,6 +532,50 @@ func (svc *Service) createRequest(s *models.NotificationSetting, ch *models.Noti
 		MailTo:      s.MailTo,
 		MailCc:      s.MailCc,
 		MailBcc:     s.MailBcc,
+	}
+	r.SetCreatedAt(time.Now())
+	r.SetUpdatedAt(time.Now())
+	r.Id, err = service.NewModelService[models.NotificationRequest]().InsertOne(r)
+	if err != nil {
+		log.Errorf("[NotificationService] save request error: %v", err)
+		return nil, err
+	}
+	return &r, nil
+}
+
+func (svc *Service) createRequestMailTest(ch *models.NotificationChannel, title, content string, mailTo []string) (res *models.NotificationRequest, err error) {
+	if mailTo == nil {
+		mailTo = []string{ch.SMTPUsername}
+	}
+
+	r := models.NotificationRequest{
+		Status:      StatusSending,
+		ChannelId:   ch.Id,
+		Title:       title,
+		Content:     content,
+		SenderEmail: ch.SMTPUsername,
+		SenderName:  ch.SMTPUsername,
+		MailTo:      mailTo,
+		Test:        true,
+	}
+
+	r.SetCreatedAt(time.Now())
+	r.SetUpdatedAt(time.Now())
+	r.Id, err = service.NewModelService[models.NotificationRequest]().InsertOne(r)
+	if err != nil {
+		log.Errorf("[NotificationService] save request error: %v", err)
+		return nil, err
+	}
+	return &r, nil
+}
+
+func (svc *Service) createRequestIM(ch *models.NotificationChannel, title, content string, test bool) (res *models.NotificationRequest, err error) {
+	r := models.NotificationRequest{
+		Status:    StatusSending,
+		ChannelId: ch.Id,
+		Title:     title,
+		Content:   content,
+		Test:      test,
 	}
 	r.SetCreatedAt(time.Now())
 	r.SetUpdatedAt(time.Now())
