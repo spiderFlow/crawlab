@@ -78,6 +78,41 @@ func (svc *Service) SendIM(s *models.NotificationSetting, ch *models.Notificatio
 	go svc.saveRequest(r, err)
 }
 
+func (svc *Service) SendTestMessage(locale string, ch *models.NotificationChannel) (err error) {
+	// Test message content
+	var title, content string
+	switch locale {
+	case "zh":
+		title = "测试通知"
+		content = "这是来自 Crawlab 的测试通知。如果您收到此消息，说明您的通知渠道配置正确。"
+	default:
+		title = "Test Notification"
+		content = "This is a test notification from Crawlab. If you receive this message, your notification channel is configured correctly."
+	}
+
+	// Send test message based on channel type
+	switch ch.Type {
+	case TypeMail:
+		// For email, we'll send to the SMTP username as a test
+		err = SendMail(nil, ch, []string{ch.SMTPUsername}, nil, nil, title, content)
+		if err != nil {
+			return fmt.Errorf("failed to send test email: %v", err)
+		}
+
+	case TypeIM:
+		// For instant messaging
+		err = SendIMNotification(ch, title, content)
+		if err != nil {
+			return fmt.Errorf("failed to send test IM notification: %v", err)
+		}
+
+	default:
+		return fmt.Errorf("unsupported notification channel type: %s", ch.Type)
+	}
+
+	return nil
+}
+
 func (svc *Service) getContent(s *models.NotificationSetting, ch *models.NotificationChannel, args ...any) (content string) {
 	vd := svc.getVariableData(args...)
 	switch s.TemplateMode {
