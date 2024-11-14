@@ -18,4 +18,5 @@ type NotificationRequest struct {
 	ChannelId                      primitive.ObjectID   `json:"channel_id" bson:"channel_id"`
 	Setting                        *NotificationSetting `json:"setting,omitempty" bson:"-"`
 	Channel                        *NotificationChannel `json:"channel,omitempty" bson:"-"`
+	Test                           bool                 `json:"test,omitempty" bson:"test,omitempty"`
 }
