@@ -71,7 +71,7 @@ func GetUserList(c *gin.Context) {
 				}
 				if role, ok := rolesMap[user.RoleId]; ok {
 					users[i].Role = role.Name
-					users[i].IsAdmin = role.Admin
+					users[i].RootAdminRole = role.RootAdmin
 				}
 			}
 		}
@@ -270,7 +270,7 @@ func getUserById(userId primitive.ObjectID, c *gin.Context) {
 				return
 			}
 			user.Role = role.Name
-			user.IsAdmin = role.Admin
+			user.RootAdminRole = role.RootAdmin
 		}
 	}
 

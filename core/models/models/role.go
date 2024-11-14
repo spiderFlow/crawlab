@@ -6,7 +6,7 @@ type Role struct {
 	Name            string   `json:"name" bson:"name"`
 	Description     string   `json:"description" bson:"description"`
 	Routes          []string `json:"routes" bson:"routes"`
-	Admin           bool     `json:"-" bson:"admin,omitempty"`
-	IsAdmin         bool     `json:"admin" bson:"-"`
+	RootAdmin       bool     `json:"-" bson:"root_admin,omitempty"`
+	IsRootAdmin     bool     `json:"root_admin" bson:"-"`
 	Users           int      `json:"users" bson:"-"`
 }
