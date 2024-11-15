@@ -15,6 +15,6 @@ const (
 )
 
 const (
-	DependencyConfigRequirementsTxt = "requirements.txt"
-	DependencyConfigPackageJson     = "package.json"
+	DependencyFileTypeRequirementsTxt = "requirements.txt"
+	DependencyFileTypePackageJson     = "package.json"
 )
