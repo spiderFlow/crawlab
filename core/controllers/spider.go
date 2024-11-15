@@ -544,7 +544,7 @@ func DeleteSpiderList(c *gin.Context) {
 }
 
 func GetSpiderListDir(c *gin.Context) {
-	rootPath, err := getSpiderRootPath(c)
+	rootPath, err := getSpiderRootPathByContext(c)
 	if err != nil {
 		HandleErrorForbidden(c, err)
 		return
@@ -553,7 +553,7 @@ func GetSpiderListDir(c *gin.Context) {
 }
 
 func GetSpiderFile(c *gin.Context) {
-	rootPath, err := getSpiderRootPath(c)
+	rootPath, err := getSpiderRootPathByContext(c)
 	if err != nil {
 		HandleErrorForbidden(c, err)
 		return
@@ -562,7 +562,7 @@ func GetSpiderFile(c *gin.Context) {
 }
 
 func GetSpiderFileInfo(c *gin.Context) {
-	rootPath, err := getSpiderRootPath(c)
+	rootPath, err := getSpiderRootPathByContext(c)
 	if err != nil {
 		HandleErrorForbidden(c, err)
 		return
@@ -571,7 +571,7 @@ func GetSpiderFileInfo(c *gin.Context) {
 }
 
 func PostSpiderSaveFile(c *gin.Context) {
-	rootPath, err := getSpiderRootPath(c)
+	rootPath, err := getSpiderRootPathByContext(c)
 	if err != nil {
 		HandleErrorForbidden(c, err)
 		return
@@ -580,7 +580,7 @@ func PostSpiderSaveFile(c *gin.Context) {
 }
 
 func PostSpiderSaveFiles(c *gin.Context) {
-	rootPath, err := getSpiderRootPath(c)
+	rootPath, err := getSpiderRootPathByContext(c)
 	if err != nil {
 		HandleErrorForbidden(c, err)
 		return
@@ -590,7 +590,7 @@ func PostSpiderSaveFiles(c *gin.Context) {
 }
 
 func PostSpiderSaveDir(c *gin.Context) {
-	rootPath, err := getSpiderRootPath(c)
+	rootPath, err := getSpiderRootPathByContext(c)
 	if err != nil {
 		HandleErrorForbidden(c, err)
 		return
@@ -599,7 +599,7 @@ func PostSpiderSaveDir(c *gin.Context) {
 }
 
 func PostSpiderRenameFile(c *gin.Context) {
-	rootPath, err := getSpiderRootPath(c)
+	rootPath, err := getSpiderRootPathByContext(c)
 	if err != nil {
 		HandleErrorForbidden(c, err)
 		return
@@ -608,7 +608,7 @@ func PostSpiderRenameFile(c *gin.Context) {
 }
 
 func DeleteSpiderFile(c *gin.Context) {
-	rootPath, err := getSpiderRootPath(c)
+	rootPath, err := getSpiderRootPathByContext(c)
 	if err != nil {
 		HandleErrorForbidden(c, err)
 		return
@@ -617,7 +617,7 @@ func DeleteSpiderFile(c *gin.Context) {
 }
 
 func PostSpiderCopyFile(c *gin.Context) {
-	rootPath, err := getSpiderRootPath(c)
+	rootPath, err := getSpiderRootPathByContext(c)
 	if err != nil {
 		HandleErrorForbidden(c, err)
 		return
@@ -626,7 +626,7 @@ func PostSpiderCopyFile(c *gin.Context) {
 }
 
 func PostSpiderExport(c *gin.Context) {
-	rootPath, err := getSpiderRootPath(c)
+	rootPath, err := getSpiderRootPathByContext(c)
 	if err != nil {
 		HandleErrorForbidden(c, err)
 		return
@@ -721,7 +721,7 @@ func getSpiderFsSvcById(id primitive.ObjectID) (svc interfaces.FsService, err er
 	return getSpiderFsSvc(s)
 }
 
-func getSpiderRootPath(c *gin.Context) (rootPath string, err error) {
+func getSpiderRootPathByContext(c *gin.Context) (rootPath string, err error) {
 	// spider id
 	id, err := primitive.ObjectIDFromHex(c.Param("id"))
 	if err != nil {
@@ -734,15 +734,5 @@ func getSpiderRootPath(c *gin.Context) (rootPath string, err error) {
 		return "", err
 	}
 
-	// check git permission
-	if !utils.IsPro() && !s.GitId.IsZero() {
-		return "", errors.New("git is not allowed in the community version")
-	}
-
-	// if git id is zero, return spider id as root path
-	if s.GitId.IsZero() {
-		return id.Hex(), nil
-	}
-
-	return filepath.Join(s.GitId.Hex(), s.GitRootPath), nil
+	return utils.GetSpiderRootPath(s)
 }
