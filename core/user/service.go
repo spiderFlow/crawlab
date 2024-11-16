@@ -30,7 +30,7 @@ func (svc *Service) Init() (err error) {
 }
 
 func (svc *Service) init() (err error) {
-	_, err = service.NewModelService[models.User]().GetOne(bson.M{"username": constants.DefaultAdminUsername}, nil)
+	u, err := service.NewModelService[models.User]().GetOne(bson.M{"username": constants.DefaultAdminUsername}, nil)
 	if err != nil {
 		if !errors2.Is(err, mongo.ErrNoDocuments) {
 			return err
@@ -41,7 +41,7 @@ func (svc *Service) init() (err error) {
 	}
 
 	// add user
-	u := models.User{
+	u = &models.User{
 		Username:  constants.DefaultAdminUsername,
 		Password:  utils.EncryptMd5(constants.DefaultAdminPassword),
 		Role:      constants.RoleAdmin,
@@ -49,12 +49,12 @@ func (svc *Service) init() (err error) {
 	}
 	u.SetCreatedAt(time.Now())
 	u.SetUpdatedAt(time.Now())
-	_, err = service.NewModelService[models.User]().InsertOne(u)
+	_, err = service.NewModelService[models.User]().InsertOne(*u)
 	return err
 }
 
 func (svc *Service) initPro() (err error) {
-	_, err = service.NewModelService[models.User]().GetOne(bson.M{
+	u, err := service.NewModelService[models.User]().GetOne(bson.M{
 		"$or": []bson.M{
 			{"username": constants.DefaultAdminUsername},
 			{"root_admin": true},
@@ -65,19 +65,25 @@ func (svc *Service) initPro() (err error) {
 			return err
 		}
 	} else {
-		// exists
+		// exists, compatible with old versions
+		u.RootAdmin = true
+		u.SetUpdatedAt(time.Now())
+		err = service.NewModelService[models.User]().ReplaceById(u.Id, *u)
+		if err != nil {
+			log.Errorf("failed to update user: %v", err)
+		}
 		return
 	}
 
 	// add user
-	u := models.User{
+	u = &models.User{
 		Username:  constants.DefaultAdminUsername,
 		Password:  utils.EncryptMd5(constants.DefaultAdminPassword),
 		RootAdmin: true,
 	}
 	u.SetCreatedAt(time.Now())
 	u.SetUpdatedAt(time.Now())
-	_, err = service.NewModelService[models.User]().InsertOne(u)
+	_, err = service.NewModelService[models.User]().InsertOne(*u)
 	return err
 }
 
