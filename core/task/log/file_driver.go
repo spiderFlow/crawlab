@@ -127,12 +127,8 @@ func (d *FileLogDriver) Flush() (err error) {
 	return nil
 }
 
-func (d *FileLogDriver) getLogPath() (logPath string) {
-	return utils.GetTaskLogPath()
-}
-
 func (d *FileLogDriver) getBasePath(id string) (filePath string) {
-	return filepath.Join(d.getLogPath(), id)
+	return filepath.Join(utils.GetTaskLogPath(), id)
 }
 
 func (d *FileLogDriver) getMetadataPath(id string) (filePath string) {
@@ -144,10 +140,9 @@ func (d *FileLogDriver) getLogFilePath(id, fileName string) (filePath string) {
 }
 
 func (d *FileLogDriver) getLogFiles(id string) (files []os.FileInfo) {
-	// 增加了对返回异常的捕获
 	files, err := utils.ListDir(d.getBasePath(id))
 	if err != nil {
-		trace.PrintError(err)
+		log.Errorf("failed to list log files: %s", err.Error())
 		return nil
 	}
 	return
@@ -221,35 +216,41 @@ func (d *FileLogDriver) getTtl() time.Duration {
 }
 
 func (d *FileLogDriver) cleanup() {
-	if d.getLogPath() == "" {
+	// check if log path is set
+	if utils.GetTaskLogPath() == "" {
+		log.Errorf("log path is not set")
 		return
 	}
-	if !utils.Exists(d.getLogPath()) {
-		if err := os.MkdirAll(d.getLogPath(), os.FileMode(0770)); err != nil {
-			log.Errorf("failed to create log directory: %s", d.getLogPath())
-			trace.PrintError(err)
+
+	// check if log path exists
+	if !utils.Exists(utils.GetTaskLogPath()) {
+		// create log directory if not exists
+		if err := os.MkdirAll(utils.GetTaskLogPath(), os.FileMode(0770)); err != nil {
+			log.Errorf("failed to create log directory: %s", utils.GetTaskLogPath())
 			return
 		}
 	}
+
+	ticker := time.NewTicker(10 * time.Minute)
+
 	for {
-		// 增加对目录不存在的判断
-		dirs, err := utils.ListDir(d.getLogPath())
-		if err != nil {
-			trace.PrintError(err)
-			time.Sleep(10 * time.Minute)
-			continue
-		}
-		for _, dir := range dirs {
-			if time.Now().After(dir.ModTime().Add(d.getTtl())) {
-				if err := os.RemoveAll(d.getBasePath(dir.Name())); err != nil {
-					trace.PrintError(err)
-					continue
+		select {
+		case <-ticker.C:
+			dirs, err := utils.ListDir(utils.GetTaskLogPath())
+			if err != nil {
+				log.Errorf("failed to list log directory: %s", utils.GetTaskLogPath())
+				continue
+			}
+			for _, dir := range dirs {
+				if time.Now().After(dir.ModTime().Add(d.getTtl())) {
+					if err := os.RemoveAll(d.getBasePath(dir.Name())); err != nil {
+						log.Errorf("failed to remove outdated log directory: %s", d.getBasePath(dir.Name()))
+						continue
+					}
+					log.Infof("removed outdated log directory: %s", d.getBasePath(dir.Name()))
 				}
-				log.Infof("removed outdated log directory: %s", d.getBasePath(dir.Name()))
 			}
 		}
-
-		time.Sleep(10 * time.Minute)
 	}
 }
 
