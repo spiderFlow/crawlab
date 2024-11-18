@@ -34,6 +34,7 @@ jobs:
       workflow_changed: ${{ steps.check_changed_files.outputs.workflow_changed }}
       base_image_changed: ${{ steps.check_changed_files.outputs.base_image_changed }}
       version: ${{ steps.version.outputs.version }}
+      test_script: ${{ steps.test_config.outputs.test_script }}
 
     steps:
       - uses: actions/checkout@v4
@@ -299,6 +300,7 @@ jobs:
         image: ghcr.io/${{ github.repository_owner }}/crawlab:${{ needs.setup.outputs.version }}
         env:
           CRAWLAB_NODE_MASTER: N
+          CRAWLAB_MASTER_HOST: master
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

@@ -36,9 +36,7 @@ func (app *Api) Init() {
 
 func (app *Api) Start() {
 	// address
-	host := utils.GetServerHost()
-	port := utils.GetServerPort()
-	address := net.JoinHostPort(host, port)
+	address := utils.GetServerAddress()
 
 	// http server
 	app.srv = &http.Server{
