@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/apex/log"
@@ -67,11 +68,9 @@ func (c *Config) Init() (err error) {
 
 	// read in config
 	if err := viper.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+		var configFileNotFoundError viper.ConfigFileNotFoundError
+		if errors.As(err, &configFileNotFoundError) {
 			log.Warn("No config file found. Using default values.")
-		} else {
-			log.Errorf("Error reading config file: %s", err)
-			return err
 		}
 	}
 
@@ -79,25 +78,12 @@ func (c *Config) Init() (err error) {
 }
 
 func (c *Config) setDefaults() {
-	viper.SetDefault("edition", "global.edition.community")
-
 	viper.SetDefault("mongo.host", "localhost")
 	viper.SetDefault("mongo.port", 27017)
 	viper.SetDefault("mongo.db", "crawlab_test")
 	viper.SetDefault("mongo.username", "")
 	viper.SetDefault("mongo.password", "")
 	viper.SetDefault("mongo.authSource", "admin")
-
-	viper.SetDefault("server.host", "0.0.0.0")
-	viper.SetDefault("server.port", 8000)
-
-	viper.SetDefault("grpc.address", "localhost:9666")
-	viper.SetDefault("grpc.server.address", "0.0.0.0:9666")
-	viper.SetDefault("grpc.authKey", "Crawlab2021!")
-
-	viper.SetDefault("api.endpoint", "http://localhost:8000")
-
-	viper.SetDefault("log.path", "/var/log/crawlab")
 }
 
 func (c *Config) initLogLevel() {

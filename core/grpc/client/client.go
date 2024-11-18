@@ -8,14 +8,10 @@ import (
 
 	"github.com/apex/log"
 	"github.com/cenkalti/backoff/v4"
-	"github.com/crawlab-team/crawlab/core/constants"
-	"github.com/crawlab-team/crawlab/core/entity"
 	"github.com/crawlab-team/crawlab/core/grpc/middlewares"
 	"github.com/crawlab-team/crawlab/core/interfaces"
-	nodeconfig "github.com/crawlab-team/crawlab/core/node/config"
 	"github.com/crawlab-team/crawlab/core/utils"
 	grpc2 "github.com/crawlab-team/crawlab/grpc"
-	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials/insecure"
@@ -26,7 +22,7 @@ type GrpcClient struct {
 	nodeCfgSvc interfaces.NodeConfigService
 
 	// settings
-	address interfaces.Address
+	address string
 	timeout time.Duration
 
 	// internals
@@ -70,14 +66,11 @@ func (c *GrpcClient) Stop() (err error) {
 		return nil
 	}
 
-	// grpc server address
-	address := c.address.String()
-
 	// close connection
 	if err := c.conn.Close(); err != nil {
 		return err
 	}
-	log.Infof("grpc client disconnected from %s", address)
+	log.Infof("grpc client disconnected from %s", c.address)
 
 	return nil
 }
@@ -124,26 +117,23 @@ func (c *GrpcClient) getRequestData(d interface{}) (data []byte) {
 
 func (c *GrpcClient) connect() (err error) {
 	op := func() error {
-		// grpc server address
-		address := c.address.String()
-
 		// connection options
 		opts := []grpc.DialOption{
 			grpc.WithTransportCredentials(insecure.NewCredentials()),
-			grpc.WithChainUnaryInterceptor(middlewares.GetAuthTokenUnaryChainInterceptor(c.nodeCfgSvc)),
-			grpc.WithChainStreamInterceptor(middlewares.GetAuthTokenStreamChainInterceptor(c.nodeCfgSvc)),
+			grpc.WithChainUnaryInterceptor(middlewares.GetAuthTokenUnaryChainInterceptor()),
+			grpc.WithChainStreamInterceptor(middlewares.GetAuthTokenStreamChainInterceptor()),
 		}
 
 		// create new client connection
-		c.conn, err = grpc.NewClient(address, opts...)
+		c.conn, err = grpc.NewClient(c.address, opts...)
 		if err != nil {
-			log.Errorf("[GrpcClient] grpc client failed to connect to %s: %v", address, err)
+			log.Errorf("[GrpcClient] grpc client failed to connect to %s: %v", c.address, err)
 			return err
 		}
 
 		// connect
 		c.conn.Connect()
-		log.Infof("[GrpcClient] grpc client connected to %s", address)
+		log.Infof("[GrpcClient] grpc client connected to %s", c.address)
 
 		return nil
 	}
@@ -151,26 +141,11 @@ func (c *GrpcClient) connect() (err error) {
 }
 
 func newGrpcClient() (c *GrpcClient) {
-	client := &GrpcClient{
-		address: entity.NewAddress(&entity.AddressOptions{
-			Host: constants.DefaultGrpcClientRemoteHost,
-			Port: constants.DefaultGrpcClientRemotePort,
-		}),
+	return &GrpcClient{
+		address: utils.GetGrpcAddress(),
 		timeout: 10 * time.Second,
 		stop:    make(chan struct{}),
 	}
-	client.nodeCfgSvc = nodeconfig.GetNodeConfigService()
-
-	if viper.GetString("grpc.address") != "" {
-		address, err := entity.NewAddressFromString(viper.GetString("grpc.address"))
-		if err != nil {
-			log.Errorf("failed to parse grpc address: %s", viper.GetString("grpc.address"))
-			panic(err)
-		}
-		client.address = address
-	}
-
-	return client
 }
 
 var _client *GrpcClient

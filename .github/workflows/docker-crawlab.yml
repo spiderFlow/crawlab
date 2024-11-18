@@ -282,7 +282,7 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-      crawlab:
+      master:
         image: ghcr.io/${{ github.repository_owner }}/crawlab:${{ needs.setup.outputs.version }}
         env:
           CRAWLAB_NODE_MASTER: Y
@@ -295,6 +295,10 @@ jobs:
           --health-interval 30s
           --health-timeout 10s
           --health-retries 5
+      worker:
+        image: ghcr.io/${{ github.repository_owner }}/crawlab:${{ needs.setup.outputs.version }}
+        env:
+          CRAWLAB_NODE_MASTER: N
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

@@ -17,23 +17,10 @@ type ApiApp interface {
 	App
 	GetGinEngine() (engine *gin.Engine)
 	GetHttpServer() (svr *http.Server)
-	Ready() (ok bool)
-}
-
-type NodeApp interface {
-	App
-	interfaces.WithConfigPath
 }
 
 type ServerApp interface {
-	NodeApp
+	App
 	GetApi() (api ApiApp)
 	GetNodeService() (masterSvc interfaces.NodeService)
-}
-
-type DockerApp interface {
-	App
-	GetParent() (parent NodeApp)
-	SetParent(parent NodeApp)
-	Ready() (ok bool)
 }

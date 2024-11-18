@@ -128,7 +128,7 @@ func (d *FileLogDriver) Flush() (err error) {
 }
 
 func (d *FileLogDriver) getLogPath() (logPath string) {
-	return viper.GetString("log.path")
+	return utils.GetTaskLogPath()
 }
 
 func (d *FileLogDriver) getBasePath(id string) (filePath string) {

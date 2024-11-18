@@ -3,7 +3,6 @@ package apps
 import (
 	"fmt"
 	"github.com/apex/log"
-	"github.com/crawlab-team/crawlab/core/config"
 	"github.com/crawlab-team/crawlab/core/interfaces"
 	"github.com/crawlab-team/crawlab/core/node/service"
 	"github.com/crawlab-team/crawlab/core/utils"
@@ -14,16 +13,9 @@ import (
 )
 
 type Server struct {
-	// settings
-	grpcAddress interfaces.Address
-
-	// dependencies
-	interfaces.WithConfigPath
-
 	// modules
 	nodeSvc interfaces.NodeService
 	api     *Api
-	dck     *Docker
 
 	// internals
 	quit chan int
@@ -39,11 +31,6 @@ func (app *Server) Init() {
 
 func (app *Server) Start() {
 	if utils.IsMaster() {
-		// start docker app
-		if utils.IsDocker() {
-			go app.dck.Start()
-		}
-
 		// start api
 		go app.api.Start()
 	}
@@ -71,9 +58,6 @@ func (app *Server) GetNodeService() interfaces.NodeService {
 
 func (app *Server) logNodeInfo() {
 	log.Infof("current node type: %s", utils.GetNodeType())
-	if utils.IsDocker() {
-		log.Infof("running in docker container")
-	}
 }
 
 func (app *Server) initPprof() {
@@ -84,22 +68,16 @@ func (app *Server) initPprof() {
 	}
 }
 
-func newServer() NodeApp {
+func newServer() App {
 	// server
 	svr := &Server{
-		WithConfigPath: config.NewConfigPathService(),
-		quit:           make(chan int, 1),
+		quit: make(chan int, 1),
 	}
 
 	// master modules
 	if utils.IsMaster() {
 		// api
 		svr.api = GetApi()
-
-		// docker
-		if utils.IsDocker() {
-			svr.dck = GetDocker(svr)
-		}
 	}
 
 	// node service
@@ -112,10 +90,10 @@ func newServer() NodeApp {
 	return svr
 }
 
-var server NodeApp
+var server App
 var serverOnce sync.Once
 
-func GetServer() NodeApp {
+func GetServer() App {
 	serverOnce.Do(func() {
 		server = newServer()
 	})
