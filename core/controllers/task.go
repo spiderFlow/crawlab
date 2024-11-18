@@ -13,7 +13,6 @@ import (
 	"github.com/crawlab-team/crawlab/core/utils"
 	"github.com/crawlab-team/crawlab/db/mongo"
 	"github.com/gin-gonic/gin"
-	"github.com/spf13/viper"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	mongo2 "go.mongodb.org/mongo-driver/mongo"
@@ -208,7 +207,7 @@ func DeleteTaskById(c *gin.Context) {
 	}
 
 	// delete task logs
-	logPath := filepath.Join(viper.GetString("log.path"), id.Hex())
+	logPath := filepath.Join(utils.GetTaskLogPath(), id.Hex())
 	if err := os.RemoveAll(logPath); err != nil {
 		log2.Warnf("failed to remove task log directory: %s", logPath)
 	}
@@ -257,7 +256,7 @@ func DeleteList(c *gin.Context) {
 	for _, id := range payload.Ids {
 		go func(id string) {
 			// delete task logs
-			logPath := filepath.Join(viper.GetString("log.path"), id)
+			logPath := filepath.Join(utils.GetTaskLogPath(), id)
 			if err := os.RemoveAll(logPath); err != nil {
 				log2.Warnf("failed to remove task log directory: %s", logPath)
 			}

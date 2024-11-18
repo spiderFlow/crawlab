@@ -18,7 +18,6 @@ import (
 	"github.com/crawlab-team/crawlab/db/mongo"
 	"github.com/crawlab-team/crawlab/trace"
 	"github.com/gin-gonic/gin"
-	"github.com/spf13/viper"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	mongo2 "go.mongodb.org/mongo-driver/mongo"
@@ -389,7 +388,7 @@ func DeleteSpiderById(c *gin.Context) {
 		for _, id := range taskIds {
 			go func(id string) {
 				// delete task logs
-				logPath := filepath.Join(viper.GetString("log.path"), id)
+				logPath := filepath.Join(utils.GetTaskLogPath(), id)
 				if err := os.RemoveAll(logPath); err != nil {
 					log.Warnf("failed to remove task log directory: %s", logPath)
 				}
@@ -494,7 +493,7 @@ func DeleteSpiderList(c *gin.Context) {
 		for _, id := range taskIds {
 			go func(id string) {
 				// delete task logs
-				logPath := filepath.Join(viper.GetString("log.path"), id)
+				logPath := filepath.Join(utils.GetTaskLogPath(), id)
 				if err := os.RemoveAll(logPath); err != nil {
 					log.Warnf("failed to remove task log directory: %s", logPath)
 				}
@@ -705,7 +704,7 @@ func GetSpiderResults(c *gin.Context) {
 }
 
 func getSpiderFsSvc(s *models.Spider) (svc interfaces.FsService, err error) {
-	workspacePath := viper.GetString("workspace")
+	workspacePath := utils.GetWorkspace()
 	fsSvc := fs.NewFsService(filepath.Join(workspacePath, s.Id.Hex()))
 
 	return fsSvc, nil

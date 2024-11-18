@@ -5,11 +5,9 @@ import (
 	"errors"
 	"github.com/apex/log"
 	"github.com/crawlab-team/crawlab/core/controllers"
-	"github.com/crawlab-team/crawlab/core/interfaces"
 	"github.com/crawlab-team/crawlab/core/middlewares"
 	"github.com/crawlab-team/crawlab/core/utils"
 	"github.com/gin-gonic/gin"
-	"github.com/spf13/viper"
 	"net"
 	"net/http"
 	"sync"
@@ -18,22 +16,14 @@ import (
 
 func init() {
 	// set gin mode
-	if viper.GetString("gin.mode") == "" {
-		gin.SetMode(gin.ReleaseMode)
-	} else {
-		gin.SetMode(viper.GetString("gin.mode"))
-	}
+	gin.SetMode(utils.GetGinMode())
 }
 
 type Api struct {
-	// dependencies
-	interfaces.WithConfigPath
-
 	// internals
-	app   *gin.Engine
-	ln    net.Listener
-	srv   *http.Server
-	ready bool
+	app *gin.Engine
+	ln  net.Listener
+	srv *http.Server
 }
 
 func (app *Api) Init() {
@@ -46,8 +36,8 @@ func (app *Api) Init() {
 
 func (app *Api) Start() {
 	// address
-	host := viper.GetString("server.host")
-	port := viper.GetString("server.port")
+	host := utils.GetServerHost()
+	port := utils.GetServerPort()
 	address := net.JoinHostPort(host, port)
 
 	// http server
@@ -62,7 +52,6 @@ func (app *Api) Start() {
 	if err != nil {
 		panic(err)
 	}
-	app.ready = true
 
 	// serve
 	if err := http.Serve(app.ln, app.app); err != nil {
@@ -95,17 +84,13 @@ func (app *Api) GetHttpServer() *http.Server {
 	return app.srv
 }
 
-func (app *Api) Ready() (ok bool) {
-	return app.ready
-}
-
 func (app *Api) initModuleWithApp(name string, fn func(app *gin.Engine) error) (err error) {
 	return initModule(name, func() error {
 		return fn(app.app)
 	})
 }
 
-func NewApi() *Api {
+func newApi() *Api {
 	api := &Api{
 		app: gin.New(),
 	}
@@ -118,7 +103,7 @@ var apiOnce sync.Once
 
 func GetApi() *Api {
 	apiOnce.Do(func() {
-		api = NewApi()
+		api = newApi()
 	})
 	return api
 }

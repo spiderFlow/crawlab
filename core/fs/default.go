@@ -2,6 +2,7 @@ package fs
 
 import (
 	"github.com/apex/log"
+	"github.com/crawlab-team/crawlab/core/utils"
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
 	"path/filepath"
@@ -15,7 +16,7 @@ func init() {
 	}
 	DefaultWorkspacePath = filepath.Join(rootDir, "crawlab_workspace")
 
-	workspacePath := viper.GetString("workspace")
+	workspacePath := utils.GetWorkspace()
 	if workspacePath == "" {
 		viper.Set("workspace", DefaultWorkspacePath)
 	}

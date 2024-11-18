@@ -6,8 +6,8 @@ import (
 	log2 "github.com/apex/log"
 	"github.com/crawlab-team/crawlab/core/fs"
 	"github.com/crawlab-team/crawlab/core/interfaces"
+	"github.com/crawlab-team/crawlab/core/utils"
 	"github.com/gin-gonic/gin"
-	"github.com/spf13/viper"
 	"io"
 	"os"
 	"path/filepath"
@@ -296,7 +296,7 @@ func GetBaseFileFsSvc(rootPath string) (svc interfaces.FsService, err error) {
 }
 
 func getBaseFileFsSvc(rootPath string) (svc interfaces.FsService, err error) {
-	workspacePath := viper.GetString("workspace")
+	workspacePath := utils.GetWorkspace()
 	fsSvc := fs.NewFsService(filepath.Join(workspacePath, rootPath))
 
 	return fsSvc, nil

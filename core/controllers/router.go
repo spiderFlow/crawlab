@@ -8,19 +8,26 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// RouterGroups defines the different authentication levels for API routes
 type RouterGroups struct {
-	AuthGroup      *gin.RouterGroup
-	AnonymousGroup *gin.RouterGroup
+	AuthGroup      *gin.RouterGroup // Routes requiring full authentication
+	SyncAuthGroup  *gin.RouterGroup // Routes for sync operations with special auth
+	AnonymousGroup *gin.RouterGroup // Public routes that don't require auth
 }
 
+// NewRouterGroups initializes the router groups with their respective middleware
 func NewRouterGroups(app *gin.Engine) (groups *RouterGroups) {
 	return &RouterGroups{
 		AuthGroup:      app.Group("/", middlewares.AuthorizationMiddleware()),
+		SyncAuthGroup:  app.Group("/", middlewares.SyncAuthorizationMiddleware()),
 		AnonymousGroup: app.Group("/"),
 	}
 }
 
+// RegisterController registers a generic controller with standard CRUD endpoints
+// and any additional custom actions
 func RegisterController[T any](group *gin.RouterGroup, basePath string, ctr *BaseController[T]) {
+	// Track registered paths to avoid duplicates
 	actionPaths := make(map[string]bool)
 	for _, action := range ctr.actions {
 		group.Handle(action.Method, basePath+action.Path, action.HandlerFunc)
@@ -37,12 +44,15 @@ func RegisterController[T any](group *gin.RouterGroup, basePath string, ctr *Bas
 	registerBuiltinHandler(group, http.MethodDelete, basePath+"", ctr.DeleteList, actionPaths)
 }
 
+// RegisterActions registers a list of custom action handlers to a route group
 func RegisterActions(group *gin.RouterGroup, basePath string, actions []Action) {
 	for _, action := range actions {
 		group.Handle(action.Method, basePath+action.Path, action.HandlerFunc)
 	}
 }
 
+// registerBuiltinHandler registers a standard handler if it hasn't been overridden
+// by a custom action
 func registerBuiltinHandler(group *gin.RouterGroup, method, path string, handlerFunc gin.HandlerFunc, existingActionPaths map[string]bool) {
 	key := method + " - " + path
 	_, ok := existingActionPaths[key]
@@ -52,10 +62,14 @@ func registerBuiltinHandler(group *gin.RouterGroup, method, path string, handler
 	group.Handle(method, path, handlerFunc)
 }
 
+// InitRoutes configures all API routes for the application
 func InitRoutes(app *gin.Engine) (err error) {
-	// routes groups
+	// Initialize route groups with different auth levels
 	groups := NewRouterGroups(app)
 
+	// Register resource controllers with their respective endpoints
+	// Each RegisterController call sets up standard CRUD operations
+	// Additional custom actions can be specified in the controller initialization
 	RegisterController(groups.AuthGroup, "/data/collections", NewController[models.DataCollection]())
 	RegisterController(groups.AuthGroup, "/environments", NewController[models.Environment]())
 	RegisterController(groups.AuthGroup, "/nodes", NewController[models.Node]())
@@ -282,6 +296,7 @@ func InitRoutes(app *gin.Engine) (err error) {
 		},
 	}...))
 
+	// Register standalone action routes that don't fit the standard CRUD pattern
 	RegisterActions(groups.AuthGroup, "/export", []Action{
 		{
 			Method:      http.MethodPost,
@@ -351,6 +366,21 @@ func InitRoutes(app *gin.Engine) (err error) {
 		},
 	})
 
+	// Register sync routes that require special authentication
+	RegisterActions(groups.SyncAuthGroup, "/sync", []Action{
+		{
+			Method:      http.MethodGet,
+			Path:        "/:id/scan",
+			HandlerFunc: GetSyncScan,
+		},
+		{
+			Method:      http.MethodGet,
+			Path:        "/:id/download",
+			HandlerFunc: GetSyncDownload,
+		},
+	})
+
+	// Register public routes that don't require authentication
 	RegisterActions(groups.AnonymousGroup, "/system-info", []Action{
 		{
 			Path:        "",
@@ -368,18 +398,6 @@ func InitRoutes(app *gin.Engine) (err error) {
 			Method:      http.MethodPost,
 			Path:        "/logout",
 			HandlerFunc: PostLogout,
-		},
-	})
-	RegisterActions(groups.AnonymousGroup, "/sync", []Action{
-		{
-			Method:      http.MethodGet,
-			Path:        "/:id/scan",
-			HandlerFunc: GetSyncScan,
-		},
-		{
-			Method:      http.MethodGet,
-			Path:        "/:id/download",
-			HandlerFunc: GetSyncDownload,
 		},
 	})
 

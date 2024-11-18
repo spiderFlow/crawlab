@@ -3,7 +3,6 @@ package utils
 import (
 	"errors"
 	"github.com/crawlab-team/crawlab/core/models/models"
-	"github.com/spf13/viper"
 	"path/filepath"
 )
 
@@ -23,7 +22,7 @@ func GetSpiderRootPath(s *models.Spider) (rootPath string, err error) {
 
 func GetSpiderFullRootPath(s *models.Spider) (rootPath string, err error) {
 	// workspace path
-	workspacePath := viper.GetString("workspace")
+	workspacePath := GetWorkspace()
 
 	// get spider root path
 	rootPath, err = GetSpiderRootPath(s)

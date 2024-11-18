@@ -3,17 +3,13 @@ package server
 import (
 	"fmt"
 	"github.com/apex/log"
-	"github.com/crawlab-team/crawlab/core/constants"
-	"github.com/crawlab-team/crawlab/core/entity"
 	"github.com/crawlab-team/crawlab/core/grpc/middlewares"
-	"github.com/crawlab-team/crawlab/core/interfaces"
-	nodeconfig "github.com/crawlab-team/crawlab/core/node/config"
+	"github.com/crawlab-team/crawlab/core/utils"
 	grpc2 "github.com/crawlab-team/crawlab/grpc"
 	grpcmiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpcauth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
 	grpcrecovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	errors2 "github.com/pkg/errors"
-	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 	"net"
 	"sync"
@@ -21,16 +17,12 @@ import (
 
 type GrpcServer struct {
 	// settings
-	cfgPath string
-	address interfaces.Address
+	address string
 
 	// internals
 	svr     *grpc.Server
 	l       net.Listener
 	stopped bool
-
-	// dependencies
-	nodeCfgSvc interfaces.NodeConfigService
 
 	// servers
 	NodeSvr             *NodeServiceServer
@@ -40,29 +32,18 @@ type GrpcServer struct {
 	MetricSvr           *MetricServiceServer
 }
 
-func (svr *GrpcServer) GetConfigPath() (path string) {
-	return svr.cfgPath
-}
-
-func (svr *GrpcServer) SetConfigPath(path string) {
-	svr.cfgPath = path
-}
-
 func (svr *GrpcServer) Init() {
 	svr.register()
 }
 
 func (svr *GrpcServer) Start() (err error) {
-	// grpc server binding address
-	address := svr.address.String()
-
 	// listener
-	svr.l, err = net.Listen("tcp", address)
+	svr.l, err = net.Listen("tcp", svr.address)
 	if err != nil {
 		log.Errorf("[GrpcServer] failed to listen: %v", err)
 		return err
 	}
-	log.Infof("[GrpcServer] grpc server listens to %s", address)
+	log.Infof("[GrpcServer] grpc server listens to %s", svr.address)
 
 	// start grpc server
 	go func() {
@@ -116,25 +97,10 @@ func (svr *GrpcServer) recoveryHandlerFunc(p interface{}) (err error) {
 func newGrpcServer() *GrpcServer {
 	// server
 	svr := &GrpcServer{
-		address: entity.NewAddress(&entity.AddressOptions{
-			Host: constants.DefaultGrpcServerHost,
-			Port: constants.DefaultGrpcServerPort,
-		}),
+		address: utils.GetGrpcServerAddress(),
 	}
 
-	if viper.GetString("grpc.server.address") != "" {
-		address, err := entity.NewAddressFromString(viper.GetString("grpc.server.address"))
-		if err != nil {
-			log.Fatalf("[GrpcServer] failed to parse grpc server address: %v", err)
-			panic(err)
-		}
-		svr.address = address
-	}
-
-	// node config service
-	svr.nodeCfgSvc = nodeconfig.GetNodeConfigService()
-
-	// servers
+	// services servers
 	svr.NodeSvr = GetNodeServiceServer()
 	svr.ModelBaseServiceSvr = GetModelBaseServiceServer()
 	svr.TaskSvr = GetTaskServiceServer()
@@ -150,11 +116,11 @@ func newGrpcServer() *GrpcServer {
 	svr.svr = grpc.NewServer(
 		grpcmiddleware.WithUnaryServerChain(
 			grpcrecovery.UnaryServerInterceptor(recoveryOpts...),
-			grpcauth.UnaryServerInterceptor(middlewares.GetAuthTokenFunc(svr.nodeCfgSvc)),
+			grpcauth.UnaryServerInterceptor(middlewares.GetAuthTokenFunc()),
 		),
 		grpcmiddleware.WithStreamServerChain(
 			grpcrecovery.StreamServerInterceptor(recoveryOpts...),
-			grpcauth.StreamServerInterceptor(middlewares.GetAuthTokenFunc(svr.nodeCfgSvc)),
+			grpcauth.StreamServerInterceptor(middlewares.GetAuthTokenFunc()),
 		),
 	)
 

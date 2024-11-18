@@ -8,7 +8,6 @@ import (
 	"github.com/crawlab-team/crawlab/core/user"
 	"github.com/crawlab-team/crawlab/core/utils"
 	"github.com/gin-gonic/gin"
-	"github.com/spf13/viper"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -16,7 +15,7 @@ func AuthorizationMiddleware() gin.HandlerFunc {
 	userSvc, _ := user.GetUserService()
 	return func(c *gin.Context) {
 		// disable auth for test
-		if viper.GetBool("auth.disabled") {
+		if utils.IsAuthDisabled() {
 			u, err := service.NewModelService[models.User]().GetOne(bson.M{"username": constants.DefaultAdminUsername}, nil)
 			if err != nil {
 				utils.HandleErrorInternalServerError(c, err)
@@ -42,6 +41,24 @@ func AuthorizationMiddleware() gin.HandlerFunc {
 		c.Set(constants.UserContextKey, u)
 
 		// validation success
+		c.Next()
+	}
+}
+
+func SyncAuthorizationMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if utils.IsAuthDisabled() {
+			c.Next()
+			return
+		}
+
+		authKey := c.GetHeader("Authorization")
+
+		if authKey != utils.GetAuthKey() {
+			utils.HandleErrorUnauthorized(c, errors.New("invalid auth key"))
+			return
+		}
+
 		c.Next()
 	}
 }
