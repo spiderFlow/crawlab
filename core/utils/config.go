@@ -1,16 +1,20 @@
 package utils
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
 )
 
 const (
-	DefaultServerHost          = "0.0.0.0"
-	DefaultServerPort          = "8000"
+	DefaultWorkspace           = "crawlab_workspace"
 	DefaultTaskLogPath         = "/var/log/crawlab/tasks"
+	DefaultServerHost          = "0.0.0.0"
+	DefaultServerPort          = 8000
 	DefaultGrpcHost            = "localhost"
-	DefaultGrpcPort            = "9666"
+	DefaultGrpcPort            = 9666
+	DefaultGrpcServerHost      = "127.0.0.1"
+	DefaultGrpcServerPort      = 9666
 	DefaultAuthKey             = "Crawlab2024!"
 	DefaultApiEndpoint         = "http://localhost:8000"
 	DefaultApiAllowOrigin      = "*"
@@ -71,7 +75,10 @@ func IsPro() bool {
 }
 
 func GetWorkspace() string {
-	return viper.GetString("workspace")
+	if res := viper.GetString("workspace"); res != "" {
+		return res
+	}
+	return DefaultWorkspace
 }
 
 func GetTaskLogPath() string {
@@ -81,18 +88,18 @@ func GetTaskLogPath() string {
 	return DefaultTaskLogPath
 }
 
-func GetServerHost() string {
-	if res := viper.GetString("server.host"); res != "" {
-		return res
+func GetServerAddress() string {
+	host := viper.GetString("server.host")
+	if host == "" {
+		host = DefaultServerHost
 	}
-	return DefaultServerHost
-}
 
-func GetServerPort() string {
-	if res := viper.GetString("server.port"); res != "" {
-		return res
+	port := viper.GetInt("server.port")
+	if port == 0 {
+		port = DefaultServerPort
 	}
-	return DefaultServerPort
+
+	return fmt.Sprintf("%s:%d", host, port)
 }
 
 func GetMasterHost() string {
@@ -101,7 +108,6 @@ func GetMasterHost() string {
 
 func GetGrpcAddress() string {
 	host := viper.GetString("grpc.host")
-	port := viper.GetString("grpc.port")
 	if host == "" {
 		masterHost := GetMasterHost()
 		if masterHost != "" {
@@ -110,14 +116,27 @@ func GetGrpcAddress() string {
 			host = DefaultGrpcHost
 		}
 	}
-	if port == "" {
+
+	port := viper.GetInt("grpc.port")
+	if port == 0 {
 		port = DefaultGrpcPort
 	}
-	return host + ":" + port
+
+	return fmt.Sprintf("%s:%d", host, port)
 }
 
 func GetGrpcServerAddress() string {
-	return viper.GetString("grpc.server.address")
+	host := viper.GetString("grpc.server.host")
+	if host == "" {
+		host = DefaultGrpcServerHost
+	}
+
+	port := viper.GetInt("grpc.server.port")
+	if port == 0 {
+		port = DefaultGrpcServerPort
+	}
+
+	return fmt.Sprintf("%s:%d", host, port)
 }
 
 func GetAuthKey() string {
