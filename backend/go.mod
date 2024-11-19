@@ -1,20 +1,14 @@
-module crawlab
+module github.com/crawlab-team/crawlab-pro/backend
 
 go 1.22
 
-require github.com/crawlab-team/crawlab/core v0.0.0-20241029064835-7d09f2c6f065
-
-require (
-	dario.cat/mergo v1.0.0 // indirect
-	github.com/cyphar/filepath-securejoin v0.2.4 // indirect
-	github.com/golang-jwt/jwt/v5 v5.2.1 // indirect
-	github.com/montanaflynn/stats v0.0.0-20171201202039-1bf9dbcd8cbe // indirect
-)
+require github.com/crawlab-team/crawlab/core v0.0.0-20241119094044-98a9c907c9cb
 
 require (
 	cloud.google.com/go/auth v0.7.2 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.3 // indirect
 	cloud.google.com/go/compute/metadata v0.5.0 // indirect
+	dario.cat/mergo v1.0.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/ProtonMail/go-crypto v1.0.0 // indirect
 	github.com/PuerkitoBio/goquery v1.9.2 // indirect
@@ -27,10 +21,11 @@ require (
 	github.com/cloudflare/circl v1.3.7 // indirect
 	github.com/cloudwego/base64x v0.1.4 // indirect
 	github.com/cloudwego/iasm v0.2.0 // indirect
-	github.com/crawlab-team/crawlab/db v0.0.0-20241029064835-7d09f2c6f065 // indirect
-	github.com/crawlab-team/crawlab/grpc v0.0.0-20241029064835-7d09f2c6f065 // indirect
-	github.com/crawlab-team/crawlab/trace v0.0.0-20241029064835-7d09f2c6f065 // indirect
-	github.com/crawlab-team/crawlab/vcs v0.0.0-20241029064835-7d09f2c6f065 // indirect
+	github.com/crawlab-team/crawlab/db v0.0.0-20241119094044-98a9c907c9cb // indirect
+	github.com/crawlab-team/crawlab/grpc v0.0.0-20241119094044-98a9c907c9cb // indirect
+	github.com/crawlab-team/crawlab/trace v0.0.0-20241119094044-98a9c907c9cb // indirect
+	github.com/crawlab-team/crawlab/vcs v0.0.0-20241119094044-98a9c907c9cb // indirect
+	github.com/cyphar/filepath-securejoin v0.2.4 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
@@ -47,9 +42,10 @@ require (
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.20.0 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
+	github.com/golang-jwt/jwt/v5 v5.2.1 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/snappy v0.0.4 // indirect
-	github.com/gomarkdown/markdown v0.0.0-20240626202925-2eda941fd024 // indirect
+	github.com/gomarkdown/markdown v0.0.0-20241105142532-d03b89096d81 // indirect
 	github.com/google/s2a-go v0.1.8 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.2 // indirect
@@ -72,6 +68,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
+	github.com/montanaflynn/stats v0.0.0-20171201202039-1bf9dbcd8cbe // indirect
 	github.com/pelletier/go-toml/v2 v2.2.2 // indirect
 	github.com/pjbgf/sha1cd v0.3.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
