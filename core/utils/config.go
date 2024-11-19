@@ -81,10 +81,15 @@ func IsPro() bool {
 }
 
 func GetWorkspace() string {
+	homedirPath, err := homedir.Dir()
+	if err != nil {
+		log.Warnf("cannot find home directory: %v", err)
+		return DefaultWorkspace
+	}
 	if res := viper.GetString("workspace"); res != "" {
 		return res
 	}
-	return DefaultWorkspace
+	return filepath.Join(homedirPath, DefaultWorkspace)
 }
 
 func GetTaskLogPath() string {

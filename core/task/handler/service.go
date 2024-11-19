@@ -457,8 +457,6 @@ func newTaskHandlerService() *Service {
 	// grpc client
 	svc.c = grpcclient.GetGrpcClient()
 
-	log.Debugf("[NewTaskHandlerService] svc[cfgPath: %s]", svc.cfgSvc.GetConfigPath())
-
 	return svc
 }
 

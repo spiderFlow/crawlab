@@ -3,45 +3,18 @@ package config
 import (
 	"errors"
 	"strings"
+	"sync"
 
 	"github.com/apex/log"
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/viper"
 )
 
-func init() {
-	// config instance
-	c := Config{Name: ""}
-
-	// init config file
-	if err := c.Init(); err != nil {
-		log.Warn("unable to init config")
-		return
-	}
-
-	// watch config change and load responsively
-	c.WatchConfig()
-
-	// init log level
-	c.initLogLevel()
-}
-
 type Config struct {
 	Name string
 }
 
-type InitConfigOptions struct {
-	Name string
-}
-
-func (c *Config) WatchConfig() {
-	viper.WatchConfig()
-	viper.OnConfigChange(func(e fsnotify.Event) {
-		log.Infof("Config file changed: %s", e.Name)
-	})
-}
-
-func (c *Config) Init() (err error) {
+func (c *Config) Init() {
 	// Set default values
 	c.setDefaults()
 
@@ -74,7 +47,15 @@ func (c *Config) Init() (err error) {
 		}
 	}
 
-	return nil
+	// init log level
+	c.initLogLevel()
+}
+
+func (c *Config) WatchConfig() {
+	viper.WatchConfig()
+	viper.OnConfigChange(func(e fsnotify.Event) {
+		log.Infof("Config file changed: %s", e.Name)
+	})
 }
 
 func (c *Config) setDefaults() {
@@ -94,4 +75,27 @@ func (c *Config) initLogLevel() {
 		l = log.InfoLevel
 	}
 	log.SetLevel(l)
+}
+
+func newConfig() *Config {
+	return &Config{}
+}
+
+var _config *Config
+var _configOnce sync.Once
+
+func GetConfig() *Config {
+	_configOnce.Do(func() {
+		_config = newConfig()
+		_config.Init()
+	})
+	return _config
+}
+
+func InitConfig() {
+	// config instance
+	c := GetConfig()
+
+	// watch config change and load responsively
+	c.WatchConfig()
 }

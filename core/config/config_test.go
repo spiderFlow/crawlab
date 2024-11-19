@@ -20,11 +20,7 @@ func init() {
 
 func TestInitConfig(t *testing.T) {
 	// Create a new Config instance
-	c := Config{Name: ""}
-
-	// Initialize the config
-	err := c.Init()
-	require.NoError(t, err, "Failed to initialize config")
+	InitConfig()
 
 	// Test default values
 	assert.Equal(t, "localhost", viper.GetString("mongo.host"), "Unexpected default value for mongo.host")
@@ -58,8 +54,7 @@ server:
 
 	// Create a new Config instance with the config file
 	cWithFile := Config{Name: configPath}
-	err = cWithFile.Init()
-	require.NoError(t, err, "Failed to initialize config with file")
+	cWithFile.Init()
 
 	// Test values from config file
 	assert.Equal(t, "global.edition.pro", viper.GetString("edition"), "Unexpected value for edition from config file")
