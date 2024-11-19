@@ -58,7 +58,7 @@ jobs:
               - 'Dockerfile'
             workflow:
               - '.github/workflows/docker-crawlab.yml'
-            base-image:
+            base_image:
               - 'docker/base-image/**'
 
       - id: check_changed_files
