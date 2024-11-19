@@ -1,4 +1,4 @@
-module github.com/crawlab-team/crawlab-pro/backend
+module crawlab
 
 go 1.22
 
