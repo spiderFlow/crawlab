@@ -120,8 +120,8 @@ func (c *GrpcClient) connect() (err error) {
 		// connection options
 		opts := []grpc.DialOption{
 			grpc.WithTransportCredentials(insecure.NewCredentials()),
-			grpc.WithChainUnaryInterceptor(middlewares.GetAuthTokenUnaryChainInterceptor()),
-			grpc.WithChainStreamInterceptor(middlewares.GetAuthTokenStreamChainInterceptor()),
+			grpc.WithChainUnaryInterceptor(middlewares.GetGrpcClientAuthTokenUnaryChainInterceptor()),
+			grpc.WithChainStreamInterceptor(middlewares.GetGrpcClientAuthTokenStreamChainInterceptor()),
 		}
 
 		// create new client connection

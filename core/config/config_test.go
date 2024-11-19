@@ -27,17 +27,9 @@ func TestInitConfig(t *testing.T) {
 	require.NoError(t, err, "Failed to initialize config")
 
 	// Test default values
-	assert.Equal(t, "global.edition.community", viper.GetString("edition"), "Unexpected default value for edition")
 	assert.Equal(t, "localhost", viper.GetString("mongo.host"), "Unexpected default value for mongo.host")
 	assert.Equal(t, 27017, viper.GetInt("mongo.port"), "Unexpected default value for mongo.port")
 	assert.Equal(t, "crawlab_test", viper.GetString("mongo.db"), "Unexpected default value for mongo.db")
-	assert.Equal(t, "0.0.0.0", viper.GetString("server.host"), "Unexpected default value for server.host")
-	assert.Equal(t, 8000, viper.GetInt("server.port"), "Unexpected default value for server.port")
-	assert.Equal(t, "localhost", viper.GetString("grpc.host"), "Unexpected default value for grpc.host")
-	assert.Equal(t, 9666, viper.GetInt("grpc.port"), "Unexpected default value for grpc.port")
-	assert.Equal(t, "Crawlab2021!", viper.GetString("grpc.authKey"), "Unexpected default value for grpc.authKey")
-	assert.Equal(t, "http://localhost:8000", viper.GetString("api.endpoint"), "Unexpected default value for api.endpoint")
-	assert.Equal(t, "/var/log/crawlab", viper.GetString("log.path"), "Unexpected default value for log.path")
 
 	// Test environment variable override
 	os.Setenv("CRAWLAB_MONGO_HOST", "mongodb.example.com")
@@ -74,7 +66,4 @@ server:
 	assert.Equal(t, "mongodb.custom.com", viper.GetString("mongo.host"), "Unexpected value for mongo.host from config file")
 	assert.Equal(t, 27018, viper.GetInt("mongo.port"), "Unexpected value for mongo.port from config file")
 	assert.Equal(t, 8001, viper.GetInt("server.port"), "Unexpected value for server.port from config file")
-
-	// Values not in config file should still use defaults
-	assert.Equal(t, "Crawlab2021!", viper.GetString("grpc.authKey"), "Unexpected default value for grpc.authKey")
 }

@@ -2,8 +2,11 @@ package utils
 
 import (
 	"fmt"
+	"github.com/apex/log"
 	"github.com/gin-gonic/gin"
+	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
+	"path/filepath"
 )
 
 const (
@@ -21,6 +24,9 @@ const (
 	DefaultApiAllowCredentials = "true"
 	DefaultApiAllowMethods     = "DELETE, POST, OPTIONS, GET, PUT"
 	DefaultApiAllowHeaders     = "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With"
+	DefaultNodeMaxRunners      = 16
+	MetadataConfigDirName      = ".crawlab"
+	MetadataConfigName         = "config.json"
 )
 
 func IsDev() bool {
@@ -159,4 +165,53 @@ func GetApiEndpoint() string {
 		return "http://" + masterHost + "/api"
 	}
 	return DefaultApiEndpoint
+}
+
+func IsMaster() bool {
+	return EnvIsTrue("node.master", false)
+}
+
+func GetNodeType() string {
+	if IsMaster() {
+		return "master"
+	} else {
+		return "worker"
+	}
+}
+
+func GetNodeKey() string {
+	if res := viper.GetString("node.key"); res != "" {
+		return res
+	}
+	return NewUUIDString()
+}
+
+func GetNodeName() string {
+	if res := viper.GetString("node.name"); res != "" {
+		return res
+	}
+	return GetNodeKey()
+}
+
+func GetNodeMaxRunners() int {
+	if res := viper.GetInt("node.maxRunners"); res != 0 {
+		return res
+	}
+	return DefaultNodeMaxRunners
+}
+
+func GetMetadataConfigPath() string {
+	var homeDirPath, err = homedir.Dir()
+	if err != nil {
+		log.Errorf("failed to get home directory: %v", err)
+		log.Errorf("please set metadata directory path using either CRAWLAB_METADATA environment variable or the metadata path in the configuration file")
+		panic(err)
+	}
+
+	if viper.GetString("metadata") != "" {
+		metadataPath := viper.GetString("metadata")
+		return filepath.Join(metadataPath, MetadataConfigName)
+	}
+
+	return filepath.Join(homeDirPath, MetadataConfigDirName, MetadataConfigName)
 }

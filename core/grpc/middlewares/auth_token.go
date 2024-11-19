@@ -2,7 +2,6 @@ package middlewares
 
 import (
 	"context"
-	"github.com/crawlab-team/crawlab/core/constants"
 	"github.com/crawlab-team/crawlab/core/errors"
 	"github.com/crawlab-team/crawlab/core/utils"
 	"github.com/grpc-ecosystem/go-grpc-middleware/auth"
@@ -10,7 +9,9 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-func GetAuthTokenFunc() grpc_auth.AuthFunc {
+const GrpcHeaderAuthorization = "authorization"
+
+func GetGrpcServerAuthTokenFunc() grpc_auth.AuthFunc {
 	return func(ctx context.Context) (ctx2 context.Context, err error) {
 		// authentication (token verification)
 		md, ok := metadata.FromIncomingContext(ctx)
@@ -19,7 +20,7 @@ func GetAuthTokenFunc() grpc_auth.AuthFunc {
 		}
 
 		// auth key from incoming context
-		res, ok := md[constants.GrpcHeaderAuthorization]
+		res, ok := md[GrpcHeaderAuthorization]
 		if !ok {
 			return ctx, errors.ErrorGrpcUnauthorized
 		}
@@ -38,18 +39,18 @@ func GetAuthTokenFunc() grpc_auth.AuthFunc {
 	}
 }
 
-func GetAuthTokenUnaryChainInterceptor() grpc.UnaryClientInterceptor {
+func GetGrpcClientAuthTokenUnaryChainInterceptor() grpc.UnaryClientInterceptor {
 	// set auth key
-	md := metadata.Pairs(constants.GrpcHeaderAuthorization, utils.GetAuthKey())
+	md := metadata.Pairs(GrpcHeaderAuthorization, utils.GetAuthKey())
 	return func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
 		ctx = metadata.NewOutgoingContext(context.Background(), md)
 		return invoker(ctx, method, req, reply, cc, opts...)
 	}
 }
 
-func GetAuthTokenStreamChainInterceptor() grpc.StreamClientInterceptor {
+func GetGrpcClientAuthTokenStreamChainInterceptor() grpc.StreamClientInterceptor {
 	// set auth key
-	md := metadata.Pairs(constants.GrpcHeaderAuthorization, utils.GetAuthKey())
+	md := metadata.Pairs(GrpcHeaderAuthorization, utils.GetAuthKey())
 	return func(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn, method string, streamer grpc.Streamer, opts ...grpc.CallOption) (grpc.ClientStream, error) {
 		ctx = metadata.NewOutgoingContext(context.Background(), md)
 		s, err := streamer(ctx, desc, cc, method, opts...)
