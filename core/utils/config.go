@@ -16,7 +16,7 @@ const (
 	DefaultServerPort          = 8000
 	DefaultGrpcHost            = "localhost"
 	DefaultGrpcPort            = 9666
-	DefaultGrpcServerHost      = "127.0.0.1"
+	DefaultGrpcServerHost      = "0.0.0.0"
 	DefaultGrpcServerPort      = 9666
 	DefaultAuthKey             = "Crawlab2024!"
 	DefaultApiEndpoint         = "http://localhost:8000"
