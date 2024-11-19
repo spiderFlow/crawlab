@@ -4,7 +4,6 @@ import (
 	"errors"
 	"github.com/apex/log"
 	"github.com/cenkalti/backoff/v4"
-	config2 "github.com/crawlab-team/crawlab/core/config"
 	"github.com/crawlab-team/crawlab/core/constants"
 	"github.com/crawlab-team/crawlab/core/grpc/server"
 	"github.com/crawlab-team/crawlab/core/interfaces"
@@ -37,10 +36,7 @@ type MasterService struct {
 	systemSvc        *system.Service
 
 	// settings
-	cfgPath         string
-	address         interfaces.Address
 	monitorInterval time.Duration
-	stopOnError     bool
 }
 
 func (svc *MasterService) Start() {
@@ -83,11 +79,11 @@ func (svc *MasterService) Wait() {
 func (svc *MasterService) Stop() {
 	_ = svc.server.Stop()
 	svc.taskHandlerSvc.Stop()
-	log.Infof("master[%s] service has stopped", svc.GetConfigService().GetNodeKey())
+	log.Infof("master[%s] service has stopped", svc.cfgSvc.GetNodeKey())
 }
 
 func (svc *MasterService) Monitor() {
-	log.Infof("master[%s] monitoring started", svc.GetConfigService().GetNodeKey())
+	log.Infof("master[%s] monitoring started", svc.cfgSvc.GetNodeKey())
 
 	// ticker
 	ticker := time.NewTicker(svc.monitorInterval)
@@ -96,12 +92,7 @@ func (svc *MasterService) Monitor() {
 		// monitor
 		err := svc.monitor()
 		if err != nil {
-			trace.PrintError(err)
-			if svc.stopOnError {
-				log.Errorf("master[%s] monitor error, now stopping...", svc.GetConfigService().GetNodeKey())
-				svc.Stop()
-				return
-			}
+			log.Errorf("master[%s] monitor error: %v", svc.cfgSvc.GetNodeKey(), err)
 		}
 
 		// wait
@@ -109,25 +100,10 @@ func (svc *MasterService) Monitor() {
 	}
 }
 
-func (svc *MasterService) GetConfigService() (cfgSvc interfaces.NodeConfigService) {
-	return svc.cfgSvc
-}
-
-func (svc *MasterService) GetConfigPath() (path string) {
-	return svc.cfgPath
-}
-
-func (svc *MasterService) SetConfigPath(path string) {
-	svc.cfgPath = path
-}
-
-func (svc *MasterService) SetMonitorInterval(duration time.Duration) {
-	svc.monitorInterval = duration
-}
-
 func (svc *MasterService) Register() (err error) {
-	nodeKey := svc.GetConfigService().GetNodeKey()
-	nodeName := svc.GetConfigService().GetNodeName()
+	nodeKey := svc.cfgSvc.GetNodeKey()
+	nodeName := svc.cfgSvc.GetNodeName()
+	nodeMaxRunners := svc.cfgSvc.GetMaxRunners()
 	node, err := service.NewModelService[models.Node]().GetOne(bson.M{"key": nodeKey}, nil)
 	if err != nil && err.Error() == mongo2.ErrNoDocuments.Error() {
 		// not exists
@@ -135,7 +111,7 @@ func (svc *MasterService) Register() (err error) {
 		node := models.Node{
 			Key:        nodeKey,
 			Name:       nodeName,
-			MaxRunners: config.DefaultConfigOptions.MaxRunners,
+			MaxRunners: nodeMaxRunners,
 			IsMaster:   true,
 			Status:     constants.NodeStatusOnline,
 			Enabled:    true,
@@ -233,7 +209,7 @@ func (svc *MasterService) getAllWorkerNodes() (nodes []models.Node, err error) {
 }
 
 func (svc *MasterService) updateMasterNodeStatus() (err error) {
-	nodeKey := svc.GetConfigService().GetNodeKey()
+	nodeKey := svc.cfgSvc.GetNodeKey()
 	node, err := service.NewModelService[models.Node]().GetOne(bson.M{"key": nodeKey}, nil)
 	if err != nil {
 		return err
@@ -318,10 +294,8 @@ func (svc *MasterService) sendNotification(node *models.Node) {
 
 func newMasterService() *MasterService {
 	return &MasterService{
-		cfgPath:          config2.GetConfigPath(),
 		cfgSvc:           config.GetNodeConfigService(),
 		monitorInterval:  15 * time.Second,
-		stopOnError:      false,
 		server:           server.GetGrpcServer(),
 		taskSchedulerSvc: scheduler.GetTaskSchedulerService(),
 		taskHandlerSvc:   handler.GetTaskHandlerService(),

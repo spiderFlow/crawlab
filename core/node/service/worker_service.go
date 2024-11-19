@@ -9,7 +9,6 @@ import (
 
 	"github.com/apex/log"
 	"github.com/cenkalti/backoff/v4"
-	"github.com/crawlab-team/crawlab/core/config"
 	"github.com/crawlab-team/crawlab/core/grpc/client"
 	"github.com/crawlab-team/crawlab/core/interfaces"
 	client2 "github.com/crawlab-team/crawlab/core/models/client"
@@ -28,7 +27,6 @@ type WorkerService struct {
 	handlerSvc *handler.Service
 
 	// settings
-	cfgPath           string
 	address           interfaces.Address
 	heartbeatInterval time.Duration
 
@@ -116,14 +114,6 @@ func (svc *WorkerService) GetConfigService() (cfgSvc interfaces.NodeConfigServic
 	return svc.cfgSvc
 }
 
-func (svc *WorkerService) GetConfigPath() (path string) {
-	return svc.cfgPath
-}
-
-func (svc *WorkerService) SetConfigPath(path string) {
-	svc.cfgPath = path
-}
-
 func (svc *WorkerService) subscribe() {
 	// Configure exponential backoff
 	b := backoff.NewExponentialBackOff()
@@ -195,7 +185,6 @@ func (svc *WorkerService) sendHeartbeat() {
 
 func newWorkerService() *WorkerService {
 	return &WorkerService{
-		cfgPath:           config.GetConfigPath(),
 		heartbeatInterval: 15 * time.Second,
 		cfgSvc:            nodeconfig.GetNodeConfigService(),
 		client:            client.GetGrpcClient(),

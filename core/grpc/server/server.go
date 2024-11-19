@@ -116,11 +116,11 @@ func newGrpcServer() *GrpcServer {
 	svr.svr = grpc.NewServer(
 		grpcmiddleware.WithUnaryServerChain(
 			grpcrecovery.UnaryServerInterceptor(recoveryOpts...),
-			grpcauth.UnaryServerInterceptor(middlewares.GetAuthTokenFunc()),
+			grpcauth.UnaryServerInterceptor(middlewares.GetGrpcServerAuthTokenFunc()),
 		),
 		grpcmiddleware.WithStreamServerChain(
 			grpcrecovery.StreamServerInterceptor(recoveryOpts...),
-			grpcauth.StreamServerInterceptor(middlewares.GetAuthTokenFunc()),
+			grpcauth.StreamServerInterceptor(middlewares.GetGrpcServerAuthTokenFunc()),
 		),
 	)
 
