@@ -45,6 +45,7 @@ jobs:
         with:
           files_yaml: |
             backend:
+              - 'backend/**'
               - 'core/**'
               - 'db/**'
               - 'fs/**'
