@@ -134,6 +134,8 @@ github.com/coreos/go-systemd/v22 v22.3.2/go.mod h1:Y58oyj3AT4RCenI/lSvhwexgC+NSV
 github.com/cpuguy83/go-md2man/v2 v2.0.1/go.mod h1:tgQtvFlXSQOSOSIRvRPT7W67SCa46tRHOmNcaadrF8o=
 github.com/crawlab-team/crawlab/core v0.0.0-20241119094044-98a9c907c9cb h1:ZbOP19WEFxIkZEGXsmx+YQA6cLskPSkhj4FyEWK1yPE=
 github.com/crawlab-team/crawlab/core v0.0.0-20241119094044-98a9c907c9cb/go.mod h1:wcICnYeY/1K5Lfe3qe1esVSv+2qs2qcftBhQF1h3d1w=
+github.com/crawlab-team/crawlab/core v0.0.0-20241119103250-dc9f62dfd09a h1:X5sAKcFeplt422TuhvWZBQwG+qgBl0zWtbDKFxwek9M=
+github.com/crawlab-team/crawlab/core v0.0.0-20241119103250-dc9f62dfd09a/go.mod h1:wcICnYeY/1K5Lfe3qe1esVSv+2qs2qcftBhQF1h3d1w=
 github.com/crawlab-team/crawlab/db v0.0.0-20241119094044-98a9c907c9cb h1:MnKwAiPiirBAK80IXjXDjyT1QzNha8N98tiU62b3QPI=
 github.com/crawlab-team/crawlab/db v0.0.0-20241119094044-98a9c907c9cb/go.mod h1:x2U50YWERhvwoJ5QeImz2hEABcTc3J+kwzoOM5fA3h4=
 github.com/crawlab-team/crawlab/grpc v0.0.0-20241119094044-98a9c907c9cb h1:IlhI+TBTtojsOSudygc4HmBz+YtkIo7Q3D3RZgn4zXg=

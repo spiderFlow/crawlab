@@ -53,7 +53,11 @@ func RecreateIndexes(col *mongo.Col, desiredIndexes []mongo2.IndexModel) {
 		}
 
 		// Create new indexes
-		col.MustCreateIndexes(desiredIndexes)
+		err = col.CreateIndexes(desiredIndexes)
+		if err != nil {
+			log.Errorf("error creating indexes: %v", err)
+			return
+		}
 		log.Infof("recreated indexes for collection: %s", col.GetCollection().Name())
 	}
 }
