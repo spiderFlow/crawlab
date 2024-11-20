@@ -296,9 +296,12 @@ func (r *Runner) configureEnv() {
 	_ = os.Setenv("NODE_PATH", nodePath)
 
 	// Default envs
-	r.cmd.Env = append(os.Environ(), "CRAWLAB_TASK_ID="+r.tid.Hex())
+	r.cmd.Env = os.Environ()
+	r.cmd.Env = append(r.cmd.Env, "CRAWLAB_TASK_ID="+r.tid.Hex())
 	r.cmd.Env = append(r.cmd.Env, "CRAWLAB_GRPC_ADDRESS="+utils.GetGrpcAddress())
 	r.cmd.Env = append(r.cmd.Env, "CRAWLAB_GRPC_AUTH_KEY="+utils.GetAuthKey())
+	r.cmd.Env = append(r.cmd.Env, "PYENV_ROOT="+utils.PyenvRoot)
+	r.cmd.Env = append(r.cmd.Env, "PATH="+os.Getenv("PATH")+":"+utils.PyenvRoot+"/shims:"+utils.PyenvRoot+"/bin")
 
 	// Global environment variables
 	envs, err := client.NewModelService[models.Environment]().GetMany(nil, nil)
