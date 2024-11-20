@@ -7,4 +7,5 @@ use (
 	trace
 	vcs
 	backend
+	cli
 )
