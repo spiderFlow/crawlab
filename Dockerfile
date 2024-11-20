@@ -1,8 +1,10 @@
-FROM crawlabteam/crawlab-backend:latest AS backend-build
+ARG CRAWLAB_TAG=latest
 
-FROM crawlabteam/crawlab-frontend:latest AS frontend-build
+FROM crawlabteam/crawlab-backend:${CRAWLAB_TAG} AS backend-build
 
-FROM crawlabteam/crawlab-base:latest
+FROM crawlabteam/crawlab-frontend:${CRAWLAB_TAG} AS frontend-build
+
+FROM crawlabteam/crawlab-base:${CRAWLAB_TAG}
 
 # copy backend files
 RUN mkdir -p /opt/bin

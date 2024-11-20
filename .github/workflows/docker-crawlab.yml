@@ -268,6 +268,8 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
+          build-args: |
+            CRAWLAB_TAG=${{ needs.setup.outputs.version }}
           push: true
           tags: |
             ${{ env.IMAGE_NAME_CRAWLAB }}:${{ needs.setup.outputs.version }}
