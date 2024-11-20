@@ -4,7 +4,13 @@
 version="stable"
 
 # deps
-apt-get install -y xvfb libxi6 libgconf-2-4
+apt-get install -y \
+	xvfb \
+	libxi6 \
+	libgconf-2-4 \
+	libglib2.0-0 \
+	libnss3 \
+	libx11-6
 
 # install puppeteer browsers package globally first
 npm install -g @puppeteer/browsers
