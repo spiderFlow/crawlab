@@ -12,8 +12,10 @@ RUN bash /app/install/deps/deps.sh & \
     bash /app/install/python/python.sh & \
     bash /app/install/golang/golang.sh & \
     bash /app/install/node/node.sh & \
-    bash /app/install/chromedriver/chromedriver.sh & \
     wait
+
+# install chromedriver
+RUN bash /app/install/chromedriver/chromedriver.sh
 
 # working directory
 WORKDIR /app/backend
