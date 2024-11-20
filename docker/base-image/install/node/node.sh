@@ -19,16 +19,16 @@ nvm alias default ${version}
 
 # verifies the right Node.js version is in the environment
 if [[ ! "$(node -v)" =~ ^v${version} ]]; then
-  echo "Node.js version is not v${version}.x"
-  exit 1
+	echo "Node.js version is not v${version}.x"
+	exit 1
 fi
 
 # install node dependencies
 npm install -g \
-  yarn \
-  pnpm \
-  crawlab-sdk@latest \
-  puppeteer \
-  playwright \
-  playwright-chromium \
-  crawlee
+	yarn \
+	pnpm \
+	crawlab-sdk@latest \
+	puppeteer \
+	playwright \
+	playwright-chromium \
+	crawlee
