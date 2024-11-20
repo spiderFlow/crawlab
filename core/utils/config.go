@@ -27,6 +27,7 @@ const (
 	DefaultNodeMaxRunners      = 16
 	MetadataConfigDirName      = ".crawlab"
 	MetadataConfigName         = "config.json"
+	PyenvRoot                  = "/root/.pyenv"
 )
 
 func IsDev() bool {
