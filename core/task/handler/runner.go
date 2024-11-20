@@ -182,10 +182,10 @@ func (r *Runner) Cancel(force bool) (err error) {
 	for {
 		select {
 		case <-timeout:
-			return errors.New(fmt.Sprintf("task process %d still exists", r.pid))
+			return fmt.Errorf("task process %d still exists", r.pid)
 		case <-ticker.C:
 			if exists, _ := process.PidExists(int32(r.pid)); exists {
-				return errors.New(fmt.Sprintf("task process %d still exists", r.pid))
+				return fmt.Errorf("task process %d still exists", r.pid)
 			}
 			return nil
 		}
