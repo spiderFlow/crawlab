@@ -7,12 +7,17 @@ ENV DEBIAN_FRONTEND=noninteractive
 # copy install scripts
 COPY ./install /app/install
 
-# install all dependencies in parallel
-RUN bash /app/install/deps/deps.sh & \
-    bash /app/install/python/python.sh & \
-    bash /app/install/golang/golang.sh & \
-    bash /app/install/node/node.sh & \
-    wait
+# install common dependencies
+RUN bash /app/install/deps/deps.sh
+
+# install python
+RUN bash /app/install/python/python.sh
+
+# install golang
+RUN bash /app/install/golang/golang.sh
+
+# install node
+RUN bash /app/install/node/node.sh
 
 # install chromedriver
 RUN bash /app/install/chromedriver/chromedriver.sh
