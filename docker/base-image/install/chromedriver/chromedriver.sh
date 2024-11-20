@@ -1,21 +1,25 @@
 #!/bin/bash
 
 # version
-version="106.0.5249.61"
+version="stable"
 
 # deps
-apt-get install -y unzip xvfb libxi6 libgconf-2-4
+apt-get install -y xvfb libxi6 libgconf-2-4
 
-# chrome
-wget -q "http://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_${version}-1_amd64.deb"
-apt-get -y install "./google-chrome-stable_${version}-1_amd64.deb"
-echo `google-chrome --version`
-rm -f "./google-chrome-stable_${version}-1_amd64.deb"
+# install chrome
+npx @puppeteer/browsers install chrome@${version}
 
+# verify chrome version
+if [[ ! "$(google-chrome --version)" =~ ^Google\ Chrome\ ${version} ]]; then
+  echo "ERROR: chrome version does not match. expected: \"Google Chrome ${version}\", but actual is \"$(google-chrome --version)\""
+  exit 1
+fi
 
-# chromedriver
-wget "https://chromedriver.storage.googleapis.com/${version}/chromedriver_linux64.zip"
-unzip chromedriver_linux64.zip
-mv chromedriver /usr/local/bin/chromedriver
-chown root:root /usr/local/bin/chromedriver
-chmod +x /usr/local/bin/chromedriver
+# install chromedriver
+npx @puppeteer/browsers install chromedriver@${version}
+
+# verify chromedriver version
+if [[ ! "$(chromedriver --version)" =~ ^ChromeDriver\ ${version} ]]; then
+  echo "ERROR: chromedriver version does not match. expected: \"ChromeDriver ${version}\", but actual is \"$(chromedriver --version)\""
+  exit 1
+fi

@@ -1,11 +1,22 @@
 #!/bin/bash
 
-# install python
-apt-get update \
-	&& apt install software-properties-common -y \
-	&& add-apt-repository ppa:deadsnakes/ppa -y \
-	&& apt install python3.10 -y \
-	&& curl -sS https://bootstrap.pypa.io/get-pip.py | python3.10
+# install pyenv
+curl https://pyenv.run | bash
+
+# add pyenv to path
+echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.bashrc
+echo 'command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.bashrc
+echo 'eval "$(pyenv init -)"' >> ~/.bashrc
+source ~/.bashrc
+
+# install python build dependencies
+apt-get install -y make build-essential libssl-dev zlib1g-dev \
+libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm \
+libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev
+
+# install python 3.10 via pyenv
+pyenv install 3.10
+pyenv global 3.10
 
 # alias
 rm /usr/local/bin/pip | true
