@@ -77,7 +77,7 @@ func (svr TaskServiceServer) Connect(stream grpc.TaskService_ConnectServer) (err
 			if strings.HasSuffix(err.Error(), "context canceled") {
 				return nil
 			}
-			trace.PrintError(err)
+			log.Errorf("error receiving stream message: %v", err)
 			continue
 		}
 
