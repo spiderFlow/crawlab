@@ -1,26 +1,20 @@
-# images
-FROM ubuntu:22.04
-
-# set as non-interactive
+# Build stage
+FROM ubuntu:22.04 AS builder
 ENV DEBIAN_FRONTEND=noninteractive
-
-# copy install scripts
 COPY ./install /app/install
+RUN bash /app/install/deps/deps.sh && \
+    bash /app/install/python/python.sh && \
+    bash /app/install/golang/golang.sh && \
+    bash /app/install/node/node.sh && \
+    bash /app/install/chromedriver/chromedriver.sh
 
-# install common dependencies
-RUN bash /app/install/deps/deps.sh
-
-# install python
-RUN bash /app/install/python/python.sh
-
-# install golang
-RUN bash /app/install/golang/golang.sh
-
-# install node
-RUN bash /app/install/node/node.sh
-
-# install chromedriver
-RUN bash /app/install/chromedriver/chromedriver.sh
+# Final stage
+FROM ubuntu:22.04
+ENV DEBIAN_FRONTEND=noninteractive
+COPY --from=builder /usr/local/bin /usr/local/bin
+COPY --from=builder /usr/local/lib /usr/local/lib
+COPY --from=builder /usr/lib /usr/lib
+COPY --from=builder /app/install /app/install
 
 # working directory
 WORKDIR /app/backend

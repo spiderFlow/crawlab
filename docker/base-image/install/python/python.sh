@@ -59,3 +59,9 @@ fi
 
 # install python dependencies
 pip install -r /app/install/python/requirements.txt
+
+# After pip install
+pip cache purge && \
+rm -rf ~/.cache/pip/* && \
+apt-get remove -y make build-essential && \
+apt-get autoremove -y

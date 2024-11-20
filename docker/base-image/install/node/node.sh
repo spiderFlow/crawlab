@@ -32,3 +32,7 @@ npm install -g \
 	playwright \
 	playwright-chromium \
 	crawlee
+
+# Clean up
+npm cache clean --force && \
+rm -rf ~/.npm
