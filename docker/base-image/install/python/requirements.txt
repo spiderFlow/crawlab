@@ -1,7 +1,7 @@
 scrapy>=2.9.0
 pymongo
 bs4
-crawlab-sdk>=0.6.0
+crawlab-sdk>=0.7.0rc1
 crawlab-demo<=0.1.0
 selenium
 pyopenssl
