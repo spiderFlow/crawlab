@@ -57,7 +57,6 @@ func setupTest(t *testing.T) *Runner {
 	runner.s = spider
 
 	// Initialize runner
-	_ = runner.Init()
 	err = runner.configureCmd()
 	require.Nil(t, err)
 
