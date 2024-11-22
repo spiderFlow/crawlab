@@ -1,26 +1,31 @@
 package utils
 
 import (
-	"github.com/crawlab-team/crawlab/trace"
+	"os"
 	"os/exec"
-	"regexp"
 	"runtime"
 	"strings"
+	"syscall"
+
+	"github.com/crawlab-team/crawlab/trace"
 )
 
-var pidRegexp, _ = regexp.Compile("(?:^|\\s+)\\d+(?:$|\\s+)")
-
-func ProcessIdExists(id int) (ok bool) {
-	lines, err := ListProcess(string(rune(id)))
+func ProcessIdExists(pid int) (ok bool) {
+	// Find process by pid
+	p, err := os.FindProcess(pid)
 	if err != nil {
+		// Process not found
 		return false
 	}
-	for _, line := range lines {
-		matched := pidRegexp.MatchString(line)
-		if matched {
-			return true
-		}
+
+	// Check if process exists
+	err = p.Signal(syscall.Signal(0))
+	if err == nil {
+		// Process exists
+		return true
 	}
+
+	// Process not found
 	return false
 }
 

@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/apex/log"
 	"io"
 	"os"
 	"syscall"
@@ -69,6 +70,8 @@ func TestRunner_HandleIPC(t *testing.T) {
 
 	// Create a pipe for testing
 	pr, pw := io.Pipe()
+	defer pr.Close()
+	defer pw.Close()
 	runner.stdoutPipe = pr
 
 	// Start IPC reader
@@ -108,13 +111,10 @@ func TestRunner_HandleIPC(t *testing.T) {
 	select {
 	case <-handled:
 		// Message was handled successfully
+		log.Info("IPC message was handled successfully")
 	case <-time.After(3 * time.Second):
 		t.Fatal("timeout waiting for IPC message to be handled")
 	}
-
-	// Clean up
-	pw.Close()
-	pr.Close()
 }
 
 func TestRunner_Cancel(t *testing.T) {
