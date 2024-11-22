@@ -2,7 +2,7 @@
 
 version="3.12"
 
-# install build dependencies
+# Install build dependencies
 apt-get install -y \
 	make \
 	build-essential \
@@ -22,30 +22,26 @@ apt-get install -y \
 	libffi-dev \
 	liblzma-dev
 
-# install pyenv
+# Install pyenv
 curl https://pyenv.run | bash
 
-# add pyenv to path
+# Add pyenv to path
 echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.bashrc
 echo '[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.bashrc
 echo 'eval "$(pyenv init -)"' >> ~/.bashrc
 echo 'eval "$(pyenv virtualenv-init -)"' >> ~/.bashrc
 
-# ensure changes take effect immediately
+# Ensure changes take effect immediately
 export PYENV_ROOT="$HOME/.pyenv"
 [[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
 eval "$(pyenv init -)"
 eval "$(pyenv virtualenv-init -)"
 
-# install python ${version} via pyenv
+# Install python ${version} via pyenv
 pyenv install ${version}
 pyenv global ${version}
 
-# Create symbolic links
-ln -sf $(pyenv which python) /usr/local/bin/python
-ln -sf $(pyenv which pip) /usr/local/bin/pip
-
-# verify
+# Verify
 python_version=$(python -V)
 if [[ $python_version =~ "Python ${version}" ]]; then
 	:
@@ -61,8 +57,12 @@ else
 	exit 1
 fi
 
-# install python dependencies
+# Install python dependencies
 pip install -r /app/install/python/requirements.txt
+
+# Create symbolic links
+ln -sf $(pyenv which python) /usr/local/bin/python
+ln -sf $(pyenv which pip) /usr/local/bin/pip
 
 # After pip install
 pip cache purge && \
