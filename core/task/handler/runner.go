@@ -277,13 +277,15 @@ func (r *Runner) configureCmd() (err error) {
 	// Configure pipes for IPC
 	r.stdinPipe, err = r.cmd.StdinPipe()
 	if err != nil {
-		return trace.TraceError(err)
+		log.Errorf("error creating stdin pipe: %v", err)
+		return err
 	}
 
 	// Add stdout pipe for IPC
 	r.stdoutPipe, err = r.cmd.StdoutPipe()
 	if err != nil {
-		return trace.TraceError(err)
+		log.Errorf("error creating stdout pipe: %v", err)
+		return err
 	}
 
 	// Initialize IPC channel
@@ -928,13 +930,13 @@ func newTaskRunner(id primitive.ObjectID, svc *Service) (r *Runner, err error) {
 	// task
 	r.t, err = svc.GetTaskById(id)
 	if err != nil {
-		return nil, err
+		return r, err
 	}
 
 	// spider
 	r.s, err = svc.GetSpiderById(r.t.SpiderId)
 	if err != nil {
-		return nil, err
+		return r, err
 	}
 
 	// task fs service

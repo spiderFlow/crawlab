@@ -12,12 +12,17 @@ import (
 	"github.com/crawlab-team/crawlab/core/constants"
 	"github.com/crawlab-team/crawlab/core/models/models"
 	"github.com/crawlab-team/crawlab/core/models/service"
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func setupTest(t *testing.T) *Runner {
+	// Mock IsMaster function by setting viper config
+	viper.Set("node.master", true)
+	defer viper.Set("node.master", nil) // cleanup after test
+
 	// Create a test spider
 	spider := &models.Spider{
 		Name: "Test Spider",
@@ -39,12 +44,18 @@ func setupTest(t *testing.T) *Runner {
 	require.NoError(t, err)
 	task.Id = taskId
 
-	// Create a test runner
+	// Create a task handler service
 	svc := newTaskHandlerService()
+
+	// Create a task runner
 	runner, _ := newTaskRunner(task.Id, svc)
 	require.NotNil(t, runner)
-	err = runner.updateTask("", nil)
-	require.Nil(t, err)
+
+	// Set task and spider
+	runner.t = task
+	runner.s = spider
+
+	// Initialize runner
 	_ = runner.Init()
 	err = runner.configureCmd()
 	require.Nil(t, err)
