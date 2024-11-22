@@ -1,6 +1,7 @@
 package sys_exec
 
 import (
+	"errors"
 	"github.com/apex/log"
 	"github.com/shirou/gopsutil/process"
 	"os/exec"
@@ -25,7 +26,11 @@ func killProcessRecursive(p *process.Process, force bool) (err error) {
 	// children processes
 	cps, err := p.Children()
 	if err != nil {
-		log.Errorf("failed to get children processes: %v", err)
+		if !errors.Is(err, process.ErrorNoChildren) {
+			log.Errorf("failed to get children processes: %v", err)
+		} else if errors.Is(err, process.ErrorProcessNotRunning) {
+			return nil
+		}
 		return killProcess(p, force)
 	}
 
