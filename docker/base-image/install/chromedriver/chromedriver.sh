@@ -38,6 +38,7 @@ if ! command -v google-chrome &> /dev/null; then
     echo "ERROR: Chrome is not installed properly"
     echo "Chrome installation path: $(find /chrome -type f -name chrome 2>/dev/null)"
     echo "PATH environment: $PATH"
+    echo "CHROME_PATH environment: $CHROME_PATH"
     exit 1
 fi
 
