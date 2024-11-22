@@ -42,6 +42,7 @@ func setupTest(t *testing.T) *Runner {
 	// Create a test runner
 	svc := newTaskHandlerService()
 	runner, _ := newTaskRunner(task.Id, svc)
+	require.NotNil(t, runner)
 	err = runner.updateTask("", nil)
 	require.Nil(t, err)
 	_ = runner.Init()
@@ -127,14 +128,4 @@ func TestRunner_Cancel(t *testing.T) {
 	require.NoError(t, err)
 	err = process.Signal(syscall.Signal(0))
 	assert.Error(t, err) // Process should not exist
-}
-
-// Helper function to create a temporary workspace for testing
-func createTestWorkspace(t *testing.T) string {
-	dir, err := os.MkdirTemp("", "crawlab-test-*")
-	assert.NoError(t, err)
-	t.Cleanup(func() {
-		os.RemoveAll(dir)
-	})
-	return dir
 }
