@@ -1,7 +1,7 @@
 package sys_exec
 
 import (
-	"github.com/crawlab-team/crawlab/trace"
+	"github.com/apex/log"
 	"github.com/shirou/gopsutil/process"
 	"os/exec"
 )
@@ -17,19 +17,15 @@ func KillProcess(cmd *exec.Cmd, opts *KillProcessOptions) error {
 		return err
 	}
 
-	// kill function
-	killFunc := func(p *process.Process) error {
-		return killProcessRecursive(p, opts.Force)
-	}
-
-	// without timeout
-	return killFunc(p)
+	// kill process
+	return killProcessRecursive(p, opts.Force)
 }
 
 func killProcessRecursive(p *process.Process, force bool) (err error) {
 	// children processes
 	cps, err := p.Children()
 	if err != nil {
+		log.Errorf("failed to get children processes: %v", err)
 		return killProcess(p, force)
 	}
 
@@ -40,7 +36,7 @@ func killProcessRecursive(p *process.Process, force bool) (err error) {
 		}
 	}
 
-	return nil
+	return killProcess(p, force)
 }
 
 func killProcess(p *process.Process, force bool) (err error) {
@@ -50,7 +46,8 @@ func killProcess(p *process.Process, force bool) (err error) {
 		err = p.Terminate()
 	}
 	if err != nil {
-		return trace.TraceError(err)
+		log.Errorf("failed to kill process (force: %v): %v", force, err)
+		return err
 	}
 	return nil
 }

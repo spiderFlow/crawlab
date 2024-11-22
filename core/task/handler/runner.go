@@ -6,8 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/crawlab-team/crawlab/core/fs"
-	"github.com/hashicorp/go-multierror"
 	"io"
 	"net/http"
 	"os"
@@ -16,6 +14,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/crawlab-team/crawlab/core/fs"
+	"github.com/hashicorp/go-multierror"
 
 	"github.com/crawlab-team/crawlab/core/models/models"
 
@@ -187,19 +188,22 @@ func (r *Runner) Cancel(force bool) (err error) {
 		return err
 	}
 
-	// Wait for process to be killed and goroutines to stop
-	ticker := time.NewTicker(time.Second)
+	// Create a context with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), r.svc.GetCancelTimeout())
+	defer cancel()
+
+	// Wait for process to be killed with context
+	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
+
 	for {
 		select {
-		case <-ticker.C:
-			if utils.ProcessIdExists(r.pid) {
-				continue
-			}
-			return nil
-		case <-time.After(r.svc.GetCancelTimeout()):
-			// timeout
+		case <-ctx.Done():
 			return fmt.Errorf("timeout waiting for task to stop")
+		case <-ticker.C:
+			if !utils.ProcessIdExists(r.pid) {
+				return nil
+			}
 		}
 	}
 }
