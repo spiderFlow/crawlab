@@ -381,6 +381,13 @@ func InitRoutes(app *gin.Engine) (err error) {
 	})
 
 	// Register public routes that don't require authentication
+	RegisterActions(groups.AnonymousGroup, "/health", []Action{
+		{
+			Path:        "",
+			Method:      http.MethodGet,
+			HandlerFunc: GetHealthFn(func() bool { return true }),
+		},
+	})
 	RegisterActions(groups.AnonymousGroup, "/system-info", []Action{
 		{
 			Path:        "",

@@ -54,7 +54,7 @@ func (svc *MasterService) Start() {
 	go common.InitIndexes()
 
 	// start monitoring worker nodes
-	go svc.Monitor()
+	go svc.startMonitoring()
 
 	// start task handler
 	go svc.taskHandlerSvc.Start()
@@ -82,7 +82,7 @@ func (svc *MasterService) Stop() {
 	log.Infof("master[%s] service has stopped", svc.cfgSvc.GetNodeKey())
 }
 
-func (svc *MasterService) Monitor() {
+func (svc *MasterService) startMonitoring() {
 	log.Infof("master[%s] monitoring started", svc.cfgSvc.GetNodeKey())
 
 	// ticker
