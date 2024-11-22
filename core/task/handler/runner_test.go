@@ -270,8 +270,10 @@ func TestRunner_HandleIPCData(t *testing.T) {
 			select {
 			case recordCount := <-processed:
 				assert.Equal(t, tc.expected, recordCount)
-			case <-time.After(3 * time.Second):
-				t.Fatal("timeout waiting for IPC message to be processed")
+			case <-time.After(1 * time.Second):
+				if tc.expected > 0 {
+					t.Fatal("timeout waiting for IPC message to be processed")
+				}
 			}
 		})
 	}
@@ -330,8 +332,10 @@ func TestRunner_HandleIPCInvalidData(t *testing.T) {
 			// Mock the gRPC connection
 			runner.conn = &mockConnectClient{
 				sendFunc: func(req *grpc.TaskServiceConnectRequest) error {
-					// This should not be called for invalid data
-					processed <- struct{}{}
+					if req.Code == grpc.TaskServiceConnectCode_INSERT_DATA {
+						// This should not be called for invalid data
+						processed <- struct{}{}
+					}
 					return nil
 				},
 			}

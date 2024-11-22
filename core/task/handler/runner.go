@@ -809,7 +809,8 @@ func (r *Runner) startIPCReader() {
 			line := scanner.Text()
 
 			var ipcMsg IPCMessage
-			if err := json.Unmarshal([]byte(line), &ipcMsg); err == nil && ipcMsg.IPC {
+			err := json.Unmarshal([]byte(line), &ipcMsg)
+			if err == nil && ipcMsg.IPC {
 				// Only handle as IPC if it's valid JSON AND has IPC flag set
 				if r.ipcHandler != nil {
 					r.ipcHandler(ipcMsg)
