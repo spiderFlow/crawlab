@@ -5,10 +5,10 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
 
-# version - using "stable" for installation but not for verification
+# Version - using "stable" for installation but not for verification
 version="stable"
 
-# deps
+# Install dependencies
 apt-get install -y \
 	xvfb \
 	libxi6 \
@@ -17,22 +17,34 @@ apt-get install -y \
 	libnss3 \
 	libx11-6
 
-# install puppeteer browsers package globally first
+# Install puppeteer browsers package globally first
 npm install -g @puppeteer/browsers
 
-# install chrome with auto-yes
+# Install chrome with auto-yes
 npx -y @puppeteer/browsers install chrome@${version}
 
-# verify chrome is installed (without specific version check)
+# Add Chrome to PATH
+CHROME_PATH="/chrome/linux-*/chrome-linux64"
+if [ -d "$CHROME_PATH" ]; then
+    CHROME_BIN=$(find "$CHROME_PATH" -name "chrome")
+    if [ -n "$CHROME_BIN" ]; then
+        ln -sf "$CHROME_BIN" /usr/local/bin/google-chrome
+        chmod +x /usr/local/bin/google-chrome
+    fi
+fi
+
+# Verify chrome is installed (with more detailed error message)
 if ! command -v google-chrome &> /dev/null; then
     echo "ERROR: Chrome is not installed properly"
+    echo "Chrome installation path: $(find /chrome -type f -name chrome 2>/dev/null)"
+    echo "PATH environment: $PATH"
     exit 1
 fi
 
-# install chromedriver with auto-yes
+# Install chromedriver with auto-yes
 npx -y @puppeteer/browsers install chromedriver@${version}
 
-# verify chromedriver is installed (without specific version check)
+# Verify chromedriver is installed (without specific version check)
 if ! command -v chromedriver &> /dev/null; then
     echo "ERROR: ChromeDriver is not installed properly"
     exit 1

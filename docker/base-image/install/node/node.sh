@@ -25,6 +25,7 @@ fi
 
 # install node dependencies
 npm install -g \
+	npm@latest \
 	yarn \
 	pnpm \
 	crawlab-sdk@latest \
