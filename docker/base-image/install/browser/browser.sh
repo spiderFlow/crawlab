@@ -20,33 +20,48 @@ apt-get install -y \
 # Install puppeteer browsers package globally first
 npm install -g @puppeteer/browsers
 
-# Chrome path
-CHROME_PATH="/chrome/linux-${version}/chrome-linux64"
-CHROME_BIN="$CHROME_PATH/chrome"
+# Install chrome with auto-yes and capture the output
+INSTALL_OUTPUT=$(npx -y @puppeteer/browsers install chrome@${version} --install-deps)
+echo "Installation output: $INSTALL_OUTPUT"
 
-# Install chrome with auto-yes
-npx -y @puppeteer/browsers install chrome@${version} \
-	--install-deps \
-    --path="$CHROME_PATH"
+# Extract the actual version and path from the output
+ACTUAL_VERSION=$(echo "$INSTALL_OUTPUT" | grep -o 'chrome@[^ ]*' | cut -d'@' -f2)
+CHROME_BIN=$(echo "$INSTALL_OUTPUT" | awk '{print $2}')
+
+echo "Detected Chrome version: $ACTUAL_VERSION"
+echo "Chrome binary path: $CHROME_BIN"
+
+# Update version variable for ChromeDriver
+version="$ACTUAL_VERSION"
 
 # Add chrome to PATH
-ln -s "$CHROME_BIN" /usr/local/bin/google-chrome
+ln -sf "$CHROME_BIN" /usr/local/bin/google-chrome
 
 # Verify chrome is installed (with more detailed error message)
 if ! command -v google-chrome &> /dev/null; then
     echo "ERROR: Chrome is not installed properly"
     echo "Chrome installation path: $(find /chrome -type f -name chrome 2>/dev/null)"
     echo "PATH environment: $PATH"
-    echo "CHROME_PATH environment: $CHROME_PATH"
+    echo "CHROME_PATH environment: $CHROME_BIN"
     exit 1
 fi
 
-# Install chromedriver with auto-yes
-npx -y @puppeteer/browsers install chromedriver@${version}
+# Install chromedriver with auto-yes and capture the output
+CHROMEDRIVER_OUTPUT=$(npx -y @puppeteer/browsers install chromedriver@${version})
+echo "ChromeDriver installation output: $CHROMEDRIVER_OUTPUT"
 
-# Verify chromedriver is installed (without specific version check)
+# Extract ChromeDriver path from the output
+CHROMEDRIVER_BIN=$(echo "$CHROMEDRIVER_OUTPUT" | awk '{print $2}')
+echo "ChromeDriver binary path: $CHROMEDRIVER_BIN"
+
+# Add chromedriver to PATH
+ln -sf "$CHROMEDRIVER_BIN" /usr/local/bin/chromedriver
+
+# Verify chromedriver is installed
 if ! command -v chromedriver &> /dev/null; then
     echo "ERROR: ChromeDriver is not installed properly"
+    echo "ChromeDriver installation path: $CHROMEDRIVER_BIN"
+    echo "PATH environment: $PATH"
     exit 1
 fi
 
