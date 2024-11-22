@@ -28,12 +28,10 @@ type Service struct {
 	c      *grpcclient.GrpcClient // grpc client
 
 	// settings
-	//maxRunners        int
-	exitWatchDuration time.Duration
-	reportInterval    time.Duration
-	fetchInterval     time.Duration
-	fetchTimeout      time.Duration
-	cancelTimeout     time.Duration
+	reportInterval time.Duration
+	fetchInterval  time.Duration
+	fetchTimeout   time.Duration
+	cancelTimeout  time.Duration
 
 	// internals variables
 	stopped   bool
@@ -134,10 +132,6 @@ func (svc *Service) reportStatus() {
 			}
 		}
 	}
-}
-
-func (svc *Service) GetExitWatchDuration() (duration time.Duration) {
-	return svc.exitWatchDuration
 }
 
 func (svc *Service) GetCancelTimeout() (timeout time.Duration) {
@@ -444,13 +438,12 @@ func (svc *Service) cancelTask(taskId primitive.ObjectID, force bool) (err error
 func newTaskHandlerService() *Service {
 	// service
 	svc := &Service{
-		exitWatchDuration: 60 * time.Second,
-		fetchInterval:     1 * time.Second,
-		fetchTimeout:      15 * time.Second,
-		reportInterval:    5 * time.Second,
-		cancelTimeout:     5 * time.Second,
-		mu:                sync.Mutex{},
-		runners:           sync.Map{},
+		fetchInterval:  1 * time.Second,
+		fetchTimeout:   15 * time.Second,
+		reportInterval: 5 * time.Second,
+		cancelTimeout:  60 * time.Second,
+		mu:             sync.Mutex{},
+		runners:        sync.Map{},
 	}
 
 	// dependency injection

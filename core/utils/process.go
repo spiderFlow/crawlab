@@ -1,32 +1,16 @@
 package utils
 
 import (
-	"os"
+	"github.com/crawlab-team/crawlab/trace"
+	"github.com/shirou/gopsutil/process"
 	"os/exec"
 	"runtime"
 	"strings"
-	"syscall"
-
-	"github.com/crawlab-team/crawlab/trace"
 )
 
 func ProcessIdExists(pid int) (ok bool) {
-	// Find process by pid
-	p, err := os.FindProcess(pid)
-	if err != nil {
-		// Process not found
-		return false
-	}
-
-	// Check if process exists
-	err = p.Signal(syscall.Signal(0))
-	if err == nil {
-		// Process exists
-		return true
-	}
-
-	// Process not found
-	return false
+	ok, _ = process.PidExists(int32(pid))
+	return ok
 }
 
 func ListProcess(text string) (lines []string, err error) {
