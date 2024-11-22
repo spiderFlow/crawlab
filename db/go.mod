@@ -1,6 +1,6 @@
 module github.com/crawlab-team/crawlab/db
 
-go 1.22
+go 1.22.9
 
 replace github.com/crawlab-team/crawlab/trace => ../trace
 

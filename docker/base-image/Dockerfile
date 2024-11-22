@@ -6,7 +6,7 @@ RUN bash /app/install/deps/deps.sh && \
     bash /app/install/python/python.sh && \
     bash /app/install/go/go.sh && \
     bash /app/install/node/node.sh && \
-    bash /app/install/chromedriver/chromedriver.sh
+    bash /app/install/browser/browser.sh
 
 # Final stage
 FROM ubuntu:22.04

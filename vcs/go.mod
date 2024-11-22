@@ -1,6 +1,6 @@
 module github.com/crawlab-team/crawlab/vcs
 
-go 1.22
+go 1.22.9
 
 require (
 	github.com/apex/log v1.9.0
