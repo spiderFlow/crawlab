@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Source nvm environment
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+
 # version - using "stable" for installation but not for verification
 version="stable"
 
