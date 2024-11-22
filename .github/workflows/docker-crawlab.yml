@@ -305,7 +305,7 @@ jobs:
         ports:
           - 8080:8080
         options: >-
-          --health-cmd "curl -f http://localhost:8080/api/system-info || exit 1"
+          --health-cmd "curl -f http://localhost:8000/health || exit 1"
           --health-interval 30s
           --health-timeout 10s
           --health-retries 5
