@@ -26,6 +26,7 @@ env:
 
 jobs:
   setup:
+    name: Setup
     runs-on: ubuntu-latest
     outputs:
       backend_changed: ${{ steps.check_changed_files.outputs.backend_changed }}
@@ -112,6 +113,7 @@ jobs:
           fi
 
   build_base_image:
+    name: Build base image
     needs: [ setup ]
     if: needs.setup.outputs.base_image_changed == 'true' || needs.setup.outputs.workflow_changed == 'true'
     runs-on: ubuntu-latest
@@ -149,15 +151,18 @@ jobs:
         image: mongo:5
         ports:
           - 27017:27017
+    strategy:
+      matrix:
+        package: [core, db]
     steps:
       - uses: actions/checkout@v4
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: 'core/go.mod'
-          cache-dependency-path: 'core/go.sum'
+          go-version-file: '${{ matrix.package }}/go.mod'
+          cache-dependency-path: '${{ matrix.package }}/go.sum'
       - name: Run tests
-        working-directory: core
+        working-directory: ${{ matrix.package }}
         run: |
           # Find all directories containing *_test.go files
           test_dirs=$(find . -name "*_test.go" -exec dirname {} \; | sort -u)
@@ -275,6 +280,7 @@ jobs:
             ${{ env.IMAGE_NAME_CRAWLAB }}:${{ needs.setup.outputs.version }}
 
   test_crawlab:
+    name: Test crawlab
     needs: [setup, build_crawlab]
     if: ${{ always() && needs.build_crawlab.result == 'success' }}
     runs-on: ubuntu-latest
@@ -332,6 +338,7 @@ jobs:
           destination_dir: playwright-report/${{ needs.setup.outputs.version }}
 
   push_images:
+    name: Push images
     if: ${{ always() && needs.test_crawlab.result == 'success' }}
     needs: [setup, test_crawlab]
     runs-on: ubuntu-latest

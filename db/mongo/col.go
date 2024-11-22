@@ -3,7 +3,8 @@ package mongo
 import (
 	"context"
 	"errors"
-	"github.com/crawlab-team/crawlab/trace"
+
+	"github.com/apex/log"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -53,18 +54,21 @@ type Col struct {
 func (col *Col) Insert(doc interface{}) (id primitive.ObjectID, err error) {
 	res, err := col.c.InsertOne(col.ctx, doc)
 	if err != nil {
-		return primitive.NilObjectID, trace.TraceError(err)
+		log.Errorf("error inserting document: %v", err)
+		return primitive.NilObjectID, err
 	}
 	if id, ok := res.InsertedID.(primitive.ObjectID); ok {
 		return id, nil
 	}
-	return primitive.NilObjectID, trace.TraceError(errors.New("InsertedID is not ObjectID"))
+	err = errors.New("InsertedID is not ObjectID")
+	log.Errorf("error inserting document: %v", err)
+	return primitive.NilObjectID, err
 }
 
 func (col *Col) InsertMany(docs []interface{}) (ids []primitive.ObjectID, err error) {
 	res, err := col.c.InsertMany(col.ctx, docs)
 	if err != nil {
-		return nil, trace.TraceError(err)
+		return nil, err
 	}
 	for _, v := range res.InsertedIDs {
 		switch v.(type) {
@@ -72,7 +76,9 @@ func (col *Col) InsertMany(docs []interface{}) (ids []primitive.ObjectID, err er
 			id := v.(primitive.ObjectID)
 			ids = append(ids, id)
 		default:
-			return nil, trace.TraceError(errors.New("InsertedID is not ObjectID"))
+			err = errors.New("InsertedID is not ObjectID")
+			log.Errorf("error inserting document: %v", err)
+			return nil, err
 		}
 	}
 	return ids, nil
@@ -81,7 +87,8 @@ func (col *Col) InsertMany(docs []interface{}) (ids []primitive.ObjectID, err er
 func (col *Col) UpdateId(id primitive.ObjectID, update interface{}) (err error) {
 	_, err = col.c.UpdateOne(col.ctx, bson.M{"_id": id}, update)
 	if err != nil {
-		return trace.TraceError(err)
+		log.Errorf("error updating document: %v", err)
+		return err
 	}
 	return nil
 }
@@ -97,7 +104,8 @@ func (col *Col) UpdateWithOptions(query bson.M, update interface{}, opts *option
 		_, err = col.c.UpdateMany(col.ctx, query, update, opts)
 	}
 	if err != nil {
-		return trace.TraceError(err)
+		log.Errorf("error updating document: %v", err)
+		return err
 	}
 	return nil
 }
@@ -117,7 +125,8 @@ func (col *Col) ReplaceWithOptions(query bson.M, doc interface{}, opts *options.
 		_, err = col.c.ReplaceOne(col.ctx, query, doc, opts)
 	}
 	if err != nil {
-		return trace.TraceError(err)
+		log.Errorf("error replacing document: %v", err)
+		return err
 	}
 	return nil
 }
@@ -125,7 +134,8 @@ func (col *Col) ReplaceWithOptions(query bson.M, doc interface{}, opts *options.
 func (col *Col) DeleteId(id primitive.ObjectID) (err error) {
 	_, err = col.c.DeleteOne(col.ctx, bson.M{"_id": id})
 	if err != nil {
-		return trace.TraceError(err)
+		log.Errorf("error deleting document: %v", err)
+		return err
 	}
 	return nil
 }
@@ -141,7 +151,8 @@ func (col *Col) DeleteWithOptions(query bson.M, opts *options.DeleteOptions) (er
 		_, err = col.c.DeleteMany(col.ctx, query, opts)
 	}
 	if err != nil {
-		return trace.TraceError(err)
+		log.Errorf("error deleting document: %v", err)
+		return err
 	}
 	return nil
 }
@@ -223,7 +234,8 @@ func (col *Col) Aggregate(pipeline mongo.Pipeline, opts *options.AggregateOption
 func (col *Col) CreateIndex(indexModel mongo.IndexModel) (err error) {
 	_, err = col.c.Indexes().CreateOne(col.ctx, indexModel)
 	if err != nil {
-		return trace.TraceError(err)
+		log.Errorf("error creating index: %v", err)
+		return err
 	}
 	return nil
 }
@@ -231,7 +243,8 @@ func (col *Col) CreateIndex(indexModel mongo.IndexModel) (err error) {
 func (col *Col) CreateIndexes(indexModels []mongo.IndexModel) (err error) {
 	_, err = col.c.Indexes().CreateMany(col.ctx, indexModels)
 	if err != nil {
-		return trace.TraceError(err)
+		log.Errorf("error creating indexes: %v", err)
+		return err
 	}
 	return nil
 }
@@ -247,7 +260,8 @@ func (col *Col) MustCreateIndexes(indexModels []mongo.IndexModel) {
 func (col *Col) DeleteIndex(name string) (err error) {
 	_, err = col.c.Indexes().DropOne(col.ctx, name)
 	if err != nil {
-		return trace.TraceError(err)
+		log.Errorf("error deleting index: %v", err)
+		return err
 	}
 	return nil
 }
@@ -255,7 +269,8 @@ func (col *Col) DeleteIndex(name string) (err error) {
 func (col *Col) DeleteAllIndexes() (err error) {
 	_, err = col.c.Indexes().DropAll(col.ctx)
 	if err != nil {
-		return trace.TraceError(err)
+		log.Errorf("error deleting all indexes: %v", err)
+		return err
 	}
 	return nil
 }
@@ -263,9 +278,11 @@ func (col *Col) DeleteAllIndexes() (err error) {
 func (col *Col) ListIndexes() (indexes []map[string]interface{}, err error) {
 	cur, err := col.c.Indexes().List(col.ctx)
 	if err != nil {
+		log.Errorf("error listing indexes: %v", err)
 		return nil, err
 	}
 	if err := cur.All(col.ctx, &indexes); err != nil {
+		log.Errorf("error listing indexes: %v", err)
 		return nil, err
 	}
 	return indexes, nil

@@ -22,6 +22,12 @@ nvm install ${version}
 nvm use ${version}
 nvm alias default ${version}
 
+# Create symbolic links
+ln -sf "$(nvm which node)" /usr/local/bin/node
+ln -sf "$(nvm which npm)" /usr/local/bin/npm
+ln -sf "$(nvm which yarn)" /usr/local/bin/yarn
+ln -sf "$(nvm which pnpm)" /usr/local/bin/pnpm
+
 # verifies the right Node.js version is in the environment
 if [[ ! "$(node -v)" =~ ^v${version} ]]; then
 	echo "Node.js version is not v${version}.x"

@@ -41,6 +41,10 @@ eval "$(pyenv virtualenv-init -)"
 pyenv install ${version}
 pyenv global ${version}
 
+# Create symbolic links
+ln -sf $(pyenv which python) /usr/local/bin/python
+ln -sf $(pyenv which pip) /usr/local/bin/pip
+
 # verify
 python_version=$(python -V)
 if [[ $python_version =~ "Python ${version}" ]]; then

@@ -19,6 +19,10 @@ eval "$(goenv init -)"
 goenv install ${version}
 goenv global ${version}
 
+# Create symbolic links
+ln -sf "$(goenv which go)" /usr/local/bin/go
+ln -sf "$(goenv which gofmt)" /usr/local/bin/gofmt
+
 # verify
 go_version=$(go version)
 if [[ $go_version =~ "go${version}" ]]; then

@@ -59,7 +59,8 @@ func TestGetMongoColWithDb(t *testing.T) {
 	dbName := "test_db"
 	colName := "test_col"
 
-	col := GetMongoColWithDb(colName, dbName)
+	db := GetMongoDb(dbName)
+	col := GetMongoColWithDb(colName, db)
 	require.Equal(t, colName, col.c.Name())
 	require.Equal(t, dbName, col.db.Name())
 }

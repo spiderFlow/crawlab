@@ -1,35 +1,24 @@
 package mongo
 
 import (
-	"github.com/crawlab-team/crawlab/trace"
+	"github.com/apex/log"
 	"github.com/spf13/viper"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func GetMongoDb(dbName string, opts ...DbOption) (db *mongo.Database) {
+func GetMongoDb(dbName string) *mongo.Database {
+	// Use default database name if not provided
 	if dbName == "" {
-		dbName = viper.GetString("mongo.db")
-	}
-	if dbName == "" {
-		dbName = "test"
-	}
-
-	_opts := &DbOptions{}
-	for _, op := range opts {
-		op(_opts)
-	}
-
-	var c *mongo.Client
-	if _opts.client == nil {
-		var err error
-		c, err = GetMongoClient()
-		if err != nil {
-			trace.PrintError(err)
-			return nil
+		if dbName = viper.GetString("mongo.db"); dbName == "" {
+			dbName = "test"
 		}
-	} else {
-		c = _opts.client
 	}
 
-	return c.Database(dbName, nil)
+	c, err := GetMongoClient()
+	if err != nil {
+		log.Errorf("error getting mongo client: %v", err)
+		return nil
+	}
+
+	return c.Database(dbName)
 }
