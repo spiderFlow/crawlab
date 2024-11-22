@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/crawlab-team/crawlab/core/fs"
+	"github.com/hashicorp/go-multierror"
 	"io"
 	"net/http"
 	"os"
@@ -20,7 +22,6 @@ import (
 	"github.com/apex/log"
 	"github.com/crawlab-team/crawlab/core/constants"
 	"github.com/crawlab-team/crawlab/core/entity"
-	"github.com/crawlab-team/crawlab/core/fs"
 	client2 "github.com/crawlab-team/crawlab/core/grpc/client"
 	"github.com/crawlab-team/crawlab/core/interfaces"
 	"github.com/crawlab-team/crawlab/core/models/client"
@@ -924,20 +925,23 @@ func newTaskRunner(id primitive.ObjectID, svc *Service) (r *Runner, err error) {
 		logBatchSize:     20,
 	}
 
+	// multi error
+	var errs multierror.Error
+
 	// task
 	r.t, err = svc.GetTaskById(id)
 	if err != nil {
-		return r, err
+		errs.Errors = append(errs.Errors, err)
+	} else {
+		// spider
+		r.s, err = svc.GetSpiderById(r.t.SpiderId)
+		if err != nil {
+			errs.Errors = append(errs.Errors, err)
+		} else {
+			// task fs service
+			r.fsSvc = fs.NewFsService(filepath.Join(utils.GetWorkspace(), r.s.Id.Hex()))
+		}
 	}
-
-	// spider
-	r.s, err = svc.GetSpiderById(r.t.SpiderId)
-	if err != nil {
-		return r, err
-	}
-
-	// task fs service
-	r.fsSvc = fs.NewFsService(filepath.Join(utils.GetWorkspace(), r.s.Id.Hex()))
 
 	// grpc client
 	r.c = client2.GetGrpcClient()
@@ -949,8 +953,8 @@ func newTaskRunner(id primitive.ObjectID, svc *Service) (r *Runner, err error) {
 	// initialize task runner
 	if err := r.Init(); err != nil {
 		log.Errorf("error initializing task runner: %v", err)
-		return r, err
+		errs.Errors = append(errs.Errors, err)
 	}
 
-	return r, nil
+	return r, errs.ErrorOrNil()
 }
