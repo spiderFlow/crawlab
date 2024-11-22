@@ -13,7 +13,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/crawlab-team/crawlab/core/models/models"
@@ -74,6 +73,11 @@ type Runner struct {
 	done   chan struct{}      // channel to signal completion
 	wg     sync.WaitGroup     // wait group for goroutine synchronization
 }
+
+const (
+	IPCMessageData = "data" // IPCMessageData is the message type identifier for data messages
+	IPCMessageLog  = "log"  // IPCMessageLog is the message type identifier for log messages
+)
 
 // IPCMessage defines the structure for messages exchanged between parent and child processes
 type IPCMessage struct {
@@ -219,14 +223,7 @@ func (r *Runner) Cancel(force bool) (err error) {
 	for {
 		select {
 		case <-ticker.C:
-			p, err := os.FindProcess(r.pid)
-			if err != nil {
-				// process not exists, exit
-				return nil
-			}
-			err = p.Signal(syscall.Signal(0))
-			if err == nil {
-				// process still exists, continue
+			if utils.ProcessIdExists(r.pid) {
 				continue
 			}
 			return nil
@@ -812,7 +809,7 @@ func (r *Runner) startIPCReader() {
 					r.ipcHandler(ipcMsg)
 				} else {
 					// Default handler (insert data)
-					if ipcMsg.Type == "" || ipcMsg.Type == "insert_data" {
+					if ipcMsg.Type == "" || ipcMsg.Type == IPCMessageData {
 						r.handleIPCInsertDataMessage(ipcMsg)
 					} else {
 						log.Warnf("no IPC handler set for message: %v", ipcMsg)
