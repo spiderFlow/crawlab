@@ -4,7 +4,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 COPY ./install /app/install
 RUN bash /app/install/deps/deps.sh && \
     bash /app/install/python/python.sh && \
-    bash /app/install/golang/golang.sh && \
+    bash /app/install/go/go.sh && \
     bash /app/install/node/node.sh && \
     bash /app/install/chromedriver/chromedriver.sh
 
