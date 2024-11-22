@@ -1,6 +1,10 @@
 module crawlab
 
-go 1.22
+go 1.22.9
+
+replace (
+	github.com/crawlab-team/crawlab/core => ../core
+)
 
 require github.com/crawlab-team/crawlab/core v0.0.0-20241119103250-dc9f62dfd09a
 

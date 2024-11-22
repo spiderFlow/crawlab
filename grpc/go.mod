@@ -1,6 +1,6 @@
 module github.com/crawlab-team/crawlab/grpc
 
-go 1.22
+go 1.22.9
 
 require (
 	google.golang.org/grpc v1.68.0

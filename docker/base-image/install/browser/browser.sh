@@ -21,17 +21,14 @@ apt-get install -y \
 npm install -g @puppeteer/browsers
 
 # Install chrome with auto-yes
-npx -y @puppeteer/browsers install chrome@${version}
+npx -y @puppeteer/browsers install chrome@${version} \
+	--install-deps \
+    --path=/chrome
 
 # Add Chrome to PATH
-CHROME_PATH="/chrome/linux-*/chrome-linux64"
-if [ -d "$CHROME_PATH" ]; then
-    CHROME_BIN=$(find "$CHROME_PATH" -name "chrome")
-    if [ -n "$CHROME_BIN" ]; then
-        ln -sf "$CHROME_BIN" /usr/local/bin/google-chrome
-        chmod +x /usr/local/bin/google-chrome
-    fi
-fi
+CHROME_PATH="/chrome/linux-${version}/chrome-linux64"
+CHROME_BIN="$CHROME_PATH/chrome"
+ln -s "$CHROME_BIN" /usr/local/bin/google-chrome
 
 # Verify chrome is installed (with more detailed error message)
 if ! command -v google-chrome &> /dev/null; then
