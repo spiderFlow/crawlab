@@ -2,28 +2,24 @@
 
 version="1.22.9"
 
-# install goenv
+# Install goenv
 git clone https://github.com/go-nv/goenv.git ~/.goenv
 
-# add goenv to path
+# Add goenv to path
 echo 'export GOENV_ROOT="$HOME/.goenv"' >> ~/.bashrc
 echo 'export PATH="$GOENV_ROOT/bin:$PATH"' >> ~/.bashrc
 echo 'eval "$(goenv init -)"' >> ~/.bashrc
 
-# ensure changes take effect immediately
+# Ensure changes take effect immediately
 export GOENV_ROOT="$HOME/.goenv"
 export PATH="$GOENV_ROOT/bin:$PATH"
 eval "$(goenv init -)"
 
-# install go
+# Install go
 goenv install ${version}
 goenv global ${version}
 
-# Create symbolic links
-ln -sf "$(goenv which go)" /usr/local/bin/go
-ln -sf "$(goenv which gofmt)" /usr/local/bin/gofmt
-
-# verify
+# Verify
 go_version=$(go version)
 if [[ $go_version =~ "go${version}" ]]; then
 	:
@@ -31,3 +27,7 @@ else
 	echo "ERROR: go version does not match. expect \"go${version}\", but actual is \"${go_version}\""
 	exit 1
 fi
+
+# Create symbolic links
+ln -sf "$(goenv which go)" /usr/local/bin/go
+ln -sf "$(goenv which gofmt)" /usr/local/bin/gofmt

@@ -141,6 +141,7 @@ jobs:
         run: echo "failed=true" >> $GITHUB_OUTPUT
 
   test_backend:
+    name: Test backend
     needs: [ setup ]
     if: needs.setup.outputs.backend_changed == 'true' || needs.setup.outputs.workflow_changed == 'true'
     runs-on: ubuntu-latest
@@ -178,6 +179,7 @@ jobs:
         run: echo "failed=true" >> $GITHUB_OUTPUT
 
   build_backend:
+    name: Build backend
     needs: [ setup, test_backend ]
     if: needs.test_backend.result == 'success' || needs.setup.outputs.workflow_changed == 'true'
     runs-on: ubuntu-latest
@@ -203,6 +205,7 @@ jobs:
         run: echo "failed=true" >> $GITHUB_OUTPUT
 
   build_frontend:
+    name: Build frontend
     needs: [ setup ]
     if: needs.setup.outputs.frontend_changed == 'true' || needs.setup.outputs.workflow_changed == 'true'
     runs-on: ubuntu-latest
@@ -230,6 +233,7 @@ jobs:
         run: echo "failed=true" >> $GITHUB_OUTPUT
 
   build_crawlab:
+    name: Build crawlab
     needs: [setup, build_base_image, test_backend, build_backend, build_frontend]
     if: |
       always() &&
