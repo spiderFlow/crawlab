@@ -27,7 +27,6 @@ import (
 	"github.com/crawlab-team/crawlab/core/interfaces"
 	"github.com/crawlab-team/crawlab/core/models/client"
 	"github.com/crawlab-team/crawlab/core/models/service"
-	"github.com/crawlab-team/crawlab/core/sys_exec"
 	"github.com/crawlab-team/crawlab/core/utils"
 	"github.com/crawlab-team/crawlab/grpc"
 	"github.com/crawlab-team/crawlab/trace"
@@ -180,13 +179,12 @@ func (r *Runner) Cancel(force bool) (err error) {
 	r.cancel()
 
 	// Kill process
-	err = sys_exec.KillProcess(r.cmd, &sys_exec.KillProcessOptions{
-		Force: force,
-	})
+	err = utils.KillProcess(r.cmd, force)
 	if err != nil {
 		log.Errorf("kill process error: %v", err)
 		return err
 	}
+	log.Debugf("attempt to kill process[%d]", r.pid)
 
 	// Create a context with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), r.svc.GetCancelTimeout())
@@ -236,7 +234,7 @@ func (r *Runner) configureCmd() (err error) {
 	}
 
 	// get cmd instance
-	r.cmd, err = sys_exec.BuildCmd(cmdStr)
+	r.cmd, err = utils.BuildCmd(cmdStr)
 	if err != nil {
 		log.Errorf("error building command: %v", err)
 		return err
@@ -511,28 +509,33 @@ func (r *Runner) getHttpRequestHeaders() (headers map[string]string) {
 func (r *Runner) wait() (err error) {
 	// start a goroutine to wait for process to finish
 	go func() {
+		log.Debugf("waiting for process[%d] to finish", r.pid)
 		err = r.cmd.Wait()
 		if err != nil {
 			var exitError *exec.ExitError
 			if !errors.As(err, &exitError) {
 				r.ch <- constants.TaskSignalError
+				log.Debugf("process[%d] exited with error: %v", r.pid, err)
 				return
 			}
 			exitCode := exitError.ExitCode()
 			if exitCode == -1 {
 				// cancel error
 				r.ch <- constants.TaskSignalCancel
+				log.Debugf("process[%d] cancelled", r.pid)
 				return
 			}
 
 			// standard error
 			r.err = err
 			r.ch <- constants.TaskSignalError
+			log.Debugf("process[%d] exited with error: %v", r.pid, err)
 			return
 		}
 
 		// success
 		r.ch <- constants.TaskSignalFinish
+		log.Debugf("process[%d] exited successfully", r.pid)
 	}()
 
 	// declare task status

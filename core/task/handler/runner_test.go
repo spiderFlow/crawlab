@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -46,7 +47,7 @@ func setupTest(t *testing.T) *Runner {
 	case "windows":
 		task.Cmd = "ping -n 10 127.0.0.1"
 	default: // linux and darwin (macOS)
-		task.Cmd = "sleep 10"
+		task.Cmd = "ping -c 10 127.0.0.1"
 	}
 	taskId, err := service.NewModelService[models.Task]().InsertOne(*task)
 	require.NoError(t, err)
@@ -146,12 +147,18 @@ func TestRunner_Cancel(t *testing.T) {
 		}
 	}()
 
-	// Wait a bit longer on Windows for the process to start properly
-	waitTime := 100 * time.Millisecond
-	if runtime.GOOS == "windows" {
-		waitTime = 1 * time.Second
-	}
-	time.Sleep(waitTime)
+	// Wait for process to finish
+	go func() {
+		err = runner.cmd.Wait()
+		if err != nil {
+			log.Errorf("process[%d] exited with error: %v", runner.pid, err)
+			return
+		}
+		log.Infof("process[%d] exited successfully", runner.pid)
+	}()
+
+	// Wait for a certain period for the process to start properly
+	time.Sleep(1 * time.Second)
 
 	// Verify process exists before attempting to cancel
 	if !utils.ProcessIdExists(runner.pid) {
@@ -162,17 +169,25 @@ func TestRunner_Cancel(t *testing.T) {
 	go func() {
 		err = runner.Cancel(true)
 		assert.NoError(t, err)
+		log.Infof("process[%d] cancelled", runner.pid)
 	}()
 
 	// Wait for process to be killed, with shorter timeout
-	deadline := time.Now().Add(5 * time.Second)
-	for time.Now().Before(deadline) {
-		if !utils.ProcessIdExists(runner.pid) {
-			return // Process was killed
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			t.Fatalf("Process with PID %d was not killed within timeout", runner.pid)
+		case <-ticker.C:
+			exists := utils.ProcessIdExists(runner.pid)
+			if !exists {
+				return // Exit the test when process is killed
+			}
 		}
-		time.Sleep(100 * time.Millisecond)
 	}
-	t.Errorf("Process with PID %d was not killed within timeout", runner.pid)
 }
 
 func TestRunner_HandleIPCData(t *testing.T) {

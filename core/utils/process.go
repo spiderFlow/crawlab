@@ -3,85 +3,100 @@ package utils
 import (
 	"errors"
 	"github.com/apex/log"
-	"github.com/crawlab-team/crawlab/trace"
 	"github.com/shirou/gopsutil/process"
 	"os/exec"
 	"runtime"
 	"strings"
 )
 
-func ProcessIdExists(pid int) (ok bool) {
-	//// Find process by pid
-	//p, err := os.FindProcess(pid)
-	//if err != nil {
-	//	// Process not found
-	//	return false
-	//}
-	//
-	//// Check if process exists
-	//err = p.Signal(syscall.Signal(0))
-	//if err == nil {
-	//	// Process exists
-	//	return true
-	//}
-	//
-	//// Process not found
-	//return false
+func BuildCmd(cmdStr string) (cmd *exec.Cmd, err error) {
+	if cmdStr == "" {
+		return nil, errors.New("command string is empty")
+	}
+	args := strings.Split(cmdStr, " ")
+	return exec.Command(args[0], args[1:]...), nil
+}
 
-	ok, err := process.PidExists(int32(pid))
+func ProcessIdExists(pid int) (exists bool) {
+	if runtime.GOOS == "windows" {
+		return processIdExistsWindows(pid)
+	} else {
+		return processIdExistsLinuxMac(pid)
+	}
+}
+
+func processIdExistsWindows(pid int) (exists bool) {
+	exists, err := process.PidExists(int32(pid))
 	if err != nil {
 		log.Errorf("error checking if process exists: %v", err)
 	}
-	return ok
-
-	//processIds, err := process.Pids()
-	//if err != nil {
-	//	log.Errorf("error getting process pids: %v", err)
-	//	return false
-	//}
-	//
-	//for _, _pid := range processIds {
-	//	if int(_pid) == pid {
-	//		return true
-	//	}
-	//}
-	//
-	//return false
+	return exists
 }
 
-func ListProcess(text string) (lines []string, err error) {
-	if runtime.GOOS == "windows" {
-		return listProcessWindow(text)
-	} else {
-		return listProcessLinuxMac(text)
+func processIdExistsLinuxMac(pid int) (exists bool) {
+	exists, err := process.PidExists(int32(pid))
+	if err != nil {
+		log.Errorf("error checking if process exists: %v", err)
 	}
+	return exists
 }
 
-func listProcessWindow(text string) (lines []string, err error) {
-	cmd := exec.Command("tasklist", "/fi", text)
-	out, err := cmd.CombinedOutput()
-	var exitError *exec.ExitError
-	ok := errors.As(err, &exitError)
-	if !ok {
-		return nil, trace.TraceError(err)
+func GetProcesses() (processes []*process.Process, err error) {
+	processes, err = process.Processes()
+	if err != nil {
+		log.Errorf("error getting processes: %v", err)
+		return nil, err
 	}
-	lines = strings.Split(string(out), "\n")
-	return lines, nil
+	return processes, nil
 }
 
-func listProcessLinuxMac(text string) (lines []string, err error) {
-	cmd := exec.Command("ps", "aux")
-	out, err := cmd.CombinedOutput()
-	var exitError *exec.ExitError
-	ok := errors.As(err, &exitError)
-	if !ok {
-		return nil, trace.TraceError(err)
+type KillProcessOptions struct {
+	Force bool
+}
+
+func KillProcess(cmd *exec.Cmd, force bool) error {
+	// process
+	p, err := process.NewProcess(int32(cmd.Process.Pid))
+	if err != nil {
+		log.Errorf("failed to get process: %v", err)
+		return err
 	}
-	_lines := strings.Split(string(out), "\n")
-	for _, l := range _lines {
-		if strings.Contains(l, text) {
-			lines = append(lines, l)
+
+	// kill process
+	return killProcessRecursive(p, force)
+}
+
+func killProcessRecursive(p *process.Process, force bool) (err error) {
+	// children processes
+	cps, err := p.Children()
+	if err != nil {
+		if !errors.Is(err, process.ErrorNoChildren) {
+			log.Errorf("failed to get children processes: %v", err)
+		} else if errors.Is(err, process.ErrorProcessNotRunning) {
+			return nil
+		}
+		return killProcess(p, force)
+	}
+
+	// iterate children processes
+	for _, cp := range cps {
+		if err := killProcessRecursive(cp, force); err != nil {
+			return err
 		}
 	}
-	return lines, nil
+
+	return killProcess(p, force)
+}
+
+func killProcess(p *process.Process, force bool) (err error) {
+	if force {
+		err = p.Kill()
+	} else {
+		err = p.Terminate()
+	}
+	if err != nil {
+		log.Errorf("failed to kill process (force: %v): %v", force, err)
+		return err
+	}
+	return nil
 }
