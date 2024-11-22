@@ -4,9 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/apex/log"
+	"github.com/crawlab-team/crawlab/core/utils"
 	"io"
-	"os"
-	"syscall"
 	"testing"
 	"time"
 
@@ -127,15 +126,14 @@ func TestRunner_Cancel(t *testing.T) {
 	runner.pid = runner.cmd.Process.Pid
 
 	// Test cancel
-	err = runner.Cancel(true)
-	assert.NoError(t, err)
+	go func() {
+		err = runner.Cancel(true)
+		assert.NoError(t, err)
+	}()
 
 	// Verify process was killed
 	// Wait a short time for the process to be killed
 	time.Sleep(100 * time.Millisecond)
-
-	process, err := os.FindProcess(runner.pid)
-	require.NoError(t, err)
-	err = process.Signal(syscall.Signal(0))
-	assert.Error(t, err) // Process should not exist
+	exists := utils.ProcessIdExists(runner.pid)
+	assert.False(t, exists)
 }
