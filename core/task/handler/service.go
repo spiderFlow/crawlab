@@ -172,6 +172,7 @@ func (svc *Service) GetTaskById(id primitive.ObjectID) (t *models.Task, err erro
 		t, err = client.NewModelService[models.Task]().GetById(id)
 	}
 	if err != nil {
+		log.Errorf("failed to get task by id: %v", err)
 		return nil, err
 	}
 
@@ -198,6 +199,7 @@ func (svc *Service) GetSpiderById(id primitive.ObjectID) (s *models.Spider, err 
 		s, err = client.NewModelService[models.Spider]().GetById(id)
 	}
 	if err != nil {
+		log.Errorf("failed to get spider by id: %v", err)
 		return nil, err
 	}
 

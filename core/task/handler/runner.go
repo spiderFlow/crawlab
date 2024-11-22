@@ -907,14 +907,16 @@ func (r *Runner) handleIPCInsertDataMessage(ipcMsg IPCMessage) {
 
 // newTaskRunner creates a new task runner instance with the specified task ID
 // It initializes all necessary components and establishes required connections
-func newTaskRunner(id primitive.ObjectID, svc *Service) (r2 *Runner, err error) {
+func newTaskRunner(id primitive.ObjectID, svc *Service) (r *Runner, err error) {
 	// validate options
 	if id.IsZero() {
-		return nil, constants.ErrInvalidOptions
+		err = fmt.Errorf("invalid task id: %s", id.Hex())
+		log.Errorf("error creating task runner: %v", err)
+		return nil, err
 	}
 
 	// runner
-	r := &Runner{
+	r = &Runner{
 		subscribeTimeout: 30 * time.Second,
 		bufferSize:       1024 * 1024,
 		svc:              svc,
@@ -947,6 +949,7 @@ func newTaskRunner(id primitive.ObjectID, svc *Service) (r2 *Runner, err error) 
 
 	// initialize task runner
 	if err := r.Init(); err != nil {
+		log.Errorf("error initializing task runner: %v", err)
 		return r, err
 	}
 
