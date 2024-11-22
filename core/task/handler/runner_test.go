@@ -1,13 +1,16 @@
 package handler
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
-	"github.com/apex/log"
-	"github.com/crawlab-team/crawlab/core/utils"
 	"io"
+	"runtime"
 	"testing"
 	"time"
+
+	"github.com/apex/log"
+	"github.com/crawlab-team/crawlab/core/utils"
 
 	"github.com/crawlab-team/crawlab/core/constants"
 	"github.com/crawlab-team/crawlab/core/models/models"
@@ -38,7 +41,12 @@ func setupTest(t *testing.T) *Runner {
 		Type:     "test",
 		Mode:     "test",
 		NodeId:   primitive.NewObjectID(),
-		Cmd:      "python script.py",
+	}
+	switch runtime.GOOS {
+	case "windows":
+		task.Cmd = "ping -n 10 127.0.0.1"
+	default: // linux and darwin (macOS)
+		task.Cmd = "sleep 10"
 	}
 	taskId, err := service.NewModelService[models.Task]().InsertOne(*task)
 	require.NoError(t, err)
@@ -119,11 +127,36 @@ func TestRunner_Cancel(t *testing.T) {
 	// Setup
 	runner := setupTest(t)
 
-	// Start a long-running command
-	runner.t.Cmd = "sleep 10"
+	// Create pipes for stdout
+	pr, pw := io.Pipe()
+	runner.cmd.Stdout = pw
+	runner.cmd.Stderr = pw
+
+	// Start the command
 	err := runner.cmd.Start()
 	assert.NoError(t, err)
+	log.Infof("started process with PID: %d", runner.cmd.Process.Pid)
 	runner.pid = runner.cmd.Process.Pid
+
+	// Read and print command output
+	go func() {
+		scanner := bufio.NewScanner(pr)
+		for scanner.Scan() {
+			log.Info(scanner.Text())
+		}
+	}()
+
+	// Wait a bit longer on Windows for the process to start properly
+	waitTime := 100 * time.Millisecond
+	if runtime.GOOS == "windows" {
+		waitTime = 1 * time.Second
+	}
+	time.Sleep(waitTime)
+
+	// Verify process exists before attempting to cancel
+	if !utils.ProcessIdExists(runner.pid) {
+		t.Fatalf("Process with PID %d was not started successfully", runner.pid)
+	}
 
 	// Test cancel
 	go func() {
@@ -131,9 +164,13 @@ func TestRunner_Cancel(t *testing.T) {
 		assert.NoError(t, err)
 	}()
 
-	// Verify process was killed
-	// Wait a short time for the process to be killed
-	time.Sleep(100 * time.Millisecond)
-	exists := utils.ProcessIdExists(runner.pid)
-	assert.False(t, exists)
+	// Wait for process to be killed, with shorter timeout
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		if !utils.ProcessIdExists(runner.pid) {
+			return // Process was killed
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	t.Errorf("Process with PID %d was not killed within timeout", runner.pid)
 }
