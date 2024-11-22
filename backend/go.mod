@@ -2,7 +2,7 @@ module crawlab
 
 go 1.22.9
 
-require github.com/crawlab-team/crawlab/core v0.0.0-20241122100609-92f460424e99
+require github.com/crawlab-team/crawlab/core v0.0.0-20241122131917-858e5c2b8900
 
 require (
 	cloud.google.com/go/auth v0.7.2 // indirect
