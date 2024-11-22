@@ -40,9 +40,6 @@ type MasterService struct {
 }
 
 func (svc *MasterService) Start() {
-	// create indexes
-	common.InitIndexes()
-
 	// start grpc server
 	if err := svc.server.Start(); err != nil {
 		panic(err)
@@ -52,6 +49,9 @@ func (svc *MasterService) Start() {
 	if err := svc.Register(); err != nil {
 		panic(err)
 	}
+
+	// create indexes
+	go common.InitIndexes()
 
 	// start monitoring worker nodes
 	go svc.Monitor()
