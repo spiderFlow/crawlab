@@ -2,11 +2,7 @@ module crawlab
 
 go 1.22.9
 
-replace (
-	github.com/crawlab-team/crawlab/core => ../core
-)
-
-require github.com/crawlab-team/crawlab/core v0.0.0-20241119103250-dc9f62dfd09a
+require github.com/crawlab-team/crawlab/core v0.0.0-20241122100609-92f460424e99
 
 require (
 	cloud.google.com/go/auth v0.7.2 // indirect
@@ -25,10 +21,10 @@ require (
 	github.com/cloudflare/circl v1.3.7 // indirect
 	github.com/cloudwego/base64x v0.1.4 // indirect
 	github.com/cloudwego/iasm v0.2.0 // indirect
-	github.com/crawlab-team/crawlab/db v0.0.0-20241119094044-98a9c907c9cb // indirect
-	github.com/crawlab-team/crawlab/grpc v0.0.0-20241119094044-98a9c907c9cb // indirect
-	github.com/crawlab-team/crawlab/trace v0.0.0-20241119094044-98a9c907c9cb // indirect
-	github.com/crawlab-team/crawlab/vcs v0.0.0-20241119094044-98a9c907c9cb // indirect
+	github.com/crawlab-team/crawlab/db v0.0.0-20241122100609-92f460424e99 // indirect
+	github.com/crawlab-team/crawlab/grpc v0.0.0-20241122100609-92f460424e99 // indirect
+	github.com/crawlab-team/crawlab/trace v0.0.0-20241122100609-92f460424e99 // indirect
+	github.com/crawlab-team/crawlab/vcs v0.0.0-20241122100609-92f460424e99 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.4 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
@@ -56,6 +52,8 @@ require (
 	github.com/googleapis/gax-go/v2 v2.13.0 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.0.1-0.20190118093823-f849b5445de4 // indirect
+	github.com/hashicorp/errwrap v1.1.0 // indirect
+	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-uuid v1.0.3 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/imroc/req v0.3.2 // indirect

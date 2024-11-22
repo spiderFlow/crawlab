@@ -2,12 +2,7 @@ FROM golang:1.22.9 AS build
 
 WORKDIR /go/src/app
 
-COPY ../backend ./backend
-COPY ../core ./core
-COPY ../db ./db
-COPY ../grpc ./grpc
-COPY ../trace ./trace
-COPY ../vcs ./vcs
+COPY . .
 
 ENV GO111MODULE on
 
