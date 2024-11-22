@@ -10,12 +10,11 @@ import (
 	"time"
 
 	"github.com/apex/log"
-	"github.com/crawlab-team/crawlab/core/utils"
-	"github.com/crawlab-team/crawlab/grpc"
-
 	"github.com/crawlab-team/crawlab/core/constants"
 	"github.com/crawlab-team/crawlab/core/models/models"
 	"github.com/crawlab-team/crawlab/core/models/service"
+	"github.com/crawlab-team/crawlab/core/utils"
+	"github.com/crawlab-team/crawlab/grpc"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
