@@ -3,7 +3,6 @@ package apps
 import (
 	"fmt"
 	"github.com/apex/log"
-	"github.com/crawlab-team/crawlab/core/utils"
 	"github.com/crawlab-team/crawlab/trace"
 )
 
@@ -16,10 +15,6 @@ func start(app App) {
 	go app.Start()
 	app.Wait()
 	app.Stop()
-}
-
-func DefaultWait() {
-	utils.DefaultWait()
 }
 
 func initModule(name string, fn func() error) (err error) {

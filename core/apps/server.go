@@ -16,9 +16,6 @@ type Server struct {
 	// modules
 	nodeSvc interfaces.NodeService
 	api     *Api
-
-	// internals
-	quit chan int
 }
 
 func (app *Server) Init() {
@@ -32,7 +29,7 @@ func (app *Server) Init() {
 func (app *Server) Start() {
 	if utils.IsMaster() {
 		// start api
-		go app.api.Start()
+		go start(app.api)
 	}
 
 	// start node service
@@ -40,12 +37,11 @@ func (app *Server) Start() {
 }
 
 func (app *Server) Wait() {
-	<-app.quit
+	utils.DefaultWait()
 }
 
 func (app *Server) Stop() {
 	app.api.Stop()
-	app.quit <- 1
 }
 
 func (app *Server) GetApi() ApiApp {
@@ -70,9 +66,7 @@ func (app *Server) initPprof() {
 
 func newServer() App {
 	// server
-	svr := &Server{
-		quit: make(chan int, 1),
-	}
+	svr := &Server{}
 
 	// master modules
 	if utils.IsMaster() {

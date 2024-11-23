@@ -1,9 +1,7 @@
 #!/bin/bash
 
-# Source nvm environment
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+# Source nvm environment from profile.d instead
+source /etc/profile.d/node-env.sh
 
 # Version - using "stable" for installation but not for verification
 version="stable"
@@ -34,7 +32,7 @@ echo "Chrome binary path: $CHROME_BIN"
 # Update version variable for ChromeDriver
 version="$ACTUAL_VERSION"
 
-# Add chrome to PATH
+# Create symbolic links
 ln -sf "$CHROME_BIN" /usr/local/bin/google-chrome
 
 # Verify chrome is installed (with more detailed error message)
@@ -54,7 +52,7 @@ echo "ChromeDriver installation output: $CHROMEDRIVER_OUTPUT"
 CHROMEDRIVER_BIN=$(echo "$CHROMEDRIVER_OUTPUT" | awk '{print $2}')
 echo "ChromeDriver binary path: $CHROMEDRIVER_BIN"
 
-# Add chromedriver to PATH
+# Create symbolic links
 ln -sf "$CHROMEDRIVER_BIN" /usr/local/bin/chromedriver
 
 # Verify chromedriver is installed
@@ -99,3 +97,18 @@ python3 test.py
 # Clean up
 cd -
 rm -rf "$TEST_DIR"
+
+# After successful Chrome and ChromeDriver installation, create persistent env config
+cat > /etc/profile.d/browser-env.sh << 'EOF'
+# Chrome and ChromeDriver paths
+export CHROME_BIN="$(which google-chrome)"
+export CHROMEDRIVER_BIN="$(which chromedriver)"
+# Common Chrome flags for headless environments
+export CHROME_FLAGS="--headless --no-sandbox --disable-dev-shm-usage"
+EOF
+
+# Make the file executable
+chmod +x /etc/profile.d/browser-env.sh
+
+# Source it immediately
+source /etc/profile.d/browser-env.sh

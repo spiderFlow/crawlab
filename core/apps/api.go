@@ -50,13 +50,14 @@ func (app *Api) Start() {
 	if err != nil {
 		panic(err)
 	}
+	log.Infof("api server listening on %s", address)
 
 	// serve
 	if err := http.Serve(app.ln, app.app); err != nil {
 		if !errors.Is(err, http.ErrServerClosed) {
-			log.Error("run server error:" + err.Error())
+			log.Errorf("run api server error: %v", err)
 		} else {
-			log.Info("server graceful down")
+			log.Info("api server graceful down")
 		}
 	}
 }
@@ -70,7 +71,7 @@ func (app *Api) Stop() {
 	defer cancel()
 
 	if err := app.srv.Shutdown(ctx); err != nil {
-		log.Error("run server error:" + err.Error())
+		log.Errorf("shutdown api server error: %v", err)
 	}
 }
 
@@ -89,11 +90,9 @@ func (app *Api) initModuleWithApp(name string, fn func(app *gin.Engine) error) (
 }
 
 func newApi() *Api {
-	api := &Api{
+	return &Api{
 		app: gin.New(),
 	}
-	api.Init()
-	return api
 }
 
 var api *Api

@@ -5,15 +5,18 @@ version="1.22.9"
 # Install goenv
 git clone https://github.com/go-nv/goenv.git ~/.goenv
 
-# Add goenv to path
-echo 'export GOENV_ROOT="$HOME/.goenv"' >> ~/.bashrc
-echo 'export PATH="$GOENV_ROOT/bin:$PATH"' >> ~/.bashrc
-echo 'eval "$(goenv init -)"' >> ~/.bashrc
-
-# Ensure changes take effect immediately
+# Create persistent environment config
+cat > /etc/profile.d/goenv.sh << 'EOF'
 export GOENV_ROOT="$HOME/.goenv"
 export PATH="$GOENV_ROOT/bin:$PATH"
 eval "$(goenv init -)"
+EOF
+
+# Make the file executable
+chmod +x /etc/profile.d/goenv.sh
+
+# Source it immediately for the rest of the installation
+source /etc/profile.d/goenv.sh
 
 # Install go
 goenv install ${version}
