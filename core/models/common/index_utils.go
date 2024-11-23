@@ -5,19 +5,11 @@ import (
 
 	"github.com/apex/log"
 	"github.com/crawlab-team/crawlab/db/mongo"
-	"go.mongodb.org/mongo-driver/bson"
 	mongo2 "go.mongodb.org/mongo-driver/mongo"
 )
 
 func RecreateIndexes(col *mongo.Col, desiredIndexes []mongo2.IndexModel) {
-	cur, err := col.GetCollection().Indexes().List(col.GetContext())
-	if err != nil {
-		log.Errorf("error listing indexes: %v", err)
-		return
-	}
-
-	var existingIndexes []bson.M
-	err = cur.All(col.GetContext(), &existingIndexes)
+	existingIndexes, err := col.ListIndexes()
 	if err != nil {
 		log.Errorf("error listing indexes: %v", err)
 		return
@@ -29,10 +21,12 @@ func RecreateIndexes(col *mongo.Col, desiredIndexes []mongo2.IndexModel) {
 
 	// Skip _id index when comparing
 	for _, idx := range existingIndexes {
-		if name, ok := idx["name"].(string); ok && name != "_id_" {
-			key := idx["key"].(bson.M)
-			keyStr := fmt.Sprintf("%v", key)
-			existingKeys[keyStr] = true
+		name, ok := idx["name"].(string)
+		if ok && name != "_id_" {
+			if key, ok := idx["key"]; ok {
+				keyStr := fmt.Sprintf("%v", key)
+				existingKeys[keyStr] = true
+			}
 		}
 	}
 

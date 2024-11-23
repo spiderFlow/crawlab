@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/bson"
 	mongo2 "go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 func TestRecreateIndexes(t *testing.T) {
@@ -26,18 +27,78 @@ func TestRecreateIndexes(t *testing.T) {
 		{
 			name: "Create new indexes",
 			desiredIndexes: []mongo2.IndexModel{
-				{Keys: bson.M{"field1": 1}},
-				{Keys: bson.M{"field2": -1}},
+				{Keys: bson.D{{Key: "field1", Value: 1}}},
+				{Keys: bson.D{{Key: "field2", Value: -1}}},
 			},
 			expectedCount: 3, // Including _id index
 		},
 		{
 			name: "Update existing indexes",
 			desiredIndexes: []mongo2.IndexModel{
-				{Keys: bson.M{"field1": 1}},
-				{Keys: bson.M{"field3": 1}},
+				{Keys: bson.D{{Key: "field1", Value: 1}}},
+				{Keys: bson.D{{Key: "field3", Value: 1}}},
 			},
-			expectedCount: 3, // Including _id index
+			expectedCount: 3,
+		},
+		{
+			name: "Compound indexes",
+			desiredIndexes: []mongo2.IndexModel{
+				{Keys: bson.D{
+					{Key: "field1", Value: 1},
+					{Key: "field2", Value: -1},
+				}},
+				{Keys: bson.D{
+					{Key: "field3", Value: 1},
+					{Key: "field4", Value: 1},
+				}},
+			},
+			expectedCount: 3,
+		},
+		{
+			name: "Unique and sparse indexes",
+			desiredIndexes: []mongo2.IndexModel{
+				{
+					Keys:    bson.D{{Key: "email", Value: 1}},
+					Options: options.Index().SetUnique(true),
+				},
+				{
+					Keys:    bson.D{{Key: "optional_field", Value: 1}},
+					Options: options.Index().SetSparse(true),
+				},
+			},
+			expectedCount: 3,
+		},
+		{
+			name: "Mixed index types",
+			desiredIndexes: []mongo2.IndexModel{
+				{Keys: bson.D{
+					{Key: "field1", Value: 1},
+					{Key: "field2", Value: -1},
+				}},
+				{
+					Keys:    bson.D{{Key: "unique_field", Value: 1}},
+					Options: options.Index().SetUnique(true),
+				},
+			},
+			expectedCount: 3,
+		},
+		{
+			name: "Complex compound index with options",
+			desiredIndexes: []mongo2.IndexModel{
+				{
+					Keys: bson.D{
+						{Key: "category", Value: 1},
+						{Key: "timestamp", Value: -1},
+						{Key: "status", Value: 1},
+					},
+					Options: options.Index().
+						SetUnique(true).
+						SetPartialFilterExpression(bson.D{
+							{Key: "status", Value: "active"},
+						}),
+				},
+			},
+			expectedCount: 2,
 		},
 	}
 
@@ -47,11 +108,7 @@ func TestRecreateIndexes(t *testing.T) {
 			RecreateIndexes(testCol, tt.desiredIndexes)
 
 			// Verify indexes
-			cur, err := testCol.GetCollection().Indexes().List(testCol.GetContext())
-			assert.NoError(t, err)
-
-			var indexes []bson.M
-			err = cur.All(testCol.GetContext(), &indexes)
+			indexes, err := testCol.ListIndexes()
 			assert.NoError(t, err)
 
 			// Check total number of indexes (including _id)
@@ -60,11 +117,19 @@ func TestRecreateIndexes(t *testing.T) {
 			// Verify each desired index exists
 			for _, desiredIdx := range tt.desiredIndexes {
 				found := false
-				desiredKeyStr := fmt.Sprintf("%v", desiredIdx.Keys)
+				// Convert bson.D to normalized string representation
+				desiredKeyDoc := desiredIdx.Keys.(bson.D)
+				desiredKeyMap := make(map[string]interface{})
+				for _, elem := range desiredKeyDoc {
+					desiredKeyMap[elem.Key] = elem.Value
+				}
+
 				for _, existingIdx := range indexes {
 					if existingIdx["name"].(string) != "_id_" {
-						key := existingIdx["key"].(bson.M)
-						if fmt.Sprintf("%v", key) == desiredKeyStr {
+						existingKey := existingIdx["key"].(map[string]interface{})
+
+						// Compare maps by converting to strings and normalizing
+						if compareIndexKeys(desiredKeyMap, existingKey) {
 							found = true
 							break
 						}
@@ -74,4 +139,27 @@ func TestRecreateIndexes(t *testing.T) {
 			}
 		})
 	}
+}
+
+// compareIndexKeys compares two index key specifications
+func compareIndexKeys(desired, existing map[string]interface{}) bool {
+	if len(desired) != len(existing) {
+		return false
+	}
+
+	for k, v1 := range desired {
+		v2, exists := existing[k]
+		if !exists {
+			return false
+		}
+
+		// Convert values to strings for comparison
+		// This handles different numeric types (int, float64, etc.)
+		str1 := fmt.Sprintf("%v", v1)
+		str2 := fmt.Sprintf("%v", v2)
+		if str1 != str2 {
+			return false
+		}
+	}
+	return true
 }
