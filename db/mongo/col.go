@@ -3,7 +3,6 @@ package mongo
 import (
 	"context"
 	"errors"
-
 	"github.com/apex/log"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -260,6 +259,10 @@ func (col *Col) MustCreateIndexes(indexModels []mongo.IndexModel) {
 func (col *Col) DeleteIndex(name string) (err error) {
 	_, err = col.c.Indexes().DropOne(col.ctx, name)
 	if err != nil {
+		var e mongo.CommandError
+		if errors.As(err, &e) && e.HasErrorCode(26) {
+			return nil
+		}
 		log.Errorf("error deleting index: %v", err)
 		return err
 	}
@@ -269,6 +272,10 @@ func (col *Col) DeleteIndex(name string) (err error) {
 func (col *Col) DeleteAllIndexes() (err error) {
 	_, err = col.c.Indexes().DropAll(col.ctx)
 	if err != nil {
+		var e mongo.CommandError
+		if errors.As(err, &e) && e.HasErrorCode(26) {
+			return nil
+		}
 		log.Errorf("error deleting all indexes: %v", err)
 		return err
 	}

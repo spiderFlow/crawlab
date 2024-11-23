@@ -5,15 +5,16 @@ version="22"
 # Install nvm (Node Version Manager)
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
 
-# Add nvm to path
-echo 'export NVM_DIR="$HOME/.nvm"' >> ~/.bashrc
-echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm' >> ~/.bashrc
-echo '[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion' >> ~/.bashrc
+# Create a file in /etc/profile.d/
+cat > /etc/profile.d/node-env.sh << 'EOF'
+export NVM_DIR="/root/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+export NODE_PATH=/usr/lib/node_modules
+EOF
 
-# Ensure changes take effect immediately
-export NVM_DIR="$HOME/.nvm"
-[[ -s "$NVM_DIR/nvm.sh" ]] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-[[ -s "$NVM_DIR/bash_completion" ]] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+# Make the file executable
+chmod +x /etc/profile.d/node-env.sh
 
 # Download and install Node.js (you may need to restart the terminal)
 nvm install ${version}

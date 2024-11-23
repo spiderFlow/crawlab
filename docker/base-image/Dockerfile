@@ -1,6 +1,9 @@
-# Build stage
-FROM ubuntu:22.04 AS builder
+FROM ubuntu:22.04
+
+# Non-interactive mode
 ENV DEBIAN_FRONTEND=noninteractive
+
+# Install dependencies
 COPY ./install /app/install
 RUN bash /app/install/deps/deps.sh && \
     bash /app/install/python/python.sh && \
@@ -8,21 +11,13 @@ RUN bash /app/install/deps/deps.sh && \
     bash /app/install/node/node.sh && \
     bash /app/install/browser/browser.sh
 
-# Final stage
-FROM ubuntu:22.04
-ENV DEBIAN_FRONTEND=noninteractive
-COPY --from=builder /usr/local/bin /usr/local/bin
-COPY --from=builder /usr/local/lib /usr/local/lib
-COPY --from=builder /usr/lib /usr/lib
-COPY --from=builder /app/install /app/install
-
-# working directory
+# Working directory
 WORKDIR /app/backend
 
-# node path
+# Node path
 ENV NODE_PATH=/usr/lib/node_modules
 
-# timezone environment
+# Timezone environment
 ENV TZ=Asia/Shanghai
 
 # language environment

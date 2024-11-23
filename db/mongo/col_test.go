@@ -2,13 +2,15 @@ package mongo
 
 import (
 	"fmt"
+	"strconv"
+	"testing"
+
 	"github.com/spf13/viper"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"strconv"
-	"testing"
 )
 
 type ColTestObject struct {
@@ -49,30 +51,38 @@ func cleanupColTest(to *ColTestObject) {
 }
 
 func TestGetMongoCol(t *testing.T) {
+	// Test getting a MongoDB collection with default database
 	colName := "test_col"
 
+	// Get collection and verify the name matches
 	col := GetMongoCol(colName)
 	require.Equal(t, colName, col.c.Name())
 }
 
 func TestGetMongoColWithDb(t *testing.T) {
+	// Test getting a MongoDB collection with specified database
 	dbName := "test_db"
 	colName := "test_col"
 
+	// Get database instance first
 	db := GetMongoDb(dbName)
+	// Get collection with specific database and verify both names
 	col := GetMongoColWithDb(colName, db)
 	require.Equal(t, colName, col.c.Name())
 	require.Equal(t, dbName, col.db.Name())
 }
 
 func TestCol_Insert(t *testing.T) {
+	// Setup test environment
 	to, err := setupColTest()
 	require.Nil(t, err)
 
+	// Insert a single document
 	id, err := to.col.Insert(bson.M{"key": "value"})
 	require.Nil(t, err)
 	require.IsType(t, primitive.ObjectID{}, id)
 
+	// Verify the inserted document
 	var doc map[string]string
 	err = to.col.FindId(id).One(&doc)
 	require.Nil(t, err)
@@ -82,36 +92,48 @@ func TestCol_Insert(t *testing.T) {
 }
 
 func TestCol_InsertMany(t *testing.T) {
+	// Setup test environment
 	to, err := setupColTest()
 	require.Nil(t, err)
 
+	// Create test data: 10 documents with incrementing values
 	n := 10
 	var docs []interface{}
 	for i := 0; i < n; i++ {
 		docs = append(docs, bson.M{"key": fmt.Sprintf("value-%d", i)})
 	}
+
+	// Insert multiple documents at once
 	ids, err := to.col.InsertMany(docs)
 	require.Nil(t, err)
 	require.Equal(t, n, len(ids))
 
+	// Verify all documents were inserted correctly
+	// Retrieve all documents sorted by _id
 	var resDocs []map[string]string
 	err = to.col.Find(nil, &FindOptions{Sort: bson.D{{"_id", 1}}}).All(&resDocs)
 	require.Nil(t, err)
 	require.Equal(t, n, len(resDocs))
+
+	// Verify each document has correct value
 	for i, doc := range resDocs {
 		require.Equal(t, fmt.Sprintf("value-%d", i), doc["key"])
 	}
 
+	// Cleanup test environment
 	cleanupColTest(to)
 }
 
 func TestCol_UpdateId(t *testing.T) {
+	// Setup test environment
 	to, err := setupColTest()
 	require.Nil(t, err)
 
+	// Insert initial document
 	id, err := to.col.Insert(bson.M{"key": "old-value"})
 	require.Nil(t, err)
 
+	// Update document by ID using $set operator
 	err = to.col.UpdateId(id, bson.M{
 		"$set": bson.M{
 			"key": "new-value",
@@ -119,6 +141,7 @@ func TestCol_UpdateId(t *testing.T) {
 	})
 	require.Nil(t, err)
 
+	// Verify the update
 	var doc map[string]string
 	err = to.col.FindId(id).One(&doc)
 	require.Nil(t, err)
@@ -128,15 +151,18 @@ func TestCol_UpdateId(t *testing.T) {
 }
 
 func TestCol_Update(t *testing.T) {
+	// Setup test environment
 	to, err := setupColTest()
 	require.Nil(t, err)
 
+	// Prepare test documents
 	n := 10
 	var docs []interface{}
 	for i := 0; i < n; i++ {
 		docs = append(docs, bson.M{"key": fmt.Sprintf("old-value-%d", i)})
 	}
 
+	// Update all documents (nil query means update all)
 	err = to.col.Update(nil, bson.M{
 		"$set": bson.M{
 			"key": "new-value",
@@ -144,6 +170,7 @@ func TestCol_Update(t *testing.T) {
 	})
 	require.Nil(t, err)
 
+	// Verify all documents were updated
 	var resDocs []map[string]string
 	err = to.col.Find(nil, &FindOptions{Sort: bson.D{{"_id", 1}}}).All(&resDocs)
 	require.Nil(t, err)
@@ -155,20 +182,25 @@ func TestCol_Update(t *testing.T) {
 }
 
 func TestCol_ReplaceId(t *testing.T) {
+	// Setup test environment
 	to, err := setupColTest()
 	require.Nil(t, err)
 
+	// Insert initial document
 	id, err := to.col.Insert(bson.M{"key": "old-value"})
 	require.Nil(t, err)
 
+	// Get the document and modify it
 	var doc map[string]interface{}
 	err = to.col.FindId(id).One(&doc)
 	require.Nil(t, err)
 	doc["key"] = "new-value"
 
+	// Replace the entire document
 	err = to.col.ReplaceId(id, doc)
 	require.Nil(t, err)
 
+	// Verify the replacement
 	err = to.col.FindId(id).One(doc)
 	require.Nil(t, err)
 	require.Equal(t, "new-value", doc["key"])
@@ -199,15 +231,19 @@ func TestCol_Replace(t *testing.T) {
 }
 
 func TestCol_DeleteId(t *testing.T) {
+	// Setup test environment
 	to, err := setupColTest()
 	require.Nil(t, err)
 
+	// Insert a document to be deleted
 	id, err := to.col.Insert(bson.M{"key": "value"})
 	require.Nil(t, err)
 
+	// Delete the document by ID
 	err = to.col.DeleteId(id)
 	require.Nil(t, err)
 
+	// Verify deletion by checking collection count
 	total, err := to.col.Count(nil)
 	require.Nil(t, err)
 	require.Equal(t, 0, total)
@@ -261,9 +297,11 @@ func TestCol_FindId(t *testing.T) {
 }
 
 func TestCol_Find(t *testing.T) {
+	// Setup test environment
 	to, err := setupColTest()
 	require.Nil(t, err)
 
+	// Insert test documents
 	n := 10
 	var docs []interface{}
 	for i := 0; i < n; i++ {
@@ -276,26 +314,31 @@ func TestCol_Find(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, n, len(ids))
 
+	// Test 1: Find all documents
 	err = to.col.Find(nil, nil).All(&docs)
 	require.Nil(t, err)
 	require.Equal(t, n, len(docs))
 
+	// Test 2: Find documents with conditional query ($gte)
 	err = to.col.Find(bson.M{"key": bson.M{"$gte": fmt.Sprintf("value-%d", 5)}}, nil).All(&docs)
 	require.Nil(t, err)
 	require.Equal(t, n-5, len(docs))
 
+	// Test 3: Test skip functionality
 	err = to.col.Find(nil, &FindOptions{
 		Skip: 5,
 	}).All(&docs)
 	require.Nil(t, err)
 	require.Equal(t, n-5, len(docs))
 
+	// Test 4: Test limit functionality
 	err = to.col.Find(nil, &FindOptions{
 		Limit: 5,
 	}).All(&docs)
 	require.Nil(t, err)
 	require.Equal(t, 5, len(docs))
 
+	// Test 5: Test ascending sort
 	var resDocs []TestDocument
 	err = to.col.Find(nil, &FindOptions{
 		Sort: bson.D{{"key", 1}},
@@ -304,6 +347,7 @@ func TestCol_Find(t *testing.T) {
 	require.Greater(t, len(resDocs), 0)
 	require.Equal(t, "value-0", resDocs[0].Key)
 
+	// Test 6: Test descending sort
 	err = to.col.Find(nil, &FindOptions{
 		Sort: bson.D{{"key", -1}},
 	}).All(&resDocs)
@@ -311,23 +355,29 @@ func TestCol_Find(t *testing.T) {
 	require.Greater(t, len(resDocs), 0)
 	require.Equal(t, fmt.Sprintf("value-%d", n-1), resDocs[0].Key)
 
+	// Test 7: Test array query with $in operator
 	var resDocs2 []TestDocument
 	err = to.col.Find(bson.M{"tags": bson.M{"$in": []string{"test tag"}}}, nil).All(&resDocs2)
 	require.Nil(t, err)
 	require.Greater(t, len(resDocs2), 0)
 
+	// Cleanup test environment
 	cleanupColTest(to)
 }
 
 func TestCol_CreateIndex(t *testing.T) {
+	// Setup test environment
 	to, err := setupColTest()
 	require.Nil(t, err)
 
+	// Create a single index on the 'key' field
 	err = to.col.CreateIndex(mongo.IndexModel{
 		Keys: bson.D{{"key", 1}},
 	})
 	require.Nil(t, err)
 
+	// Verify index creation
+	// Should have 2 indexes: default _id index and our new index
 	indexes, err := to.col.ListIndexes()
 	require.Nil(t, err)
 	require.Equal(t, 2, len(indexes))
@@ -336,22 +386,12 @@ func TestCol_CreateIndex(t *testing.T) {
 }
 
 func TestCol_Aggregate(t *testing.T) {
+	// Setup test environment
 	to, err := setupColTest()
 	require.Nil(t, err)
 
-	n := 10
-	v := 2
-	var docs []interface{}
-	for i := 0; i < n; i++ {
-		docs = append(docs, TestDocument{
-			Key:   fmt.Sprintf("%d", i%2),
-			Value: v,
-		})
-	}
-	ids, err := to.col.InsertMany(docs)
-	require.Nil(t, err)
-	require.Equal(t, n, len(ids))
-
+	// Define aggregation pipeline
+	var results []TestAggregateResult
 	pipeline := mongo.Pipeline{
 		{
 			{
@@ -376,7 +416,26 @@ func TestCol_Aggregate(t *testing.T) {
 			},
 		},
 	}
-	var results []TestAggregateResult
+
+	// Test empty collection aggregation
+	err = to.col.Aggregate(pipeline, nil).All(&results)
+	assert.Nil(t, err)
+
+	// Insert test documents
+	n := 10 // total documents
+	v := 2  // value for each document
+	var docs []interface{}
+	for i := 0; i < n; i++ {
+		docs = append(docs, TestDocument{
+			Key:   fmt.Sprintf("%d", i%2), // alternates between "0" and "1"
+			Value: v,
+		})
+	}
+	ids, err := to.col.InsertMany(docs)
+	require.Nil(t, err)
+	require.Equal(t, n, len(ids))
+
+	// Run aggregation on populate
 	err = to.col.Aggregate(pipeline, nil).All(&results)
 	require.Nil(t, err)
 	require.Equal(t, 2, len(results))
@@ -392,6 +451,9 @@ func TestCol_CreateIndexes(t *testing.T) {
 	to, err := setupColTest()
 	require.Nil(t, err)
 
+	indexes, err := to.col.ListIndexes()
+	assert.Nil(t, err)
+
 	err = to.col.CreateIndexes([]mongo.IndexModel{
 		{
 			Keys: bson.D{{"key", 1}},
@@ -402,7 +464,7 @@ func TestCol_CreateIndexes(t *testing.T) {
 	})
 	require.Nil(t, err)
 
-	indexes, err := to.col.ListIndexes()
+	indexes, err = to.col.ListIndexes()
 	require.Nil(t, err)
 	require.Equal(t, 3, len(indexes))
 
@@ -413,6 +475,9 @@ func TestCol_DeleteIndex(t *testing.T) {
 	to, err := setupColTest()
 	require.Nil(t, err)
 
+	err = to.col.DeleteIndex("non-existent-index")
+	assert.Nil(t, err)
+
 	err = to.col.CreateIndex(mongo.IndexModel{
 		Keys: bson.D{{"key", 1}},
 	})
@@ -420,29 +485,35 @@ func TestCol_DeleteIndex(t *testing.T) {
 
 	indexes, err := to.col.ListIndexes()
 	require.Nil(t, err)
-	require.Equal(t, 2, len(indexes))
+	assert.Equal(t, 2, len(indexes))
 	for _, index := range indexes {
 		name, ok := index["name"].(string)
-		require.True(t, ok)
+		assert.True(t, ok)
 
 		if name != "_id_" {
 			err = to.col.DeleteIndex(name)
-			require.Nil(t, err)
+			assert.Nil(t, err)
 			break
 		}
 	}
 
 	indexes, err = to.col.ListIndexes()
 	require.Nil(t, err)
-	require.Equal(t, 1, len(indexes))
+	assert.Equal(t, 1, len(indexes))
 
 	cleanupColTest(to)
 }
 
 func TestCol_DeleteIndexes(t *testing.T) {
+	// Setup test environment
 	to, err := setupColTest()
 	require.Nil(t, err)
 
+	// Delete all existing indexes
+	err = to.col.DeleteAllIndexes()
+	assert.Nil(t, err)
+
+	// Create multiple test indexes
 	err = to.col.CreateIndexes([]mongo.IndexModel{
 		{
 			Keys: bson.D{{"key", 1}},
@@ -453,9 +524,11 @@ func TestCol_DeleteIndexes(t *testing.T) {
 	})
 	require.Nil(t, err)
 
+	// Delete all indexes except the default _id index
 	err = to.col.DeleteAllIndexes()
 	require.Nil(t, err)
 
+	// Verify only default _id index remains
 	indexes, err := to.col.ListIndexes()
 	require.Nil(t, err)
 	require.Equal(t, 1, len(indexes))
