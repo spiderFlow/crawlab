@@ -21,17 +21,26 @@ func init() {
 
 type Api struct {
 	// internals
-	app *gin.Engine
-	ln  net.Listener
-	srv *http.Server
+	app         *gin.Engine
+	ln          net.Listener
+	srv         *http.Server
+	initialized bool
 }
 
 func (app *Api) Init() {
+	// skip if already initialized
+	if app.initialized {
+		return
+	}
+
 	// initialize middlewares
 	_ = app.initModuleWithApp("middlewares", middlewares.InitMiddlewares)
 
 	// initialize routes
 	_ = app.initModuleWithApp("routes", controllers.InitRoutes)
+
+	// set initialized
+	app.initialized = true
 }
 
 func (app *Api) Start() {
@@ -90,9 +99,11 @@ func (app *Api) initModuleWithApp(name string, fn func(app *gin.Engine) error) (
 }
 
 func newApi() *Api {
-	return &Api{
+	api := &Api{
 		app: gin.New(),
 	}
+	api.Init()
+	return api
 }
 
 var api *Api
