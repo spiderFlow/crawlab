@@ -6,10 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Install dependencies
 COPY ./install /app/install
 RUN bash /app/install/deps/deps.sh && \
-    bash /app/install/python/python.sh && \
-    bash /app/install/go/go.sh && \
-    bash /app/install/node/node.sh && \
-    bash /app/install/browser/browser.sh
+    bash /app/install/python/python.sh
 
 # Working directory
 WORKDIR /app/backend
