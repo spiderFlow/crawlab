@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/crawlab-team/crawlab/core/entity"
 	"io"
 	"runtime"
 	"testing"
@@ -85,7 +86,7 @@ func TestRunner_HandleIPC(t *testing.T) {
 	go runner.startIPCReader()
 
 	// Create test message
-	testMsg := IPCMessage{
+	testMsg := entity.IPCMessage{
 		Type:    "test_type",
 		Payload: map[string]interface{}{"key": "value"},
 		IPC:     true,
@@ -93,7 +94,7 @@ func TestRunner_HandleIPC(t *testing.T) {
 
 	// Create a channel to signal that the message was handled
 	handled := make(chan bool)
-	runner.SetIPCHandler(func(msg IPCMessage) {
+	runner.SetIPCHandler(func(msg entity.IPCMessage) {
 		assert.Equal(t, testMsg.Type, msg.Type)
 		assert.Equal(t, testMsg.Payload, msg.Payload)
 		handled <- true
@@ -266,8 +267,8 @@ func TestRunner_HandleIPCData(t *testing.T) {
 			}
 
 			// Create test message
-			testMsg := IPCMessage{
-				Type:    IPCMessageData,
+			testMsg := entity.IPCMessage{
+				Type:    constants.IPCMessageData,
 				Payload: tc.payload,
 				IPC:     true,
 			}
