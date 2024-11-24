@@ -12,28 +12,28 @@ apt-get update
 # -y flag means "yes" to all prompts (non-interactive installation)
 apt-get install -y \
     # Network and File Transfer Utilities
-    curl \       # Modern HTTP client, useful for API requests and downloads
-    wget \       # Another download utility, often used in scripts
+    curl \       	# Modern HTTP client
+    wget \       	# Another download utility
     
     # Version Control
-    git \        # Distributed version control system
+    git \        	# Distributed version control system
     
     # Network Diagnostics and Monitoring
-    net-tools \  # Traditional networking tools (netstat, ifconfig, etc.)
-    iputils-ping \ # Tools for testing network connectivity (ping)
+    net-tools \  	# Traditional networking tools
+    iputils-ping \  # Tools for testing network connectivity
     
     # Time Synchronization
-    ntp \        # Network Time Protocol daemon for time sync
-    ntpdate \    # Client for one-time NTP sync
+    ntp \        	# Network Time Protocol daemon for time sync
+    ntpdate \   	# Client for one-time NTP sync
     
     # Web Server
-    nginx \      # High-performance HTTP server and reverse proxy
+    nginx \     	# High-performance HTTP server and reverse proxy
     
     # File Operations
-    unzip \      # Extract .zip archives
+    unzip \     	# Extract .zip archives
     
     # Security and Encryption
-    gnupg2 \     # GNU Privacy Guard for encryption and signing
+    gnupg2 \    	# GNU Privacy Guard for encryption and signing
     
     # System Libraries
-    libc6        # GNU C Library - essential for running C programs
+    libc6       	# GNU C Library - essential for running C programs
