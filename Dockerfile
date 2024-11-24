@@ -6,30 +6,19 @@ FROM crawlabteam/crawlab-frontend:${CRAWLAB_TAG} AS frontend-build
 
 FROM crawlabteam/crawlab-base:${CRAWLAB_TAG}
 
-# copy backend files
-RUN mkdir -p /opt/bin
-COPY --from=backend-build /go/bin/crawlab /opt/bin
-RUN cp /opt/bin/crawlab /usr/local/bin/crawlab-server
-
-# copy backend config files
-COPY ./backend/conf /app/backend/conf
-
-# copy frontend files
+# Copy files
+COPY --from=backend-build /go/bin/crawlab /usr/local/bin/crawlab-server
 COPY --from=frontend-build /app/dist /app/dist
-
-# copy nginx config files
+COPY ./backend/conf /app/backend/conf
 COPY ./docker/nginx/crawlab.conf /etc/nginx/conf.d
+COPY ./docker/bin/docker-init.sh /app/bin/docker-init.sh
 
-# copy docker bin files
-RUN mkdir -p /app/bin
-COPY ./docker/bin/* /app/bin
-
-# start backend
+# Start backend
 CMD ["/bin/bash", "/app/bin/docker-init.sh"]
 
-# frontend port
+# Frontend port
 EXPOSE 8080
 
-# healthcheck for backend
+# Healthcheck for backend
 HEALTHCHECK --interval=1m --timeout=3s \
   CMD curl -f http://localhost:8000/health || exit 1

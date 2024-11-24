@@ -10,12 +10,7 @@ services:
       - "8080:8080"
     depends_on:
       - mongo
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-
+    
   worker:
     image: ghcr.io/crawlab-team/crawlab:${CRAWLAB_TAG:-develop}
     container_name: crawlab_ghcr_worker
@@ -24,11 +19,6 @@ services:
       CRAWLAB_MASTER_HOST: "master"
     depends_on:
       - master
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-
+    
   mongo:
     image: mongo:5
