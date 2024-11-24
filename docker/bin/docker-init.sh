@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ "${CRAWLAB_MASTER_NODE}" == "Y" ]; then
+if [ "${CRAWLAB_NODE_MASTER}" == "Y" ]; then
     # Replace default api path to new one
     python /app/bin/update_docker_js_api_address.py
 
