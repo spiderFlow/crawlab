@@ -11,29 +11,14 @@ apt-get update
 # Install common dependencies with detailed explanations
 # -y flag means "yes" to all prompts (non-interactive installation)
 apt-get install -y \
-    # Network and File Transfer Utilities
     curl \       	# Modern HTTP client
     wget \       	# Another download utility
-    
-    # Version Control
     git \        	# Distributed version control system
-    
-    # Network Diagnostics and Monitoring
     net-tools \  	# Traditional networking tools
     iputils-ping \  # Tools for testing network connectivity
-    
-    # Time Synchronization
     ntp \        	# Network Time Protocol daemon for time sync
     ntpdate \   	# Client for one-time NTP sync
-    
-    # Web Server
     nginx \     	# High-performance HTTP server and reverse proxy
-    
-    # File Operations
     unzip \     	# Extract .zip archives
-    
-    # Security and Encryption
     gnupg2 \    	# GNU Privacy Guard for encryption and signing
-    
-    # System Libraries
     libc6       	# GNU C Library - essential for running C programs
