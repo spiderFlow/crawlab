@@ -16,6 +16,9 @@ EOF
 # Make the file executable
 chmod +x /etc/profile.d/node-env.sh
 
+# Source the file to apply the environment variables
+source /etc/profile.d/node-env.sh
+
 # Download and install Node.js (you may need to restart the terminal)
 nvm install ${version}
 
