@@ -26,3 +26,10 @@ COPY ./docker/bin/* /app/bin
 
 # start backend
 CMD ["/bin/bash", "/app/bin/docker-init.sh"]
+
+# frontend port
+EXPOSE 8080
+
+# healthcheck for backend
+HEALTHCHECK --interval=1m --timeout=3s \
+  CMD curl -f http://localhost:8000/health || exit 1
