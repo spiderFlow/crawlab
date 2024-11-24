@@ -304,23 +304,11 @@ jobs:
           CRAWLAB_MONGO_PORT: 27017
         ports:
           - 8080:8080
-        options: >-
-          --health-cmd "curl -f http://localhost:8080/api/health || exit 1"
-          --health-interval 30s
-          --health-timeout 10s
-          --health-retries 5
       worker:
         image: ghcr.io/${{ github.repository_owner }}/crawlab:${{ needs.setup.outputs.version }}
         env:
           CRAWLAB_NODE_MASTER: N
           CRAWLAB_MASTER_HOST: master
-        ports:
-          - 8001:8000
-        options: >-
-          --health-cmd "curl -f http://localhost:8001/health || exit 1"
-          --health-interval 30s
-          --health-timeout 10s
-          --health-retries 5
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
