@@ -31,7 +31,7 @@ jobs:
     outputs:
       backend_changed: ${{ steps.check_changed_files.outputs.backend_changed }}
       frontend_changed: ${{ steps.check_changed_files.outputs.frontend_changed }}
-      dockerfile_changed: ${{ steps.check_changed_files.outputs.dockerfile_changed }}
+      docker_changed: ${{ steps.check_changed_files.outputs.docker_changed }}
       workflow_changed: ${{ steps.check_changed_files.outputs.workflow_changed }}
       base_image_changed: ${{ steps.check_changed_files.outputs.base_image_changed }}
       version: ${{ steps.version.outputs.version }}
@@ -55,8 +55,10 @@ jobs:
               - 'trace/**'
             frontend:
               - '${{ env.IMAGE_PATH_CRAWLAB_FRONTEND }}/**'
-            dockerfile:
+            docker:
               - 'Dockerfile'
+              - 'docker/bin/**'
+              - 'docker/nginx/**'
             workflow:
               - '.github/workflows/docker-crawlab.yml'
             base_image:
@@ -69,13 +71,13 @@ jobs:
           if [[ "${{ github.ref }}" == "refs/tags/"* ]]; then
             echo "backend_changed=true" >> $GITHUB_OUTPUT
             echo "frontend_changed=true" >> $GITHUB_OUTPUT
-            echo "dockerfile_changed=true" >> $GITHUB_OUTPUT
+            echo "docker_changed=true" >> $GITHUB_OUTPUT
             echo "workflow_changed=true" >> $GITHUB_OUTPUT
             echo "base_image_changed=true" >> $GITHUB_OUTPUT
           else
             echo "backend_changed=${{ steps.changed_files.outputs.backend_any_changed }}" >> $GITHUB_OUTPUT
             echo "frontend_changed=${{ steps.changed_files.outputs.frontend_any_changed }}" >> $GITHUB_OUTPUT
-            echo "dockerfile_changed=${{ steps.changed_files.outputs.dockerfile_any_changed }}" >> $GITHUB_OUTPUT
+            echo "docker_changed=${{ steps.changed_files.outputs.docker_any_changed }}" >> $GITHUB_OUTPUT
             echo "workflow_changed=${{ steps.changed_files.outputs.workflow_any_changed }}" >> $GITHUB_OUTPUT
             echo "base_image_changed=${{ steps.changed_files.outputs.base_image_any_changed }}" >> $GITHUB_OUTPUT
           fi
@@ -83,7 +85,7 @@ jobs:
           # Display change status for each component
           echo "Backend changed: ${{ steps.changed_files.outputs.backend_any_changed }}"
           echo "Frontend changed: ${{ steps.changed_files.outputs.frontend_any_changed }}"
-          echo "Dockerfile changed: ${{ steps.changed_files.outputs.dockerfile_any_changed }}"
+          echo "Docker changed: ${{ steps.changed_files.outputs.docker_any_changed }}"
           echo "Workflow changed: ${{ steps.changed_files.outputs.workflow_any_changed }}"
           echo "Base image changed: ${{ steps.changed_files.outputs.base_image_any_changed }}"
 
@@ -246,7 +248,7 @@ jobs:
       (
         needs.setup.outputs.backend_changed == 'true' ||
         needs.setup.outputs.frontend_changed == 'true' ||
-        needs.setup.outputs.dockerfile_changed == 'true' ||
+        needs.setup.outputs.docker_changed == 'true' ||
         needs.setup.outputs.base_image_changed == 'true' ||
         needs.setup.outputs.workflow_changed == 'true'
       )
