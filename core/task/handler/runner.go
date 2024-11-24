@@ -62,28 +62,16 @@ type Runner struct {
 	logBatchSize  int           // number of log lines to batch before sending
 
 	// IPC (Inter-Process Communication)
-	stdinPipe  io.WriteCloser   // pipe for writing to child process
-	stdoutPipe io.ReadCloser    // pipe for reading from child process
-	ipcChan    chan IPCMessage  // channel for sending IPC messages
-	ipcHandler func(IPCMessage) // callback for handling received IPC messages
+	stdinPipe  io.WriteCloser          // pipe for writing to child process
+	stdoutPipe io.ReadCloser           // pipe for reading from child process
+	ipcChan    chan entity.IPCMessage  // channel for sending IPC messages
+	ipcHandler func(entity.IPCMessage) // callback for handling received IPC messages
 
 	// goroutine management
 	ctx    context.Context    // context for controlling goroutine lifecycle
 	cancel context.CancelFunc // function to cancel the context
 	done   chan struct{}      // channel to signal completion
 	wg     sync.WaitGroup     // wait group for goroutine synchronization
-}
-
-const (
-	IPCMessageData = "data" // IPCMessageData is the message type identifier for data messages
-	IPCMessageLog  = "log"  // IPCMessageLog is the message type identifier for log messages
-)
-
-// IPCMessage defines the structure for messages exchanged between parent and child processes
-type IPCMessage struct {
-	Type    string      `json:"type"`    // message type identifier
-	Payload interface{} `json:"payload"` // message content
-	IPC     bool        `json:"ipc"`     // Add this field to explicitly mark IPC messages
 }
 
 // Init initializes the task runner by updating the task status and establishing gRPC connections
@@ -162,10 +150,11 @@ func (r *Runner) Run() (err error) {
 
 	// Ensure cleanup when Run() exits
 	defer func() {
-		r.cancel()       // Cancel context to stop all goroutines
-		r.wg.Wait()      // Wait for all goroutines to finish
-		close(r.done)    // Signal that everything is done
-		close(r.ipcChan) // Close IPC channel
+		_ = r.conn.CloseSend() // Close gRPC connection
+		r.cancel()             // Cancel context to stop all goroutines
+		r.wg.Wait()            // Wait for all goroutines to finish
+		close(r.done)          // Signal that everything is done
+		close(r.ipcChan)       // Close IPC channel
 	}()
 
 	// wait for process to finish
@@ -258,7 +247,7 @@ func (r *Runner) configureCmd() (err error) {
 	}
 
 	// Initialize IPC channel
-	r.ipcChan = make(chan IPCMessage)
+	r.ipcChan = make(chan entity.IPCMessage)
 
 	return nil
 }
@@ -782,7 +771,7 @@ func (r *Runner) handleIPC() {
 // msgType: type of message being sent
 // payload: data to be sent to the child process
 func (r *Runner) SendToChild(msgType string, payload interface{}) {
-	r.ipcChan <- IPCMessage{
+	r.ipcChan <- entity.IPCMessage{
 		Type:    msgType,
 		Payload: payload,
 		IPC:     true, // Explicitly mark as IPC message
@@ -790,7 +779,7 @@ func (r *Runner) SendToChild(msgType string, payload interface{}) {
 }
 
 // SetIPCHandler sets the handler for incoming IPC messages
-func (r *Runner) SetIPCHandler(handler func(IPCMessage)) {
+func (r *Runner) SetIPCHandler(handler func(entity.IPCMessage)) {
 	r.ipcHandler = handler
 }
 
@@ -811,7 +800,7 @@ func (r *Runner) startIPCReader() {
 			}
 			line := scanner.Text()
 
-			var ipcMsg IPCMessage
+			var ipcMsg entity.IPCMessage
 			err := json.Unmarshal([]byte(line), &ipcMsg)
 			if err == nil && ipcMsg.IPC {
 				// Only handle as IPC if it's valid JSON AND has IPC flag set
@@ -819,7 +808,7 @@ func (r *Runner) startIPCReader() {
 					r.ipcHandler(ipcMsg)
 				} else {
 					// Default handler (insert data)
-					if ipcMsg.Type == "" || ipcMsg.Type == IPCMessageData {
+					if ipcMsg.Type == "" || ipcMsg.Type == constants.IPCMessageData {
 						r.handleIPCInsertDataMessage(ipcMsg)
 					} else {
 						log.Warnf("no IPC handler set for message: %v", ipcMsg)
@@ -834,7 +823,7 @@ func (r *Runner) startIPCReader() {
 }
 
 // handleIPCInsertDataMessage converts the IPC message payload to JSON and sends it to the master node
-func (r *Runner) handleIPCInsertDataMessage(ipcMsg IPCMessage) {
+func (r *Runner) handleIPCInsertDataMessage(ipcMsg entity.IPCMessage) {
 	// Validate message
 	if ipcMsg.Payload == nil {
 		log.Errorf("empty payload in IPC message")

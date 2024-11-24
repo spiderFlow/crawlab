@@ -63,11 +63,11 @@ func (svc *Service) InsertData(taskId primitive.ObjectID, records ...map[string]
 			count++
 		}
 	} else {
-		var records2 []interface{}
+		var recordsToInsert []interface{}
 		for _, record := range records {
-			records2 = append(records2, svc.normalizeRecord(item, record))
+			recordsToInsert = append(recordsToInsert, svc.normalizeRecord(item, record))
 		}
-		_, err = mongo.GetMongoCol(tableName).InsertMany(records2)
+		_, err = mongo.GetMongoCol(tableName).InsertMany(recordsToInsert)
 		if err != nil {
 			log2.Errorf("failed to insert data: %v", err)
 			return err
