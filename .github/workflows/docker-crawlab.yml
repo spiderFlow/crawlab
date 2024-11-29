@@ -311,6 +311,11 @@ jobs:
         env:
           CRAWLAB_NODE_MASTER: N
           CRAWLAB_MASTER_HOST: master
+        options: >-
+          --health-cmd curl -f http://localhost:8000/health || exit 1
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
