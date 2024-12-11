@@ -1,6 +1,6 @@
 {
   "name": "crawlab",
-  "version": "0.7.0-rc6",
+  "version": "0.7.0-rc7",
   "scripts": {
     "dev": "pnpm run serve",
     "serve": "vite",
