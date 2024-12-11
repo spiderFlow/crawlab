@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"errors"
+	"github.com/crawlab-team/crawlab/core/constants"
 	"github.com/crawlab-team/crawlab/core/models/models"
 	"math"
 	"os"
@@ -250,6 +251,13 @@ func PostSpider(c *gin.Context) {
 	if err := c.ShouldBindJSON(&s); err != nil {
 		HandleErrorBadRequest(c, err)
 		return
+	}
+
+	if s.Mode == "" {
+		s.Mode = constants.RunTypeRandom
+	}
+	if s.Priority == 0 {
+		s.Priority = 5
 	}
 
 	// user
