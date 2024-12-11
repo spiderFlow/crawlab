@@ -1,6 +1,6 @@
 {
   "name": "crawlab",
-  "version": "0.7.0-rc2",
+  "version": "0.7.0-rc7",
   "scripts": {
     "dev": "turbo run dev",
     "test": "turbo run test",
