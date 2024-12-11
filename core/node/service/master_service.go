@@ -181,7 +181,7 @@ func (svc *MasterService) monitor() (err error) {
 			}
 
 			// update node available runners
-			if err := svc.updateNodeAvailableRunners(n); err != nil {
+			if err := svc.updateNodeRunners(n); err != nil {
 				trace.PrintError(err)
 				return
 			}
@@ -268,18 +268,20 @@ func (svc *MasterService) pingNodeClient(n *models.Node) (ok bool) {
 	return true
 }
 
-func (svc *MasterService) updateNodeAvailableRunners(node *models.Node) (err error) {
+func (svc *MasterService) updateNodeRunners(node *models.Node) (err error) {
 	query := bson.M{
 		"node_id": node.Id,
 		"status":  constants.TaskStatusRunning,
 	}
 	runningTasksCount, err := service.NewModelService[models.Task]().Count(query)
 	if err != nil {
-		return trace.TraceError(err)
+		log.Errorf("failed to count running tasks for node[%s]: %v", node.Key, err)
+		return err
 	}
-	node.AvailableRunners = node.MaxRunners - runningTasksCount
+	node.CurrentRunners = runningTasksCount
 	err = service.NewModelService[models.Node]().ReplaceById(node.Id, *node)
 	if err != nil {
+		log.Errorf("failed to update node runners for node[%s]: %v", node.Key, err)
 		return err
 	}
 	return nil

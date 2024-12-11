@@ -215,13 +215,13 @@ func (svc *Service) getRunnerCount() (count int) {
 	if svc.cfgSvc.IsMaster() {
 		count, err = service.NewModelService[models.Task]().Count(query)
 		if err != nil {
-			trace.PrintError(err)
+			log.Errorf("failed to count tasks: %v", err)
 			return
 		}
 	} else {
 		count, err = client.NewModelService[models.Task]().Count(query)
 		if err != nil {
-			trace.PrintError(err)
+			log.Errorf("failed to count tasks: %v", err)
 			return
 		}
 	}
@@ -260,11 +260,8 @@ func (svc *Service) updateNodeStatus() (err error) {
 		return err
 	}
 
-	// available runners of handler
-	ar := n.MaxRunners - svc.getRunnerCount()
-
 	// set available runners
-	n.AvailableRunners = ar
+	n.CurrentRunners = svc.getRunnerCount()
 
 	// save node
 	n.SetUpdated(n.CreatedBy)
