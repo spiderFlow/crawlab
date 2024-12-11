@@ -59,8 +59,9 @@ func normalizeIndexKey(key interface{}) string {
 		pairs = append(pairs, fmt.Sprintf("%q:%v", elem.Key, elem.Value))
 	}
 
-	res, _ := bson.Marshal(pairs)
-	return string(res)
+	pairsBytes, _ := json.Marshal(pairs)
+	pairsStr := string(pairsBytes)
+	return pairsStr
 }
 
 func RecreateIndexes(col *mongo.Col, desiredIndexes []mongo2.IndexModel) {
