@@ -24,7 +24,7 @@ const (
 	DefaultApiAllowCredentials = "true"
 	DefaultApiAllowMethods     = "DELETE, POST, OPTIONS, GET, PUT"
 	DefaultApiAllowHeaders     = "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With"
-	DefaultNodeMaxRunners      = 16
+	DefaultNodeMaxRunners      = 0 // 0 means no limit
 	MetadataConfigDirName      = ".crawlab"
 	MetadataConfigName         = "config.json"
 	PyenvRoot                  = "/root/.pyenv"

@@ -85,8 +85,8 @@ func (svc *Service) fetchAndRunTasks() {
 				continue
 			}
 
-			// validate if there are available runners
-			if svc.getRunnerCount() >= n.MaxRunners {
+			// validate if max runners is reached (max runners = 0 means no limit)
+			if n.MaxRunners > 0 && svc.getRunnerCount() >= n.MaxRunners {
 				continue
 			}
 
