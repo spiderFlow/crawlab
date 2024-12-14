@@ -1,8 +1,11 @@
 package constants
 
 const (
-	DependencyTypePython = "python"
-	DependencyTypeNode   = "node"
+	DependencyTypePython  = "python"
+	DependencyTypeNode    = "node"
+	DependencyTypeGo      = "go"
+	DependencyTypeJava    = "java"
+	DependencyTypeBrowser = "browser"
 )
 
 const (
