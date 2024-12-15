@@ -10,24 +10,25 @@ import (
 )
 
 const (
-	DefaultWorkspace           = "crawlab_workspace"
-	DefaultTaskLogPath         = "/var/log/crawlab/tasks"
-	DefaultServerHost          = "0.0.0.0"
-	DefaultServerPort          = 8000
-	DefaultGrpcHost            = "localhost"
-	DefaultGrpcPort            = 9666
-	DefaultGrpcServerHost      = "0.0.0.0"
-	DefaultGrpcServerPort      = 9666
-	DefaultAuthKey             = "Crawlab2024!"
-	DefaultApiEndpoint         = "http://localhost:8000"
-	DefaultApiAllowOrigin      = "*"
-	DefaultApiAllowCredentials = "true"
-	DefaultApiAllowMethods     = "DELETE, POST, OPTIONS, GET, PUT"
-	DefaultApiAllowHeaders     = "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With"
-	DefaultNodeMaxRunners      = 0 // 0 means no limit
-	MetadataConfigDirName      = ".crawlab"
-	MetadataConfigName         = "config.json"
-	PyenvRoot                  = "/root/.pyenv"
+	DefaultWorkspace                 = "crawlab_workspace"
+	DefaultTaskLogPath               = "/var/log/crawlab/tasks"
+	DefaultServerHost                = "0.0.0.0"
+	DefaultServerPort                = 8000
+	DefaultGrpcHost                  = "localhost"
+	DefaultGrpcPort                  = 9666
+	DefaultGrpcServerHost            = "0.0.0.0"
+	DefaultGrpcServerPort            = 9666
+	DefaultAuthKey                   = "Crawlab2024!"
+	DefaultApiEndpoint               = "http://localhost:8000"
+	DefaultApiAllowOrigin            = "*"
+	DefaultApiAllowCredentials       = "true"
+	DefaultApiAllowMethods           = "DELETE, POST, OPTIONS, GET, PUT"
+	DefaultApiAllowHeaders           = "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With"
+	DefaultNodeMaxRunners            = 0 // 0 means no limit
+	DefaultDependencySetupScriptRoot = "/app/install"
+	MetadataConfigDirName            = ".crawlab"
+	MetadataConfigName               = "config.json"
+	PyenvRoot                        = "/root/.pyenv"
 )
 
 func IsDev() bool {
@@ -220,4 +221,11 @@ func GetMetadataConfigPath() string {
 	}
 
 	return filepath.Join(homeDirPath, MetadataConfigDirName, MetadataConfigName)
+}
+
+func GetDependencySetupScriptRoot() string {
+	if res := viper.GetString("dependency.setupScriptRoot"); res != "" {
+		return res
+	}
+	return DefaultDependencySetupScriptRoot
 }
