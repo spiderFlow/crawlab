@@ -35,12 +35,20 @@ message DependencyServiceSyncRequest {
 }
 
 message DependencyServiceUpdateLogsRequest {
-  string dependency_id = 1;
+  string target_id = 1;
   repeated string logs = 2;
+}
+
+message DependencyServiceSyncConfigSetupRequest {
+  string node_key = 1;
+  string lang = 2;
+  string status = 3;
+  string error = 4;
 }
 
 service DependencyService {
   rpc Connect(DependencyServiceConnectRequest) returns (stream DependencyServiceConnectResponse){};
   rpc Sync(DependencyServiceSyncRequest) returns (Response){};
   rpc UpdateLogs(stream DependencyServiceUpdateLogsRequest) returns (Response){};
+  rpc SyncConfigSetup(DependencyServiceSyncConfigSetupRequest) returns (Response){};
 }

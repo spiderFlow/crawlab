@@ -145,7 +145,6 @@ func (svr DependencyServiceServer) Sync(_ context.Context, request *grpc.Depende
 }
 
 func (svr DependencyServiceServer) UpdateLogs(stream grpc.DependencyService_UpdateLogsServer) (err error) {
-	var dep *models.Dependency
 	for {
 		// receive message
 		req, err := stream.Recv()
@@ -157,26 +156,19 @@ func (svr DependencyServiceServer) UpdateLogs(stream grpc.DependencyService_Upda
 			return err
 		}
 
-		// if dependency is nil, get dependency
-		if dep == nil {
-			id, err := primitive.ObjectIDFromHex(req.DependencyId)
-			if err != nil {
-				log.Errorf("[DependencyServiceServer] convert dependency id error: %v", err)
-				return err
-			}
-			dep, err = service.NewModelService[models.Dependency]().GetById(id)
-			if err != nil {
-				log.Errorf("[DependencyServiceServer] get dependency error: %v", err)
-				return err
-			}
+		// get id
+		id, err := primitive.ObjectIDFromHex(req.TargetId)
+		if err != nil {
+			log.Errorf("[DependencyServiceServer] convert dependency id error: %v", err)
+			return err
 		}
 
 		// insert dependency logs
 		var depLogs []models.DependencyLog
 		for _, line := range req.Logs {
 			depLog := models.DependencyLog{
-				DependencyId: dep.Id,
-				Content:      line,
+				TargetId: id,
+				Content:  line,
 			}
 			depLogs = append(depLogs, depLog)
 		}
@@ -186,6 +178,57 @@ func (svr DependencyServiceServer) UpdateLogs(stream grpc.DependencyService_Upda
 			return err
 		}
 	}
+}
+
+func (svr DependencyServiceServer) SyncConfigSetup(_ context.Context, request *grpc.DependencyServiceSyncConfigSetupRequest) (response *grpc.Response, err error) {
+	// Get node by node key
+	n, err := service.NewModelService[models.Node]().GetOne(bson.M{"key": request.NodeKey}, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get config
+	cfg, err := service.NewModelService[models.DependencyConfig]().GetOne(bson.M{"key": request.Lang}, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get config setup for the node
+	cs, err := service.NewModelService[models.DependencyConfigSetup]().GetOne(bson.M{
+		"node_id":              n.Id,
+		"dependency_config_id": cfg.Id,
+	}, nil)
+	if err != nil {
+		if !errors.Is(err, mongo.ErrNoDocuments) {
+			log.Errorf("[DependencyService] get dependency config setup from db error: %v", err)
+			return nil, err
+		}
+	}
+
+	if cs == nil {
+		// Create new config setup
+		cs = &models.DependencyConfigSetup{
+			NodeId:             n.Id,
+			DependencyConfigId: cfg.Id,
+			Status:             request.Status,
+			Error:              request.Error,
+		}
+		_, err = service.NewModelService[models.DependencyConfigSetup]().InsertOne(*cs)
+		if err != nil {
+			log.Errorf("[DependencyService] insert dependency config setup error: %v", err)
+			return nil, err
+		}
+	} else {
+		// Update existing config setup
+		cs.Status = request.Status
+		cs.Error = request.Error
+		err = service.NewModelService[models.DependencyConfigSetup]().ReplaceById(cs.Id, *cs)
+		if err != nil {
+			log.Errorf("[DependencyService] update dependency config setup error: %v", err)
+			return nil, err
+		}
+	}
+	return nil, nil
 }
 
 func (svr DependencyServiceServer) GetStream(key string) (stream *grpc.DependencyService_ConnectServer, err error) {

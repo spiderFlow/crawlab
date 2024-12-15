@@ -19,9 +19,10 @@ import (
 const _ = grpc.SupportPackageIsVersion8
 
 const (
-	DependencyService_Connect_FullMethodName    = "/grpc.DependencyService/Connect"
-	DependencyService_Sync_FullMethodName       = "/grpc.DependencyService/Sync"
-	DependencyService_UpdateLogs_FullMethodName = "/grpc.DependencyService/UpdateLogs"
+	DependencyService_Connect_FullMethodName         = "/grpc.DependencyService/Connect"
+	DependencyService_Sync_FullMethodName            = "/grpc.DependencyService/Sync"
+	DependencyService_UpdateLogs_FullMethodName      = "/grpc.DependencyService/UpdateLogs"
+	DependencyService_SyncConfigSetup_FullMethodName = "/grpc.DependencyService/SyncConfigSetup"
 )
 
 // DependencyServiceClient is the client API for DependencyService service.
@@ -31,6 +32,7 @@ type DependencyServiceClient interface {
 	Connect(ctx context.Context, in *DependencyServiceConnectRequest, opts ...grpc.CallOption) (DependencyService_ConnectClient, error)
 	Sync(ctx context.Context, in *DependencyServiceSyncRequest, opts ...grpc.CallOption) (*Response, error)
 	UpdateLogs(ctx context.Context, opts ...grpc.CallOption) (DependencyService_UpdateLogsClient, error)
+	SyncConfigSetup(ctx context.Context, in *DependencyServiceSyncConfigSetupRequest, opts ...grpc.CallOption) (*Response, error)
 }
 
 type dependencyServiceClient struct {
@@ -119,6 +121,16 @@ func (x *dependencyServiceUpdateLogsClient) CloseAndRecv() (*Response, error) {
 	return m, nil
 }
 
+func (c *dependencyServiceClient) SyncConfigSetup(ctx context.Context, in *DependencyServiceSyncConfigSetupRequest, opts ...grpc.CallOption) (*Response, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Response)
+	err := c.cc.Invoke(ctx, DependencyService_SyncConfigSetup_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // DependencyServiceServer is the server API for DependencyService service.
 // All implementations must embed UnimplementedDependencyServiceServer
 // for forward compatibility
@@ -126,6 +138,7 @@ type DependencyServiceServer interface {
 	Connect(*DependencyServiceConnectRequest, DependencyService_ConnectServer) error
 	Sync(context.Context, *DependencyServiceSyncRequest) (*Response, error)
 	UpdateLogs(DependencyService_UpdateLogsServer) error
+	SyncConfigSetup(context.Context, *DependencyServiceSyncConfigSetupRequest) (*Response, error)
 	mustEmbedUnimplementedDependencyServiceServer()
 }
 
@@ -141,6 +154,9 @@ func (UnimplementedDependencyServiceServer) Sync(context.Context, *DependencySer
 }
 func (UnimplementedDependencyServiceServer) UpdateLogs(DependencyService_UpdateLogsServer) error {
 	return status.Errorf(codes.Unimplemented, "method UpdateLogs not implemented")
+}
+func (UnimplementedDependencyServiceServer) SyncConfigSetup(context.Context, *DependencyServiceSyncConfigSetupRequest) (*Response, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SyncConfigSetup not implemented")
 }
 func (UnimplementedDependencyServiceServer) mustEmbedUnimplementedDependencyServiceServer() {}
 
@@ -220,6 +236,24 @@ func (x *dependencyServiceUpdateLogsServer) Recv() (*DependencyServiceUpdateLogs
 	return m, nil
 }
 
+func _DependencyService_SyncConfigSetup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DependencyServiceSyncConfigSetupRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DependencyServiceServer).SyncConfigSetup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DependencyService_SyncConfigSetup_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DependencyServiceServer).SyncConfigSetup(ctx, req.(*DependencyServiceSyncConfigSetupRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // DependencyService_ServiceDesc is the grpc.ServiceDesc for DependencyService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -230,6 +264,10 @@ var DependencyService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Sync",
 			Handler:    _DependencyService_Sync_Handler,
+		},
+		{
+			MethodName: "SyncConfigSetup",
+			Handler:    _DependencyService_SyncConfigSetup_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
