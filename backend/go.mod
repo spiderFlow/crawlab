@@ -21,10 +21,10 @@ require (
 	github.com/cloudflare/circl v1.3.7 // indirect
 	github.com/cloudwego/base64x v0.1.4 // indirect
 	github.com/cloudwego/iasm v0.2.0 // indirect
-	github.com/crawlab-team/crawlab/db v0.0.0-20241124022343-af3749d91332 // indirect
-	github.com/crawlab-team/crawlab/grpc v0.0.0-20241124022343-af3749d91332 // indirect
-	github.com/crawlab-team/crawlab/trace v0.0.0-20241124022343-af3749d91332 // indirect
-	github.com/crawlab-team/crawlab/vcs v0.0.0-20241124022343-af3749d91332 // indirect
+	github.com/crawlab-team/crawlab/db v0.0.0-20241216134403-79c1d5d14b9f // indirect
+	github.com/crawlab-team/crawlab/grpc v0.0.0-20241216134403-79c1d5d14b9f // indirect
+	github.com/crawlab-team/crawlab/trace v0.0.0-20241216134403-79c1d5d14b9f // indirect
+	github.com/crawlab-team/crawlab/vcs v0.0.0-20241216134403-79c1d5d14b9f // indirect
 	github.com/cyphar/filepath-securejoin v0.2.4 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect

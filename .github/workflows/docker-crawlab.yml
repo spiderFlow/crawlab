@@ -19,7 +19,7 @@ env:
   IMAGE_NAME_CRAWLAB_BASE: ghcr.io/${{ github.repository_owner }}/crawlab-base
   IMAGE_NAME_CRAWLAB_BACKEND: ghcr.io/${{ github.repository_owner }}/crawlab-backend
   IMAGE_NAME_CRAWLAB_FRONTEND: ghcr.io/${{ github.repository_owner }}/crawlab-frontend
-  IMAGE_NAME_CRAWLAB: ghcr.io/${{ github.repository_owner }}/crawlab
+  IMAGE_NAME_CRAWLAB_GH: ghcr.io/${{ github.repository_owner }}/crawlab
   IMAGE_NAME_CRAWLAB_DOCKERHUB: crawlabteam/crawlab
   IMAGE_NAME_CRAWLAB_TENCENT: ccr.ccs.tencentyun.com/crawlab/crawlab
   E2E_TESTS_IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/e2e-tests
@@ -283,7 +283,7 @@ jobs:
             CRAWLAB_TAG=${{ needs.setup.outputs.version }}
           push: true
           tags: |
-            ${{ env.IMAGE_NAME_CRAWLAB }}:${{ needs.setup.outputs.version }}
+            ${{ env.IMAGE_NAME_CRAWLAB_GH }}:${{ needs.setup.outputs.version }}
 
   test_crawlab:
     name: Test crawlab
