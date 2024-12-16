@@ -8,4 +8,5 @@ type DependencyConfig struct {
 	ExecCmd                     string `json:"exec_cmd" bson:"exec_cmd"`
 	PkgCmd                      string `json:"pkg_cmd" bson:"pkg_cmd"`
 	Proxy                       string `json:"proxy" bson:"proxy"`
+	Setup                       bool   `json:"setup" bson:"-"`
 }

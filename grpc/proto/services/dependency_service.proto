@@ -39,11 +39,18 @@ message DependencyServiceUpdateLogsRequest {
   repeated string logs = 2;
 }
 
+message DependencyDriver {
+  string name = 1;
+  string version = 2;
+}
+
 message DependencyServiceSyncConfigSetupRequest {
   string node_key = 1;
   string lang = 2;
-  string status = 3;
-  string error = 4;
+  string version = 3;
+  string status = 4;
+  string error = 5;
+  repeated DependencyDriver drivers = 6;
 }
 
 service DependencyService {

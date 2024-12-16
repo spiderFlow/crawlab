@@ -205,6 +205,17 @@ func (svr DependencyServiceServer) SyncConfigSetup(_ context.Context, request *g
 		}
 	}
 
+	// drivers
+	var drivers []models.DependencyDriver
+	if request.Drivers != nil && len(request.Drivers) > 0 {
+		for _, d := range request.Drivers {
+			drivers = append(drivers, models.DependencyDriver{
+				Name:    d.Name,
+				Version: d.Version,
+			})
+		}
+	}
+
 	if cs == nil {
 		// Create new config setup
 		cs = &models.DependencyConfigSetup{
@@ -212,6 +223,8 @@ func (svr DependencyServiceServer) SyncConfigSetup(_ context.Context, request *g
 			DependencyConfigId: cfg.Id,
 			Status:             request.Status,
 			Error:              request.Error,
+			Version:            request.Version,
+			Drivers:            drivers,
 		}
 		_, err = service.NewModelService[models.DependencyConfigSetup]().InsertOne(*cs)
 		if err != nil {
@@ -220,8 +233,12 @@ func (svr DependencyServiceServer) SyncConfigSetup(_ context.Context, request *g
 		}
 	} else {
 		// Update existing config setup
-		cs.Status = request.Status
+		if cs.Status == constants.DependencyStatusUninstalled || request.Status == constants.DependencyStatusInstalled {
+			cs.Status = request.Status
+		}
 		cs.Error = request.Error
+		cs.Version = request.Version
+		cs.Drivers = drivers
 		err = service.NewModelService[models.DependencyConfigSetup]().ReplaceById(cs.Id, *cs)
 		if err != nil {
 			log.Errorf("[DependencyService] update dependency config setup error: %v", err)
