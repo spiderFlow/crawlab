@@ -4,7 +4,7 @@
 set -e
 
 # Get version from first argument
-version="${1}"
+version="${1:-3.12}"
 
 # Check if version is provided
 if [ -z "$version" ]; then
