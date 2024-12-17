@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Fail on error
+set -e
+
 # Ensure directory mode of /tmp is world-writable (readable, writable, executable by all users)
 # This is important for temporary file operations in containerized environments
 chmod 777 /tmp
@@ -21,4 +24,7 @@ apt-get install -y \
     nginx \
     unzip \
     gnupg2 \
-    libc6     	
+    libc6
+
+# Add source /etc/profile to ~/.bashrc
+echo "source /etc/profile" >> ~/.bashrc

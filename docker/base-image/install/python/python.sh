@@ -1,6 +1,16 @@
 #!/bin/bash
 
-version="3.12"
+# Fail on error
+set -e
+
+# Get version from first argument
+version="${1}"
+
+# Check if version is provided
+if [ -z "$version" ]; then
+	echo "Please provide a version number"
+	exit 1
+fi
 
 # Install build dependencies
 apt-get install -y \
@@ -64,6 +74,7 @@ pip install -r /app/install/python/requirements.txt
 
 # Create symbolic links
 ln -sf $(pyenv which python) /usr/local/bin/python
+ln -sf $(pyenv which python3) /usr/local/bin/python3
 ln -sf $(pyenv which pip) /usr/local/bin/pip
 
 # After pip install
