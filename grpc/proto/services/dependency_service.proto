@@ -26,6 +26,7 @@ message DependencyServiceConnectResponse {
   string lang = 2;
   string proxy = 3;
   Dependency dependency = 4;
+  string version = 5;
 }
 
 message DependencyServiceSyncRequest {

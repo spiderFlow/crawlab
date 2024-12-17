@@ -9,4 +9,5 @@ type DependencyConfig struct {
 	PkgCmd                      string `json:"pkg_cmd" bson:"pkg_cmd"`
 	Proxy                       string `json:"proxy" bson:"proxy"`
 	Setup                       bool   `json:"setup" bson:"-"`
+	DefaultVersion              string `json:"default_version" bson:"default_version"`
 }
