@@ -767,17 +767,6 @@ func (r *Runner) handleIPC() {
 	}
 }
 
-// SendToChild sends a message to the child process through the IPC channel
-// msgType: type of message being sent
-// payload: data to be sent to the child process
-func (r *Runner) SendToChild(msgType string, payload interface{}) {
-	r.ipcChan <- entity.IPCMessage{
-		Type:    msgType,
-		Payload: payload,
-		IPC:     true, // Explicitly mark as IPC message
-	}
-}
-
 // SetIPCHandler sets the handler for incoming IPC messages
 func (r *Runner) SetIPCHandler(handler func(entity.IPCMessage)) {
 	r.ipcHandler = handler
