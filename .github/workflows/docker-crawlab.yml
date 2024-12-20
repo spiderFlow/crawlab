@@ -338,6 +338,7 @@ jobs:
           name: playwright-report-${{ needs.setup.outputs.version }}
           path: ${{ env.E2E_TESTS_WORKSPACE }}
           retention-days: 1
+          overwrite: true
 
   push_images:
     name: Push images
