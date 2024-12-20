@@ -1,9 +1,18 @@
 FROM golang:1.22.9 AS build
 
+# Context path is the root of the repository
+
 WORKDIR /go/src/app
 
-# Copy all required modules from parent directory
-COPY .. .
+# Copy the current directory (backend) first
+COPY ./backend ./backend/
+
+# Copy required modules from relative paths
+COPY ./core ./core/
+COPY ./db ./db/
+COPY ./grpc ./grpc/
+COPY ./trace ./trace/
+COPY ./vcs ./vcs/
 
 ENV GO111MODULE on
 

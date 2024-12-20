@@ -199,7 +199,8 @@ jobs:
       - name: Build and push image
         uses: docker/build-push-action@v5
         with:
-          context: ${{ env.IMAGE_PATH_CRAWLAB_BACKEND }}
+          context: .
+          file: ${{ env.IMAGE_PATH_CRAWLAB_BACKEND }}/Dockerfile
           push: true
           tags: ${{ env.IMAGE_NAME_CRAWLAB_BACKEND }}:${{ needs.setup.outputs.version }}
       - name: Set output
