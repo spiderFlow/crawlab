@@ -43,8 +43,23 @@ type WorkerService struct {
 }
 
 func (svc *WorkerService) Start() {
-	// start grpc client
-	if err := svc.client.Start(); err != nil {
+	// start grpc client (retry if failed)
+	err := backoff.RetryNotify(
+		func() error {
+			return svc.client.Start()
+		},
+		backoff.NewExponentialBackOff(
+			backoff.WithInitialInterval(1*time.Second),
+			backoff.WithMaxInterval(1*time.Minute),
+			backoff.WithMaxElapsedTime(10*time.Minute),
+		),
+		func(err error, duration time.Duration) {
+			log.Errorf("failed to start grpc client: %v", err)
+			log.Infof("retrying in %s", duration)
+		},
+	)
+	if err != nil {
+		log.Fatalf("failed to start grpc client: %v", err)
 		panic(err)
 	}
 
@@ -63,7 +78,7 @@ func (svc *WorkerService) Start() {
 	// start sending heartbeat to master
 	go svc.reportStatus()
 
-	// start handler
+	// start task handler
 	go svc.handlerSvc.Start()
 
 	// wait for quit signal
