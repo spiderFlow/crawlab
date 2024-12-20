@@ -39,3 +39,10 @@ coverage.txt
 # Temporary files
 *.tmp
 *~
+**/tmp
+
+# Git directories
+.git/
+
+# Node modules
+**/node_modules

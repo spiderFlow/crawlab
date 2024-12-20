@@ -2,13 +2,15 @@ FROM golang:1.22.9 AS build
 
 WORKDIR /go/src/app
 
-COPY . .
+# Copy all required modules from parent directory
+COPY .. .
 
 ENV GO111MODULE on
 
-RUN go install -v ./...
+# Build from the backend directory which contains the main.go
+RUN cd backend && go install -v ./...
 
 FROM alpine:3.14
 
-# copy files
+# Copy the built binary
 COPY --from=build /go/bin/crawlab /go/bin/crawlab
