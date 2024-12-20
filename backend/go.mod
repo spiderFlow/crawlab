@@ -2,7 +2,15 @@ module crawlab
 
 go 1.22.9
 
-require github.com/crawlab-team/crawlab/core v0.0.0-20241220034021-be93f9d17db8
+replace (
+	github.com/crawlab-team/crawlab/core => ../core
+	github.com/crawlab-team/crawlab/db => ../db
+	github.com/crawlab-team/crawlab/grpc => ../grpc
+	github.com/crawlab-team/crawlab/trace => ../trace
+	github.com/crawlab-team/crawlab/vcs => ../vcs
+)
+
+require github.com/crawlab-team/crawlab/core v0.0.0
 
 require (
 	cloud.google.com/go/auth v0.7.2 // indirect
@@ -21,10 +29,10 @@ require (
 	github.com/cloudflare/circl v1.3.7 // indirect
 	github.com/cloudwego/base64x v0.1.4 // indirect
 	github.com/cloudwego/iasm v0.2.0 // indirect
-	github.com/crawlab-team/crawlab/db v0.0.0-20241220034021-be93f9d17db8 // indirect
-	github.com/crawlab-team/crawlab/grpc v0.0.0-20241220034021-be93f9d17db8 // indirect
-	github.com/crawlab-team/crawlab/trace v0.0.0-20241220034021-be93f9d17db8 // indirect
-	github.com/crawlab-team/crawlab/vcs v0.0.0-20241220034021-be93f9d17db8 // indirect
+	github.com/crawlab-team/crawlab/db v0.0.0 // indirect
+	github.com/crawlab-team/crawlab/grpc v0.0.0 // indirect
+	github.com/crawlab-team/crawlab/trace v0.0.0 // indirect
+	github.com/crawlab-team/crawlab/vcs v0.0.0 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.4 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
@@ -106,13 +114,13 @@ require (
 	go.opentelemetry.io/otel/trace v1.28.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/arch v0.8.0 // indirect
-	golang.org/x/crypto v0.29.0 // indirect
+	golang.org/x/crypto v0.31.0 // indirect
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 // indirect
 	golang.org/x/net v0.31.0 // indirect
 	golang.org/x/oauth2 v0.23.0 // indirect
-	golang.org/x/sync v0.9.0 // indirect
-	golang.org/x/sys v0.27.0 // indirect
-	golang.org/x/text v0.20.0 // indirect
+	golang.org/x/sync v0.10.0 // indirect
+	golang.org/x/sys v0.28.0 // indirect
+	golang.org/x/text v0.21.0 // indirect
 	google.golang.org/api v0.189.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20241118233622-e639e219e697 // indirect
 	google.golang.org/grpc v1.68.0 // indirect
