@@ -23,6 +23,7 @@ env:
   IMAGE_NAME_CRAWLAB_DOCKERHUB: crawlabteam/crawlab
   IMAGE_NAME_CRAWLAB_TENCENT: ccr.ccs.tencentyun.com/crawlab/crawlab
   E2E_TESTS_IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/e2e-tests
+  E2E_TESTS_REPO_PATH: crawlab-test-report/playwright-report
 
 jobs:
   setup:
@@ -331,11 +332,11 @@ jobs:
             -v ${{ github.workspace }}/playwright-report:/app/playwright-report \
             ${{ env.E2E_TESTS_IMAGE_NAME }}:latest
       - name: Deploy to GitHub Pages
-        if: always()
+        if: ${{ success() || failure() }}
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ${{ github.workspace }}/playwright-report
+          publish_dir: ${{ env.E2E_TESTS_REPO_PATH }}
           destination_dir: playwright-report/${{ needs.setup.outputs.version }}
 
   push_images:
