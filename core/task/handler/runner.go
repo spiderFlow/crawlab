@@ -53,7 +53,6 @@ type Runner struct {
 	ch   chan constants.TaskSignal      // channel for task status communication
 	err  error                          // captures any process execution errors
 	cwd  string                         // current working directory for task
-	c    *client2.GrpcClient            // gRPC client for communication
 	conn grpc.TaskService_ConnectClient // gRPC stream connection for task service
 
 	// log handling
@@ -81,13 +80,8 @@ func (r *Runner) Init() (err error) {
 		return err
 	}
 
-	// start grpc client
-	if !r.c.IsStarted() {
-		err := r.c.Start()
-		if err != nil {
-			return err
-		}
-	}
+	// wait for grpc client ready
+	client2.GetGrpcClient().WaitForReady()
 
 	// grpc task service stream client
 	if err := r.initConnection(); err != nil {
@@ -599,7 +593,7 @@ func (r *Runner) updateTask(status string, e error) (err error) {
 
 // initConnection establishes a gRPC connection to the task service
 func (r *Runner) initConnection() (err error) {
-	r.conn, err = r.c.TaskClient.Connect(context.Background())
+	r.conn, err = client2.GetGrpcClient().TaskClient.Connect(context.Background())
 	if err != nil {
 		log.Errorf("error connecting to task service: %v", err)
 		return err
@@ -670,7 +664,7 @@ func (r *Runner) sendNotification() {
 		NodeKey: r.svc.GetNodeConfigService().GetNodeKey(),
 		TaskId:  r.tid.Hex(),
 	}
-	_, err := r.c.TaskClient.SendNotification(context.Background(), req)
+	_, err := client2.GetGrpcClient().TaskClient.SendNotification(context.Background(), req)
 	if err != nil {
 		log.Errorf("error sending notification: %v", err)
 		trace.PrintError(err)
@@ -929,9 +923,6 @@ func newTaskRunner(id primitive.ObjectID, svc *Service) (r *Runner, err error) {
 			r.fsSvc = fs.NewFsService(filepath.Join(utils.GetWorkspace(), r.s.Id.Hex()))
 		}
 	}
-
-	// grpc client
-	r.c = client2.GetGrpcClient()
 
 	// Initialize context and done channel
 	r.ctx, r.cancel = context.WithCancel(context.Background())

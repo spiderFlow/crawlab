@@ -21,14 +21,12 @@ import (
 	"github.com/crawlab-team/crawlab/core/task/handler"
 	"github.com/crawlab-team/crawlab/core/utils"
 	"github.com/crawlab-team/crawlab/grpc"
-	"github.com/crawlab-team/crawlab/trace"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
 type WorkerService struct {
 	// dependencies
 	cfgSvc     interfaces.NodeConfigService
-	client     *client.GrpcClient
 	handlerSvc *handler.Service
 
 	// settings
@@ -43,25 +41,8 @@ type WorkerService struct {
 }
 
 func (svc *WorkerService) Start() {
-	// start grpc client (retry if failed)
-	err := backoff.RetryNotify(
-		func() error {
-			return svc.client.Start()
-		},
-		backoff.NewExponentialBackOff(
-			backoff.WithInitialInterval(1*time.Second),
-			backoff.WithMaxInterval(1*time.Minute),
-			backoff.WithMaxElapsedTime(10*time.Minute),
-		),
-		func(err error, duration time.Duration) {
-			log.Errorf("failed to start grpc client: %v", err)
-			log.Infof("retrying in %s", duration)
-		},
-	)
-	if err != nil {
-		log.Fatalf("failed to start grpc client: %v", err)
-		panic(err)
-	}
+	// wait for grpc client ready
+	client.GetGrpcClient().WaitForReady()
 
 	// register to master
 	svc.register()
@@ -94,15 +75,15 @@ func (svc *WorkerService) Wait() {
 
 func (svc *WorkerService) Stop() {
 	svc.stopped = true
-	_ = svc.client.Stop()
+	_ = client.GetGrpcClient().Stop()
 	svc.handlerSvc.Stop()
 	log.Infof("worker[%s] service has stopped", svc.cfgSvc.GetNodeKey())
 }
 
 func (svc *WorkerService) register() {
-	ctx, cancel := svc.client.Context()
+	ctx, cancel := client.GetGrpcClient().Context()
 	defer cancel()
-	_, err := svc.client.NodeClient.Register(ctx, &grpc.NodeServiceRegisterRequest{
+	_, err := client.GetGrpcClient().NodeClient.Register(ctx, &grpc.NodeServiceRegisterRequest{
 		NodeKey:    svc.cfgSvc.GetNodeKey(),
 		NodeName:   svc.cfgSvc.GetNodeName(),
 		MaxRunners: int32(svc.cfgSvc.GetMaxRunners()),
@@ -124,7 +105,7 @@ func (svc *WorkerService) reportStatus() {
 	ticker := time.NewTicker(svc.heartbeatInterval)
 	for {
 		// return if client is closed
-		if svc.client.IsClosed() {
+		if client.GetGrpcClient().IsClosed() {
 			ticker.Stop()
 			return
 		}
@@ -156,7 +137,7 @@ func (svc *WorkerService) subscribe() {
 
 		// Use backoff for connection attempts
 		operation := func() error {
-			stream, err := svc.client.NodeClient.Subscribe(context.Background(), &grpc.NodeServiceSubscribeRequest{
+			stream, err := client.GetGrpcClient().NodeClient.Subscribe(context.Background(), &grpc.NodeServiceSubscribeRequest{
 				NodeKey: svc.cfgSvc.GetNodeKey(),
 			})
 			if err != nil {
@@ -172,7 +153,7 @@ func (svc *WorkerService) subscribe() {
 
 				msg, err := stream.Recv()
 				if err != nil {
-					if svc.client.IsClosed() {
+					if client.GetGrpcClient().IsClosed() {
 						log.Errorf("connection to master is closed: %v", err)
 						return err
 					}
@@ -202,11 +183,11 @@ func (svc *WorkerService) subscribe() {
 func (svc *WorkerService) sendHeartbeat() {
 	ctx, cancel := context.WithTimeout(context.Background(), svc.heartbeatInterval)
 	defer cancel()
-	_, err := svc.client.NodeClient.SendHeartbeat(ctx, &grpc.NodeServiceSendHeartbeatRequest{
+	_, err := client.GetGrpcClient().NodeClient.SendHeartbeat(ctx, &grpc.NodeServiceSendHeartbeatRequest{
 		NodeKey: svc.cfgSvc.GetNodeKey(),
 	})
 	if err != nil {
-		trace.PrintError(err)
+		log.Errorf("failed to send heartbeat to master: %v", err)
 	}
 }
 
@@ -214,7 +195,7 @@ func (svc *WorkerService) startHealthServer() {
 	// handlers
 	app := gin.New()
 	app.GET("/health", controllers.GetHealthFn(func() bool {
-		return svc.isReady && !svc.stopped && svc.client != nil && !svc.client.IsClosed()
+		return svc.isReady && !svc.stopped && client.GetGrpcClient() != nil && !client.GetGrpcClient().IsClosed()
 	}))
 
 	// listen
@@ -237,7 +218,6 @@ func newWorkerService() *WorkerService {
 	return &WorkerService{
 		heartbeatInterval: 15 * time.Second,
 		cfgSvc:            nodeconfig.GetNodeConfigService(),
-		client:            client.GetGrpcClient(),
 		handlerSvc:        handler.GetTaskHandlerService(),
 		isReady:           false,
 	}

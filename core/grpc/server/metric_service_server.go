@@ -16,7 +16,7 @@ type MetricServiceServer struct {
 }
 
 func (svr MetricServiceServer) Send(_ context.Context, req *grpc.MetricServiceSendRequest) (res *grpc.Response, err error) {
-	log.Info("[MetricServiceServer] received metric from node: " + req.NodeKey)
+	log.Debugf("[MetricServiceServer] received metric from node: " + req.NodeKey)
 	n, err := service.NewModelService[models.Node]().GetOne(bson.M{"key": req.NodeKey}, nil)
 	if err != nil {
 		log.Errorf("[MetricServiceServer] error getting node: %v", err)

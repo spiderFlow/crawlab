@@ -41,13 +41,8 @@ type Service struct {
 }
 
 func (svc *Service) Start() {
-	// Initialize gRPC if not started
-	if !svc.c.IsStarted() {
-		err := svc.c.Start()
-		if err != nil {
-			return
-		}
-	}
+	// wait for grpc client ready
+	grpcclient.GetGrpcClient().WaitForReady()
 
 	go svc.reportStatus()
 	go svc.fetchAndRunTasks()

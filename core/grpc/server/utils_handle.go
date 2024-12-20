@@ -2,12 +2,15 @@ package server
 
 import (
 	"encoding/json"
+	"github.com/crawlab-team/crawlab/core/utils"
 	"github.com/crawlab-team/crawlab/grpc"
 	"github.com/crawlab-team/crawlab/trace"
 )
 
 func HandleError(err error) (res *grpc.Response, err2 error) {
-	trace.PrintError(err)
+	if utils.IsDev() {
+		trace.PrintError(err)
+	}
 	return &grpc.Response{
 		Code:  grpc.ResponseCode_ERROR,
 		Error: err.Error(),

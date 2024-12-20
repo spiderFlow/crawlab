@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"sync"
 	"time"
 
@@ -75,6 +76,21 @@ func (c *GrpcClient) Stop() (err error) {
 	return nil
 }
 
+func (c *GrpcClient) WaitForReady() {
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			if c.IsReady() {
+				return
+			}
+		case <-c.stop:
+			log.Errorf("grpc client stopped")
+		}
+	}
+}
+
 func (c *GrpcClient) register() {
 	c.NodeClient = grpc2.NewNodeServiceClient(c.conn)
 	c.ModelBaseServiceClient = grpc2.NewModelBaseServiceClient(c.conn)
@@ -87,8 +103,8 @@ func (c *GrpcClient) Context() (ctx context.Context, cancel context.CancelFunc) 
 	return context.WithTimeout(context.Background(), c.timeout)
 }
 
-func (c *GrpcClient) IsStarted() (res bool) {
-	return c.conn != nil
+func (c *GrpcClient) IsReady() (res bool) {
+	return c.conn != nil && c.conn.GetState() == connectivity.Ready
 }
 
 func (c *GrpcClient) IsClosed() (res bool) {
@@ -132,12 +148,30 @@ func (c *GrpcClient) connect() (err error) {
 		}
 
 		// connect
+		log.Infof("[GrpcClient] grpc client connecting to %s", c.address)
 		c.conn.Connect()
+
+		// wait for connection to be ready
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		ok := c.conn.WaitForStateChange(ctx, connectivity.Ready)
+		if !ok {
+			return fmt.Errorf("[GrpcClient] grpc client failed to connect to %s: timed out", c.address)
+		}
+
+		// success
 		log.Infof("[GrpcClient] grpc client connected to %s", c.address)
 
 		return nil
 	}
-	return backoff.RetryNotify(op, backoff.NewExponentialBackOff(), utils.BackoffErrorNotify("grpc client connect"))
+	b := backoff.NewExponentialBackOff(
+		backoff.WithInitialInterval(5*time.Second),
+		backoff.WithMaxElapsedTime(10*time.Minute),
+	)
+	n := func(err error, duration time.Duration) {
+		log.Errorf("[GrpcClient] grpc client failed to connect to %s: %v, retrying in %s", c.address, err, duration)
+	}
+	return backoff.RetryNotify(op, b, n)
 }
 
 func newGrpcClient() (c *GrpcClient) {
@@ -154,6 +188,12 @@ var _clientOnce sync.Once
 func GetGrpcClient() *GrpcClient {
 	_clientOnce.Do(func() {
 		_client = newGrpcClient()
+		go func() {
+			err := _client.Start()
+			if err != nil {
+				log.Fatalf("[GrpcClient] failed to start: %v", err)
+			}
+		}()
 	})
 	return _client
 }
