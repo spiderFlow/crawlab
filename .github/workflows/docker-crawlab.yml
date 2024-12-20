@@ -23,7 +23,7 @@ env:
   IMAGE_NAME_CRAWLAB_DOCKERHUB: crawlabteam/crawlab
   IMAGE_NAME_CRAWLAB_TENCENT: ccr.ccs.tencentyun.com/crawlab/crawlab
   E2E_TESTS_IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/e2e-tests
-  E2E_TESTS_REPO_PATH: crawlab-test-report/playwright-report
+  E2E_TESTS_WORKSPACE: ${{ github.workspace }}/playwright-report
 
 jobs:
   setup:
@@ -329,15 +329,15 @@ jobs:
           docker run --network host \
             -e BASE_URL=http://localhost:8080 \
             -e TEST_SCRIPT=${{ needs.setup.outputs.test_script }} \
-            -v ${{ github.workspace }}/playwright-report:/app/playwright-report \
+            -v ${{ env.E2E_TESTS_WORKSPACE }}:/app/playwright-report \
             ${{ env.E2E_TESTS_IMAGE_NAME }}:latest
-      - name: Deploy to GitHub Pages
+      - name: Upload test results
         if: ${{ success() || failure() }}
-        uses: peaceiris/actions-gh-pages@v3
+        uses: actions/upload-artifact@v4
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ${{ env.E2E_TESTS_REPO_PATH }}
-          destination_dir: playwright-report/${{ needs.setup.outputs.version }}
+          name: playwright-report-${{ needs.setup.outputs.version }}
+          path: ${{ env.E2E_TESTS_WORKSPACE }}
+          retention-days: 1
 
   push_images:
     name: Push images
@@ -355,7 +355,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Pull Docker image from GitHub Container Registry
-        run: docker pull ${{ env.IMAGE_NAME_CRAWLAB }}:${{ needs.setup.outputs.version }}
+        run: docker pull ${{ env.IMAGE_NAME_CRAWLAB_GH }}:${{ needs.setup.outputs.version }}
       - name: Login to DockerHub or Tencent Registry
         uses: docker/login-action@v3
         with:
@@ -365,6 +365,6 @@ jobs:
       - name: Tag and push image
         if: ${{ matrix.registry == 'dockerhub' || (matrix.registry == 'tencent' && github.ref != 'refs/heads/develop') }}
         run: |
-          docker tag ${{ env.IMAGE_NAME_CRAWLAB }}:${{ needs.setup.outputs.version }} ${{ (matrix.registry == 'dockerhub' && env.IMAGE_NAME_CRAWLAB_DOCKERHUB) || (matrix.registry == 'tencent' && env.IMAGE_NAME_CRAWLAB_TENCENT) }}:${{ needs.setup.outputs.version }}
+          docker tag ${{ env.IMAGE_NAME_CRAWLAB_GH }}:${{ needs.setup.outputs.version }} ${{ (matrix.registry == 'dockerhub' && env.IMAGE_NAME_CRAWLAB_DOCKERHUB) || (matrix.registry == 'tencent' && env.IMAGE_NAME_CRAWLAB_TENCENT) }}:${{ needs.setup.outputs.version }}
           docker push ${{ (matrix.registry == 'dockerhub' && env.IMAGE_NAME_CRAWLAB_DOCKERHUB) || (matrix.registry == 'tencent' && env.IMAGE_NAME_CRAWLAB_TENCENT) }}:${{ needs.setup.outputs.version }}
 
