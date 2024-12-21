@@ -6,6 +6,7 @@ import (
 	"github.com/crawlab-team/crawlab/trace"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"time"
 )
 
 func handleError(statusCode int, c *gin.Context, err error, print bool) {
@@ -29,4 +30,10 @@ func HandleErrorUnauthorized(c *gin.Context, err error) {
 
 func HandleErrorInternalServerError(c *gin.Context, err error) {
 	HandleError(http.StatusInternalServerError, c, err)
+}
+
+func NewHttpClient(timeout time.Duration) *http.Client {
+	return &http.Client{
+		Timeout: timeout,
+	}
 }

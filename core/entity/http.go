@@ -20,3 +20,5 @@ type ListResponse struct {
 type BatchRequestPayload struct {
 	Ids []primitive.ObjectID `form:"ids" json:"ids"`
 }
+
+type RequestParam map[string]interface{}

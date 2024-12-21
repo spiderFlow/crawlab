@@ -3,13 +3,14 @@ package controllers
 import (
 	"github.com/crawlab-team/crawlab/core/constants"
 	"github.com/crawlab-team/crawlab/core/entity"
+	"github.com/crawlab-team/crawlab/core/utils"
 	"github.com/crawlab-team/crawlab/trace"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
 
-func handleError(statusCode int, c *gin.Context, err error, print bool) {
-	if print {
+func handleError(statusCode int, c *gin.Context, err error) {
+	if utils.IsDev() {
 		trace.PrintError(err)
 	}
 	c.AbortWithStatusJSON(statusCode, entity.Response{
@@ -20,11 +21,7 @@ func handleError(statusCode int, c *gin.Context, err error, print bool) {
 }
 
 func HandleError(statusCode int, c *gin.Context, err error) {
-	handleError(statusCode, c, err, true)
-}
-
-func HandleErrorNoPrint(statusCode int, c *gin.Context, err error) {
-	handleError(statusCode, c, err, false)
+	handleError(statusCode, c, err)
 }
 
 func HandleErrorBadRequest(c *gin.Context, err error) {
@@ -41,10 +38,6 @@ func HandleErrorUnauthorized(c *gin.Context, err error) {
 
 func HandleErrorNotFound(c *gin.Context, err error) {
 	HandleError(http.StatusNotFound, c, err)
-}
-
-func HandleErrorNotFoundNoPrint(c *gin.Context, err error) {
-	HandleErrorNoPrint(http.StatusNotFound, c, err)
 }
 
 func HandleErrorInternalServerError(c *gin.Context, err error) {

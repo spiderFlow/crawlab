@@ -239,7 +239,7 @@ func (svc *Service) getRunner(taskId primitive.ObjectID) (r interfaces.TaskRunne
 }
 
 func (svc *Service) addRunner(taskId primitive.ObjectID, r interfaces.TaskRunner) {
-	log.Debugf("[TaskHandlerService] addRunner: taskId[%v]", taskId)
+	log.Debugf("[TaskHandlerService] addRunner: taskId[%s]", taskId.Hex())
 	svc.runners.Store(taskId, r)
 }
 

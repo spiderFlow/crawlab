@@ -1,19 +1,61 @@
 package notification
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/crawlab-team/crawlab/core/entity"
+	"github.com/crawlab-team/crawlab/core/utils"
+	"io"
+	"net/http"
+	"regexp"
+	"strings"
+	"time"
+
 	"github.com/apex/log"
 	"github.com/crawlab-team/crawlab/core/models/models"
 	"github.com/crawlab-team/crawlab/trace"
-	"github.com/imroc/req"
-	"regexp"
-	"strings"
 )
 
 type ResBody struct {
 	ErrCode int    `json:"errcode"`
 	ErrMsg  string `json:"errmsg"`
+}
+
+// RequestParam represents parameters for HTTP requests
+type RequestParam entity.RequestParam
+
+// performRequest performs an HTTP request with JSON body
+func performRequest(method, url string, data interface{}) (*http.Response, []byte, error) {
+	var reqBody io.Reader
+	if data != nil {
+		jsonData, err := json.Marshal(data)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to marshal request body: %v", err)
+		}
+		reqBody = bytes.NewBuffer(jsonData)
+	}
+
+	req, err := http.NewRequest(method, url, reqBody)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create request: %v", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+
+	resp, err := utils.NewHttpClient(15 * time.Second).Do(req)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to perform request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to read response body: %v", err)
+	}
+
+	return resp, body, nil
 }
 
 func SendIMNotification(ch *models.NotificationChannel, title, content string) error {
@@ -34,43 +76,42 @@ func SendIMNotification(ch *models.NotificationChannel, title, content string) e
 		return sendIMMSTeams(ch, title, content)
 	}
 
-	// request header
-	header := req.Header{
-		"Content-Type": "application/json; charset=utf-8",
-	}
-
 	// request data
-	data := req.Param{
+	data := RequestParam{
 		"msgtype": "markdown",
-		"markdown": req.Param{
+		"markdown": RequestParam{
 			"title":   title,
 			"text":    content,
 			"content": content,
 		},
-		"at": req.Param{
+		"at": RequestParam{
 			"atMobiles": []string{},
 			"isAtAll":   false,
 		},
 		"text": content,
 	}
 	if strings.Contains(strings.ToLower(ch.WebhookUrl), "feishu") {
-		data = req.Param{
+		data = RequestParam{
 			"msg_type": "text",
-			"content": req.Param{
+			"content": RequestParam{
 				"text": content,
 			},
 		}
 	}
 
 	// perform request
-	res, err := req.Post(ch.WebhookUrl, header, req.BodyJSON(&data))
+	resp, body, err := performRequest("POST", ch.WebhookUrl, data)
 	if err != nil {
 		return trace.TraceError(err)
 	}
 
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("request failed with status code: %d", resp.StatusCode)
+	}
+
 	// parse response
 	var resBody ResBody
-	if err := res.ToJSON(&resBody); err != nil {
+	if err := json.Unmarshal(body, &resBody); err != nil {
 		return trace.TraceError(err)
 	}
 
@@ -82,47 +123,31 @@ func SendIMNotification(ch *models.NotificationChannel, title, content string) e
 	return nil
 }
 
-func getIMRequestHeader() req.Header {
-	return req.Header{
-		"Content-Type": "application/json; charset=utf-8",
-	}
-}
-
-func performIMRequest(webhookUrl string, data req.Param) (res *req.Resp, err error) {
-	// perform request
-	res, err = req.Post(webhookUrl, getIMRequestHeader(), req.BodyJSON(&data))
+func performIMRequest(webhookUrl string, data RequestParam) ([]byte, error) {
+	resp, body, err := performRequest("POST", webhookUrl, data)
 	if err != nil {
 		log.Errorf("IM request error: %v", err)
 		return nil, err
 	}
 
-	// get response
-	response := res.Response()
-
-	// check status code
-	if response.StatusCode >= 400 {
-		log.Errorf("IM response status code: %d", res.Response().StatusCode)
-		return nil, errors.New(fmt.Sprintf("IM error response %d: %s", response.StatusCode, res.String()))
+	if resp.StatusCode >= 400 {
+		log.Errorf("IM response status code: %d", resp.StatusCode)
+		return nil, fmt.Errorf("IM error response %d: %s", resp.StatusCode, string(body))
 	}
 
-	return res, nil
+	return body, nil
 }
 
-func performIMRequestWithJson[T any](webhookUrl string, data req.Param) (resBody T, err error) {
-	res, err := performIMRequest(webhookUrl, data)
+func performIMRequestWithJson[T any](webhookUrl string, data RequestParam) (resBody T, err error) {
+	body, err := performIMRequest(webhookUrl, data)
 	if err != nil {
 		return resBody, err
 	}
 
 	// parse response
-	if err := res.ToJSON(&resBody); err != nil {
+	if err := json.Unmarshal(body, &resBody); err != nil {
 		log.Warnf("Parsing IM response error: %v", err)
-		resText, err := res.ToString()
-		if err != nil {
-			log.Warnf("Converting response to string error: %v", err)
-			return resBody, err
-		}
-		log.Infof("IM response: %s", resText)
+		log.Infof("IM response: %s", string(body))
 		return resBody, nil
 	}
 
@@ -193,16 +218,16 @@ func convertMarkdownToTelegram(markdownText string) string {
 }
 
 func sendIMLark(ch *models.NotificationChannel, title, content string) error {
-	data := req.Param{
+	data := RequestParam{
 		"msg_type": "interactive",
-		"card": req.Param{
-			"header": req.Param{
-				"title": req.Param{
+		"card": RequestParam{
+			"header": RequestParam{
+				"title": RequestParam{
 					"tag":     "plain_text",
 					"content": title,
 				},
 			},
-			"elements": []req.Param{
+			"elements": []RequestParam{
 				{
 					"tag":     "markdown",
 					"content": content,
@@ -221,9 +246,9 @@ func sendIMLark(ch *models.NotificationChannel, title, content string) error {
 }
 
 func sendIMDingTalk(ch *models.NotificationChannel, title string, content string) error {
-	data := req.Param{
+	data := RequestParam{
 		"msgtype": "markdown",
-		"markdown": req.Param{
+		"markdown": RequestParam{
 			"title": title,
 			"text":  fmt.Sprintf("# %s\n\n%s", title, content),
 		},
@@ -239,9 +264,9 @@ func sendIMDingTalk(ch *models.NotificationChannel, title string, content string
 }
 
 func sendIMWechatWork(ch *models.NotificationChannel, title string, content string) error {
-	data := req.Param{
+	data := RequestParam{
 		"msgtype": "markdown",
-		"markdown": req.Param{
+		"markdown": RequestParam{
 			"content": fmt.Sprintf("# %s\n\n%s", title, content),
 		},
 	}
@@ -256,10 +281,10 @@ func sendIMWechatWork(ch *models.NotificationChannel, title string, content stri
 }
 
 func sendIMSlack(ch *models.NotificationChannel, title, content string) error {
-	data := req.Param{
-		"blocks": []req.Param{
-			{"type": "header", "text": req.Param{"type": "plain_text", "text": title}},
-			{"type": "section", "text": req.Param{"type": "mrkdwn", "text": convertMarkdownToSlack(content)}},
+	data := RequestParam{
+		"blocks": []RequestParam{
+			{"type": "header", "text": RequestParam{"type": "plain_text", "text": title}},
+			{"type": "section", "text": RequestParam{"type": "mrkdwn", "text": convertMarkdownToSlack(content)}},
 		},
 	}
 	_, err := performIMRequest(ch.WebhookUrl, data)
@@ -291,7 +316,7 @@ func sendIMTelegram(ch *models.NotificationChannel, title string, content string
 	text = convertMarkdownToTelegram(text)
 
 	// request data
-	data := req.Param{
+	data := RequestParam{
 		"chat_id":    chatId,
 		"text":       text,
 		"parse_mode": "MarkdownV2",
@@ -306,8 +331,8 @@ func sendIMTelegram(ch *models.NotificationChannel, title string, content string
 }
 
 func sendIMDiscord(ch *models.NotificationChannel, title string, content string) error {
-	data := req.Param{
-		"embeds": []req.Param{
+	data := RequestParam{
+		"embeds": []RequestParam{
 			{
 				"title":       title,
 				"description": content,
@@ -322,16 +347,16 @@ func sendIMDiscord(ch *models.NotificationChannel, title string, content string)
 }
 
 func sendIMMSTeams(ch *models.NotificationChannel, title string, content string) error {
-	data := req.Param{
+	data := RequestParam{
 		"type": "message",
-		"attachments": []req.Param{{
+		"attachments": []RequestParam{{
 			"contentType": "application/vnd.microsoft.card.adaptive",
 			"contentUrl":  nil,
-			"content": req.Param{
+			"content": RequestParam{
 				"$schema": "https://adaptivecards.io/schemas/adaptive-card.json",
 				"type":    "AdaptiveCard",
 				"version": "1.2",
-				"body": []req.Param{
+				"body": []RequestParam{
 					{
 						"type": "TextBlock",
 						"text": fmt.Sprintf("**%s**", title),

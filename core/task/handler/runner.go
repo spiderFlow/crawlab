@@ -309,6 +309,11 @@ func (r *Runner) configureEnv() {
 }
 
 func (r *Runner) createHttpRequest(method, path string) (*http.Response, error) {
+	// Normalize path
+	if strings.HasPrefix(path, "/") {
+		path = path[1:]
+	}
+
 	// Construct master URL
 	var id string
 	if r.s.GitId.IsZero() {
@@ -316,7 +321,7 @@ func (r *Runner) createHttpRequest(method, path string) (*http.Response, error) 
 	} else {
 		id = r.s.GitId.Hex()
 	}
-	url := fmt.Sprintf("%s/sync/%s%s", utils.GetApiEndpoint(), id, path)
+	url := fmt.Sprintf("%s/sync/%s/%s", utils.GetApiEndpoint(), id, path)
 
 	// Create and execute request
 	req, err := http.NewRequest(method, url, nil)
@@ -357,7 +362,8 @@ func (r *Runner) syncFiles() (err error) {
 	var masterFiles map[string]entity.FsFileInfo
 	err = json.Unmarshal(body, &masterFiles)
 	if err != nil {
-		log.Errorf("error unmarshaling JSON: %v", err)
+		log.Errorf("error unmarshaling JSON for URL: %s", resp.Request.URL.String())
+		log.Errorf("error details: %v", err)
 		return err
 	}
 
