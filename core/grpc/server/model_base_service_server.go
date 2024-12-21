@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"github.com/crawlab-team/crawlab/core/utils"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"reflect"
 	"sync"
@@ -58,13 +59,14 @@ func (svr ModelBaseServiceServer) GetOne(_ context.Context, req *grpc.ModelServi
 	if err != nil {
 		return HandleError(err)
 	}
-	var options mongo.FindOptions
-	err = json.Unmarshal(req.FindOptions, &options)
+	query = utils.NormalizeBsonMObjectId(query)
+	var opts mongo.FindOptions
+	err = json.Unmarshal(req.FindOptions, &opts)
 	if err != nil {
 		return HandleError(err)
 	}
 	modelSvc := service.NewModelServiceWithColName[bson.M](typeNameColNameMap[req.ModelType])
-	data, err := modelSvc.GetOne(query, &options)
+	data, err := modelSvc.GetOne(query, &opts)
 	if err != nil {
 		return HandleError(err)
 	}
@@ -77,13 +79,14 @@ func (svr ModelBaseServiceServer) GetMany(_ context.Context, req *grpc.ModelServ
 	if err != nil {
 		return HandleError(err)
 	}
-	var options mongo.FindOptions
-	err = json.Unmarshal(req.FindOptions, &options)
+	query = utils.NormalizeBsonMObjectId(query)
+	var opts mongo.FindOptions
+	err = json.Unmarshal(req.FindOptions, &opts)
 	if err != nil {
 		return HandleError(err)
 	}
 	modelSvc := service.NewModelServiceWithColName[bson.M](typeNameColNameMap[req.ModelType])
-	data, err := modelSvc.GetMany(query, &options)
+	data, err := modelSvc.GetMany(query, &opts)
 	if err != nil {
 		return HandleError(err)
 	}
@@ -109,6 +112,7 @@ func (svr ModelBaseServiceServer) DeleteOne(_ context.Context, req *grpc.ModelSe
 	if err != nil {
 		return HandleError(err)
 	}
+	query = utils.NormalizeBsonMObjectId(query)
 	modelSvc := GetModelService[bson.M](req.ModelType)
 	err = modelSvc.DeleteOne(query)
 	if err != nil {
@@ -123,6 +127,7 @@ func (svr ModelBaseServiceServer) DeleteMany(_ context.Context, req *grpc.ModelS
 	if err != nil {
 		return HandleError(err)
 	}
+	query = utils.NormalizeBsonMObjectId(query)
 	modelSvc := GetModelService[bson.M](req.ModelType)
 	err = modelSvc.DeleteMany(query)
 	if err != nil {
@@ -155,11 +160,13 @@ func (svr ModelBaseServiceServer) UpdateOne(_ context.Context, req *grpc.ModelSe
 	if err != nil {
 		return HandleError(err)
 	}
+	query = utils.NormalizeBsonMObjectId(query)
 	var update bson.M
 	err = json.Unmarshal(req.Update, &update)
 	if err != nil {
 		return HandleError(err)
 	}
+	update = utils.NormalizeBsonMObjectId(update)
 	modelSvc := GetModelService[bson.M](req.ModelType)
 	err = modelSvc.UpdateOne(query, update)
 	if err != nil {
@@ -174,11 +181,13 @@ func (svr ModelBaseServiceServer) UpdateMany(_ context.Context, req *grpc.ModelS
 	if err != nil {
 		return HandleError(err)
 	}
+	query = utils.NormalizeBsonMObjectId(query)
 	var update bson.M
 	err = json.Unmarshal(req.Update, &update)
 	if err != nil {
 		return HandleError(err)
 	}
+	update = utils.NormalizeBsonMObjectId(update)
 	modelSvc := GetModelService[bson.M](req.ModelType)
 	err = modelSvc.UpdateMany(query, update)
 	if err != nil {
@@ -213,6 +222,7 @@ func (svr ModelBaseServiceServer) ReplaceOne(_ context.Context, req *grpc.ModelS
 	if err != nil {
 		return HandleError(err)
 	}
+	query = utils.NormalizeBsonMObjectId(query)
 	model := GetOneInstanceModel(req.ModelType)
 	modelType := reflect.TypeOf(model)
 	modelValuePtr := reflect.New(modelType).Interface()
@@ -283,6 +293,7 @@ func (svr ModelBaseServiceServer) UpsertOne(_ context.Context, req *grpc.ModelSe
 	if err != nil {
 		return HandleError(err)
 	}
+	query = utils.NormalizeBsonMObjectId(query)
 	modelSvc := GetModelService[bson.M](req.ModelType)
 	opts := &options.ReplaceOptions{}
 	opts.SetUpsert(true)
