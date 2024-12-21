@@ -101,6 +101,11 @@ func InitRoutes(app *gin.Engine) (err error) {
 			Path:        "/:id/disable",
 			HandlerFunc: PostScheduleDisable,
 		},
+		{
+			Method:      http.MethodPost,
+			Path:        "/:id/run",
+			HandlerFunc: PostScheduleRun,
+		},
 	}...))
 	RegisterController(groups.AuthGroup, "/spiders", NewController[models.Spider]([]Action{
 		{

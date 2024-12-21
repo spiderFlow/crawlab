@@ -17,8 +17,8 @@ type Task struct {
 	ScheduleId      primitive.ObjectID   `json:"schedule_id" bson:"schedule_id"`
 	Type            string               `json:"type" bson:"type"`
 	Mode            string               `json:"mode" bson:"mode"`
-	NodeIds         []primitive.ObjectID `json:"node_ids" bson:"node_ids"`
 	Priority        int                  `json:"priority" bson:"priority"`
+	NodeIds         []primitive.ObjectID `json:"node_ids,omitempty" bson:"-"`
 	Stat            *TaskStat            `json:"stat,omitempty" bson:"-"`
 	Spider          *Spider              `json:"spider,omitempty" bson:"-"`
 	Schedule        *Schedule            `json:"schedule,omitempty" bson:"-"`

@@ -339,6 +339,12 @@ func PostTaskRestart(c *gin.Context) {
 		Priority: t.Priority,
 	}
 
+	// normalize options for tasks with assigned node
+	if !t.NodeId.IsZero() {
+		opts.NodeIds = []primitive.ObjectID{t.NodeId}
+		opts.Mode = constants.RunTypeSelectedNodes
+	}
+
 	// user
 	if u := GetUserFromContext(c); u != nil {
 		opts.UserId = u.Id

@@ -660,10 +660,8 @@ func PostSpiderRun(c *gin.Context) {
 		opts.UserId = u.GetId()
 	}
 
-	adminSvc := admin.GetSpiderAdminService()
-
-	// schedule
-	taskIds, err := adminSvc.Schedule(id, &opts)
+	// schedule tasks
+	taskIds, err := admin.GetSpiderAdminService().Schedule(id, &opts)
 	if err != nil {
 		HandleErrorInternalServerError(c, err)
 		return
