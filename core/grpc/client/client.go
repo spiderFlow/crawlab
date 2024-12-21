@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -39,10 +38,21 @@ type GrpcClient struct {
 	ModelBaseServiceClient grpc2.ModelBaseServiceClient
 	DependencyClient       grpc2.DependencyServiceClient
 	MetricClient           grpc2.MetricServiceClient
+
+	// Add new fields for state management
+	state     connectivity.State
+	stateMux  sync.RWMutex
+	reconnect chan struct{}
 }
 
 func (c *GrpcClient) Start() (err error) {
 	c.once.Do(func() {
+		// initialize reconnect channel
+		c.reconnect = make(chan struct{})
+
+		// start state monitor
+		go c.monitorState()
+
 		// connect
 		err = c.connect()
 		if err != nil {
@@ -69,6 +79,7 @@ func (c *GrpcClient) Stop() (err error) {
 
 	// close connection
 	if err := c.conn.Close(); err != nil {
+		log.Errorf("grpc client failed to close connection: %v", err)
 		return err
 	}
 	log.Infof("grpc client disconnected from %s", c.address)
@@ -83,6 +94,7 @@ func (c *GrpcClient) WaitForReady() {
 		select {
 		case <-ticker.C:
 			if c.IsReady() {
+				log.Debugf("grpc client ready")
 				return
 			}
 		case <-c.stop:
@@ -104,7 +116,8 @@ func (c *GrpcClient) Context() (ctx context.Context, cancel context.CancelFunc) 
 }
 
 func (c *GrpcClient) IsReady() (res bool) {
-	return c.conn != nil && c.conn.GetState() == connectivity.Ready
+	state := c.conn.GetState()
+	return c.conn != nil && state == connectivity.Ready
 }
 
 func (c *GrpcClient) IsClosed() (res bool) {
@@ -114,24 +127,75 @@ func (c *GrpcClient) IsClosed() (res bool) {
 	return false
 }
 
-func (c *GrpcClient) getRequestData(d interface{}) (data []byte) {
-	if d == nil {
-		return data
-	}
-	switch d.(type) {
-	case []byte:
-		data = d.([]byte)
-	default:
-		var err error
-		data, err = json.Marshal(d)
-		if err != nil {
-			panic(err)
+func (c *GrpcClient) monitorState() {
+	for {
+		select {
+		case <-c.stop:
+			return
+		default:
+			if c.conn == nil {
+				time.Sleep(time.Second)
+				continue
+			}
+
+			previous := c.getState()
+			current := c.conn.GetState()
+
+			if previous != current {
+				c.setState(current)
+				log.Infof("[GrpcClient] state changed from %s to %s", previous, current)
+
+				// Trigger reconnect if connection is lost or becomes idle from ready state
+				if current == connectivity.TransientFailure ||
+					current == connectivity.Shutdown ||
+					(previous == connectivity.Ready && current == connectivity.Idle) {
+					select {
+					case c.reconnect <- struct{}{}:
+						log.Infof("[GrpcClient] triggering reconnection due to state change to %s", current)
+					default:
+					}
+				}
+			}
+
+			time.Sleep(time.Second)
 		}
 	}
-	return data
+}
+
+func (c *GrpcClient) setState(state connectivity.State) {
+	c.stateMux.Lock()
+	defer c.stateMux.Unlock()
+	c.state = state
+}
+
+func (c *GrpcClient) getState() connectivity.State {
+	c.stateMux.RLock()
+	defer c.stateMux.RUnlock()
+	return c.state
 }
 
 func (c *GrpcClient) connect() (err error) {
+	// Start reconnection loop
+	go func() {
+		for {
+			select {
+			case <-c.stop:
+				return
+			case <-c.reconnect:
+				if !c.stopped {
+					log.Infof("[GrpcClient] attempting to reconnect to %s", c.address)
+					if err := c.doConnect(); err != nil {
+						log.Errorf("[GrpcClient] reconnection failed: %v", err)
+					}
+				}
+			}
+		}
+	}()
+
+	return c.doConnect()
+}
+
+func (c *GrpcClient) doConnect() (err error) {
 	op := func() error {
 		// connection options
 		opts := []grpc.DialOption{
@@ -164,10 +228,9 @@ func (c *GrpcClient) connect() (err error) {
 
 		return nil
 	}
-	b := backoff.NewExponentialBackOff(
-		backoff.WithInitialInterval(5*time.Second),
-		backoff.WithMaxElapsedTime(10*time.Minute),
-	)
+	b := backoff.NewExponentialBackOff()
+	b.InitialInterval = 5 * time.Second
+	b.MaxElapsedTime = 10 * time.Minute
 	n := func(err error, duration time.Duration) {
 		log.Errorf("[GrpcClient] grpc client failed to connect to %s: %v, retrying in %s", c.address, err, duration)
 	}
@@ -179,6 +242,7 @@ func newGrpcClient() (c *GrpcClient) {
 		address: utils.GetGrpcAddress(),
 		timeout: 10 * time.Second,
 		stop:    make(chan struct{}),
+		state:   connectivity.Idle,
 	}
 }
 

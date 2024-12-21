@@ -75,13 +75,13 @@ type Runner struct {
 
 // Init initializes the task runner by updating the task status and establishing gRPC connections
 func (r *Runner) Init() (err error) {
+	// wait for grpc client ready
+	client2.GetGrpcClient().WaitForReady()
+
 	// update task
 	if err := r.updateTask("", nil); err != nil {
 		return err
 	}
-
-	// wait for grpc client ready
-	client2.GetGrpcClient().WaitForReady()
 
 	// grpc task service stream client
 	if err := r.initConnection(); err != nil {
