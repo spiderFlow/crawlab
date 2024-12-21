@@ -7,6 +7,7 @@ import (
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
 	"path/filepath"
+	"strings"
 )
 
 const (
@@ -24,6 +25,8 @@ const (
 	DefaultApiAllowCredentials       = "true"
 	DefaultApiAllowMethods           = "DELETE, POST, OPTIONS, GET, PUT"
 	DefaultApiAllowHeaders           = "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With"
+	DefaultApiPort                   = 8080
+	DefaultApiPath                   = "/api"
 	DefaultNodeMaxRunners            = 0 // 0 means no limit
 	DefaultDependencySetupScriptRoot = "/app/install"
 	MetadataConfigDirName            = ".crawlab"
@@ -159,17 +162,36 @@ func GetAuthKey() string {
 	return DefaultAuthKey
 }
 
+func GetApiPort() int {
+	if viper.GetInt("api.port") > 0 {
+		return viper.GetInt("api.port")
+	}
+	return DefaultApiPort
+}
+
+func GetApiPath() string {
+	if viper.GetString("api.path") != "" {
+		apiPath := viper.GetString("api.path")
+		if !strings.HasPrefix(apiPath, "/") {
+			apiPath = "/" + apiPath
+		}
+		return apiPath
+	}
+	return DefaultApiPath
+}
+
 func GetApiEndpoint() string {
 	if res := viper.GetString("api.endpoint"); res != "" {
 		return res
 	}
 	masterHost := GetMasterHost()
 	if masterHost != "" {
+		scheme := "http"
 		apiHttps := viper.GetBool("api.https")
 		if apiHttps {
-			return "https://" + masterHost + "/api"
+			scheme = "https"
 		}
-		return "http://" + masterHost + "/api"
+		return fmt.Sprintf("%s://%s:%d%s", scheme, masterHost, GetApiPort(), GetApiPath())
 	}
 	return DefaultApiEndpoint
 }
