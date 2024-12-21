@@ -2,6 +2,7 @@ package client_test
 
 import (
 	"context"
+	client2 "github.com/crawlab-team/crawlab/core/grpc/client"
 	"github.com/crawlab-team/crawlab/core/models/models"
 	"testing"
 	"time"
@@ -15,8 +16,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/bson"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 func setupTestDB() {
@@ -58,9 +57,8 @@ func TestModelService_GetById(t *testing.T) {
 	m.SetId(id)
 	time.Sleep(100 * time.Millisecond)
 
-	c, err := grpc.NewClient("localhost:9666", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	err = client2.GetGrpcClient().Start()
 	require.Nil(t, err)
-	c.Connect()
 
 	clientSvc := client.NewModelService[models.TestModel]()
 	res, err := clientSvc.GetById(m.Id)
@@ -85,9 +83,8 @@ func TestModelService_GetOne(t *testing.T) {
 	m.SetId(id)
 	time.Sleep(100 * time.Millisecond)
 
-	c, err := grpc.NewClient("localhost:9666", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	err = client2.GetGrpcClient().Start()
 	require.Nil(t, err)
-	c.Connect()
 
 	clientSvc := client.NewModelService[models.TestModel]()
 	res, err := clientSvc.GetOne(bson.M{"name": m.Name}, nil)
@@ -112,9 +109,8 @@ func TestModelService_GetMany(t *testing.T) {
 	m.SetId(id)
 	time.Sleep(100 * time.Millisecond)
 
-	c, err := grpc.NewClient("localhost:9666", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	err = client2.GetGrpcClient().Start()
 	require.Nil(t, err)
-	c.Connect()
 
 	clientSvc := client.NewModelService[models.TestModel]()
 	res, err := clientSvc.GetMany(bson.M{"name": m.Name}, nil)
@@ -140,9 +136,8 @@ func TestModelService_DeleteById(t *testing.T) {
 	m.SetId(id)
 	time.Sleep(100 * time.Millisecond)
 
-	c, err := grpc.NewClient("localhost:9666", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	err = client2.GetGrpcClient().Start()
 	require.Nil(t, err)
-	c.Connect()
 
 	clientSvc := client.NewModelService[models.TestModel]()
 	err = clientSvc.DeleteById(m.Id)
@@ -169,9 +164,8 @@ func TestModelService_DeleteOne(t *testing.T) {
 	m.SetId(id)
 	time.Sleep(100 * time.Millisecond)
 
-	c, err := grpc.NewClient("localhost:9666", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	err = client2.GetGrpcClient().Start()
 	require.Nil(t, err)
-	c.Connect()
 
 	clientSvc := client.NewModelService[models.TestModel]()
 	err = clientSvc.DeleteOne(bson.M{"name": m.Name})
@@ -198,9 +192,8 @@ func TestModelService_DeleteMany(t *testing.T) {
 	m.SetId(id)
 	time.Sleep(100 * time.Millisecond)
 
-	c, err := grpc.NewClient("localhost:9666", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	err = client2.GetGrpcClient().Start()
 	require.Nil(t, err)
-	c.Connect()
 
 	clientSvc := client.NewModelService[models.TestModel]()
 	err = clientSvc.DeleteMany(bson.M{"name": m.Name})
@@ -227,9 +220,8 @@ func TestModelService_UpdateById(t *testing.T) {
 	m.SetId(id)
 	time.Sleep(100 * time.Millisecond)
 
-	c, err := grpc.NewClient("localhost:9666", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	err = client2.GetGrpcClient().Start()
 	require.Nil(t, err)
-	c.Connect()
 
 	clientSvc := client.NewModelService[models.TestModel]()
 	err = clientSvc.UpdateById(m.Id, bson.M{"$set": bson.M{"name": "New Name"}})
@@ -256,9 +248,8 @@ func TestModelService_UpdateOne(t *testing.T) {
 	m.SetId(id)
 	time.Sleep(100 * time.Millisecond)
 
-	c, err := grpc.NewClient("localhost:9666", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	err = client2.GetGrpcClient().Start()
 	require.Nil(t, err)
-	c.Connect()
 
 	clientSvc := client.NewModelService[models.TestModel]()
 	err = clientSvc.UpdateOne(bson.M{"name": m.Name}, bson.M{"$set": bson.M{"name": "New Name"}})
@@ -289,9 +280,8 @@ func TestModelService_UpdateMany(t *testing.T) {
 	require.Nil(t, err)
 	time.Sleep(100 * time.Millisecond)
 
-	c, err := grpc.NewClient("localhost:9666", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	err = client2.GetGrpcClient().Start()
 	require.Nil(t, err)
-	c.Connect()
 
 	clientSvc := client.NewModelService[models.TestModel]()
 	err = clientSvc.UpdateMany(bson.M{"name": "Test Name"}, bson.M{"$set": bson.M{"name": "New Name"}})
@@ -318,9 +308,8 @@ func TestModelService_ReplaceById(t *testing.T) {
 	m.SetId(id)
 	time.Sleep(100 * time.Millisecond)
 
-	c, err := grpc.NewClient("localhost:9666", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	err = client2.GetGrpcClient().Start()
 	require.Nil(t, err)
-	c.Connect()
 
 	clientSvc := client.NewModelService[models.TestModel]()
 	m.Name = "New Name"
@@ -348,9 +337,8 @@ func TestModelService_ReplaceOne(t *testing.T) {
 	m.SetId(id)
 	time.Sleep(100 * time.Millisecond)
 
-	c, err := grpc.NewClient("localhost:9666", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	err = client2.GetGrpcClient().Start()
 	require.Nil(t, err)
-	c.Connect()
 
 	clientSvc := client.NewModelService[models.TestModel]()
 	m.Name = "New Name"
@@ -369,9 +357,8 @@ func TestModelService_InsertOne(t *testing.T) {
 	go startSvr(svr)
 	defer stopSvr(svr)
 
-	c, err := grpc.NewClient("localhost:9666", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	err := client2.GetGrpcClient().Start()
 	require.Nil(t, err)
-	c.Connect()
 
 	clientSvc := client.NewModelService[models.TestModel]()
 	m := models.TestModel{
@@ -392,9 +379,8 @@ func TestModelService_InsertMany(t *testing.T) {
 	go startSvr(svr)
 	defer stopSvr(svr)
 
-	c, err := grpc.NewClient("localhost:9666", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	err := client2.GetGrpcClient().Start()
 	require.Nil(t, err)
-	c.Connect()
 
 	clientSvc := client.NewModelService[models.TestModel]()
 	testModels := []models.TestModel{
@@ -427,9 +413,8 @@ func TestModelService_Count(t *testing.T) {
 	}
 	time.Sleep(100 * time.Millisecond)
 
-	c, err := grpc.NewClient("localhost:9666", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	err := client2.GetGrpcClient().Start()
 	require.Nil(t, err)
-	c.Connect()
 
 	clientSvc := client.NewModelService[models.TestModel]()
 	count, err := clientSvc.Count(bson.M{})

@@ -2,9 +2,6 @@ package client
 
 import (
 	"encoding/json"
-	"reflect"
-	"sync"
-
 	"github.com/crawlab-team/crawlab/core/grpc/client"
 	"github.com/crawlab-team/crawlab/core/interfaces"
 	nodeconfig "github.com/crawlab-team/crawlab/core/node/config"
@@ -12,6 +9,8 @@ import (
 	"github.com/crawlab-team/crawlab/grpc"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"reflect"
+	"sync"
 )
 
 var (
