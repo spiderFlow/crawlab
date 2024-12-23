@@ -23,6 +23,7 @@ apt-get install -y \
     ntpdate \
     nginx \
     unzip \
+    zip \
     gnupg2 \
     libc6
 
