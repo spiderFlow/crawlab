@@ -17,6 +17,36 @@ func NewServiceLogger(serviceName string) *ServiceLogger {
 	}
 }
 
+// Debug logs a debug message.
+func (l *ServiceLogger) Debug(message string) {
+	log.Debug(l.getFormat(message))
+}
+
+// Info logs an informational message.
+func (l *ServiceLogger) Info(message string) {
+	log.Info(l.getFormat(message))
+}
+
+// Warn logs a warning message.
+func (l *ServiceLogger) Warn(message string) {
+	log.Warn(l.getFormat(message))
+}
+
+// Error logs an error message.
+func (l *ServiceLogger) Error(message string) {
+	log.Error(l.getFormat(message))
+}
+
+// Fatal logs a fatal message.
+func (l *ServiceLogger) Fatal(message string) {
+	log.Fatal(l.getFormat(message))
+}
+
+// Debugf logs a debug message with formatted content.
+func (l *ServiceLogger) Debugf(format string, args ...interface{}) {
+	log.Debugf(l.getFormat(format), args...)
+}
+
 // Infof logs an informational message with formatted content.
 func (l *ServiceLogger) Infof(format string, args ...interface{}) {
 	log.Infof(l.getFormat(format), args...)
@@ -32,12 +62,7 @@ func (l *ServiceLogger) Errorf(format string, args ...interface{}) {
 	log.Errorf(l.getFormat(format), args...)
 }
 
-// Debugf logs a debug message with formatted content.
-func (l *ServiceLogger) Debugf(format string, args ...interface{}) {
-	log.Debugf(l.getFormat(format), args...)
-}
-
-// Fatalf logs a fatal message with formatted content and exits the program.
+// Fatalf logs an error message with formatted content.
 func (l *ServiceLogger) Fatalf(format string, args ...interface{}) {
 	log.Fatalf(l.getFormat(format), args...)
 }

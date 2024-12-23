@@ -2,6 +2,21 @@ package interfaces
 
 // Logger interface for reporting informational and warning messages.
 type Logger interface {
+	// Debug logs a debugging message.
+	Debug(message string)
+
+	// Info logs an informational message.
+	Info(message string)
+
+	// Warn logs a warning message.
+	Warn(message string)
+
+	// Error logs an error message.
+	Error(message string)
+
+	// Fatal logs a fatal message.
+	Fatal(message string)
+
 	// Debugf logs a formatted debugging message.
 	Debugf(format string, args ...interface{})
 
