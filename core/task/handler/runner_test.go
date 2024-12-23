@@ -36,7 +36,7 @@ func setupGrpc(t *testing.T) {
 	require.Nil(t, err)
 
 	// Start a gRPC client
-	err = client.GetGrpcClient().Start()
+	client.GetGrpcClient().Start()
 	require.Nil(t, err)
 
 	// Cleanup

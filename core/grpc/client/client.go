@@ -93,11 +93,11 @@ func (c *GrpcClient) WaitForReady() {
 		select {
 		case <-ticker.C:
 			if c.IsReady() {
-				c.logger.Debugf("ready")
+				c.logger.Debugf("client is now ready")
 				return
 			}
 		case <-c.stop:
-			c.logger.Errorf("stopped")
+			c.logger.Errorf("client has stopped")
 		}
 	}
 }
