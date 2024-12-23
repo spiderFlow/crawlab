@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/apex/log"
 	"github.com/cenkalti/backoff/v4"
 	"github.com/crawlab-team/crawlab/core/grpc/middlewares"
 	"github.com/crawlab-team/crawlab/core/interfaces"
@@ -31,6 +30,7 @@ type GrpcClient struct {
 	once    sync.Once
 	stopped bool
 	stop    chan struct{}
+	logger  interfaces.Logger
 
 	// clients
 	NodeClient             grpc2.NodeServiceClient
@@ -45,7 +45,7 @@ type GrpcClient struct {
 	reconnect chan struct{}
 }
 
-func (c *GrpcClient) Start() (err error) {
+func (c *GrpcClient) Start() {
 	c.once.Do(func() {
 		// initialize reconnect channel
 		c.reconnect = make(chan struct{})
@@ -54,23 +54,22 @@ func (c *GrpcClient) Start() (err error) {
 		go c.monitorState()
 
 		// connect
-		err = c.connect()
+		err := c.connect()
 		if err != nil {
+			c.logger.Fatalf("failed to connect: %v", err)
 			return
 		}
 
 		// register rpc services
 		c.register()
 	})
-
-	return err
 }
 
 func (c *GrpcClient) Stop() (err error) {
 	// set stopped flag
 	c.stopped = true
 	c.stop <- struct{}{}
-	log.Infof("[GrpcClient] stopped")
+	c.logger.Infof("stopped")
 
 	// skip if connection is nil
 	if c.conn == nil {
@@ -79,10 +78,10 @@ func (c *GrpcClient) Stop() (err error) {
 
 	// close connection
 	if err := c.conn.Close(); err != nil {
-		log.Errorf("grpc client failed to close connection: %v", err)
+		c.logger.Errorf("failed to close connection: %v", err)
 		return err
 	}
-	log.Infof("grpc client disconnected from %s", c.address)
+	c.logger.Infof("disconnected from %s", c.address)
 
 	return nil
 }
@@ -94,11 +93,11 @@ func (c *GrpcClient) WaitForReady() {
 		select {
 		case <-ticker.C:
 			if c.IsReady() {
-				log.Debugf("grpc client ready")
+				c.logger.Debugf("ready")
 				return
 			}
 		case <-c.stop:
-			log.Errorf("grpc client stopped")
+			c.logger.Errorf("stopped")
 		}
 	}
 }
@@ -143,7 +142,7 @@ func (c *GrpcClient) monitorState() {
 
 			if previous != current {
 				c.setState(current)
-				log.Infof("[GrpcClient] state changed from %s to %s", previous, current)
+				c.logger.Infof("state changed from %s to %s", previous, current)
 
 				// Trigger reconnect if connection is lost or becomes idle from ready state
 				if current == connectivity.TransientFailure ||
@@ -151,7 +150,7 @@ func (c *GrpcClient) monitorState() {
 					(previous == connectivity.Ready && current == connectivity.Idle) {
 					select {
 					case c.reconnect <- struct{}{}:
-						log.Infof("[GrpcClient] triggering reconnection due to state change to %s", current)
+						c.logger.Infof("triggering reconnection due to state change to %s", current)
 					default:
 					}
 				}
@@ -183,9 +182,9 @@ func (c *GrpcClient) connect() (err error) {
 				return
 			case <-c.reconnect:
 				if !c.stopped {
-					log.Infof("[GrpcClient] attempting to reconnect to %s", c.address)
+					c.logger.Infof("attempting to reconnect to %s", c.address)
 					if err := c.doConnect(); err != nil {
-						log.Errorf("[GrpcClient] reconnection failed: %v", err)
+						c.logger.Errorf("reconnection failed: %v", err)
 					}
 				}
 			}
@@ -207,12 +206,12 @@ func (c *GrpcClient) doConnect() (err error) {
 		// create new client connection
 		c.conn, err = grpc.NewClient(c.address, opts...)
 		if err != nil {
-			log.Errorf("[GrpcClient] grpc client failed to connect to %s: %v", c.address, err)
+			c.logger.Errorf("failed to connect to %s: %v", c.address, err)
 			return err
 		}
 
 		// connect
-		log.Infof("[GrpcClient] grpc client connecting to %s", c.address)
+		c.logger.Infof("connecting to %s", c.address)
 		c.conn.Connect()
 
 		// wait for connection to be ready
@@ -220,11 +219,11 @@ func (c *GrpcClient) doConnect() (err error) {
 		defer cancel()
 		ok := c.conn.WaitForStateChange(ctx, connectivity.Ready)
 		if !ok {
-			return fmt.Errorf("[GrpcClient] grpc client failed to connect to %s: timed out", c.address)
+			return fmt.Errorf("failed to connect to %s: timed out", c.address)
 		}
 
 		// success
-		log.Infof("[GrpcClient] grpc client connected to %s", c.address)
+		c.logger.Infof("connected to %s", c.address)
 
 		return nil
 	}
@@ -232,7 +231,7 @@ func (c *GrpcClient) doConnect() (err error) {
 	b.InitialInterval = 5 * time.Second
 	b.MaxElapsedTime = 10 * time.Minute
 	n := func(err error, duration time.Duration) {
-		log.Errorf("[GrpcClient] grpc client failed to connect to %s: %v, retrying in %s", c.address, err, duration)
+		c.logger.Errorf("failed to connect to %s: %v, retrying in %s", c.address, err, duration)
 	}
 	return backoff.RetryNotify(op, b, n)
 }
@@ -242,6 +241,7 @@ func newGrpcClient() (c *GrpcClient) {
 		address: utils.GetGrpcAddress(),
 		timeout: 10 * time.Second,
 		stop:    make(chan struct{}),
+		logger:  utils.NewServiceLogger("GrpcClient"),
 		state:   connectivity.Idle,
 	}
 }
@@ -252,12 +252,7 @@ var _clientOnce sync.Once
 func GetGrpcClient() *GrpcClient {
 	_clientOnce.Do(func() {
 		_client = newGrpcClient()
-		go func() {
-			err := _client.Start()
-			if err != nil {
-				log.Fatalf("[GrpcClient] failed to start: %v", err)
-			}
-		}()
+		go _client.Start()
 	})
 	return _client
 }

@@ -21,3 +21,7 @@ const (
 	DependencyFileTypeRequirementsTxt = "requirements.txt"
 	DependencyFileTypePackageJson     = "package.json"
 )
+const (
+	DependencyActionSync  = "sync"
+	DependencyActionSetup = "setup"
+)
