@@ -13,4 +13,7 @@ type Logger interface {
 
 	// Errorf logs a formatted error message.
 	Errorf(format string, args ...interface{})
+
+	// Fatalf logs a formatted fatal message.
+	Fatalf(format string, args ...interface{})
 }

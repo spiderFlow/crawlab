@@ -37,6 +37,11 @@ func (l *ServiceLogger) Debugf(format string, args ...interface{}) {
 	log.Debugf(l.getFormat(format), args...)
 }
 
+// Fatalf logs a fatal message with formatted content and exits the program.
+func (l *ServiceLogger) Fatalf(format string, args ...interface{}) {
+	log.Fatalf(l.getFormat(format), args...)
+}
+
 func (l *ServiceLogger) getFormat(format string) string {
 	return fmt.Sprintf("[%s] %s", l.prefix, format)
 }
