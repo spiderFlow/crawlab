@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/crawlab-team/crawlab/core/controllers"
 	"github.com/gin-gonic/gin"
 	"net"
@@ -12,7 +13,6 @@ import (
 
 	"github.com/crawlab-team/crawlab/core/models/models"
 
-	"github.com/apex/log"
 	"github.com/cenkalti/backoff/v4"
 	"github.com/crawlab-team/crawlab/core/grpc/client"
 	"github.com/crawlab-team/crawlab/core/interfaces"
@@ -38,6 +38,7 @@ type WorkerService struct {
 	n       *models.Node
 	s       grpc.NodeService_SubscribeClient
 	isReady bool
+	logger  interfaces.Logger
 }
 
 func (svc *WorkerService) Start() {
@@ -77,28 +78,40 @@ func (svc *WorkerService) Stop() {
 	svc.stopped = true
 	_ = client.GetGrpcClient().Stop()
 	svc.handlerSvc.Stop()
-	log.Infof("worker[%s] service has stopped", svc.cfgSvc.GetNodeKey())
+	svc.logger.Infof("worker[%s] service has stopped", svc.cfgSvc.GetNodeKey())
 }
 
 func (svc *WorkerService) register() {
-	ctx, cancel := client.GetGrpcClient().Context()
-	defer cancel()
-	_, err := client.GetGrpcClient().NodeClient.Register(ctx, &grpc.NodeServiceRegisterRequest{
-		NodeKey:    svc.cfgSvc.GetNodeKey(),
-		NodeName:   svc.cfgSvc.GetNodeName(),
-		MaxRunners: int32(svc.cfgSvc.GetMaxRunners()),
-	})
+	op := func() (err error) {
+		ctx, cancel := client.GetGrpcClient().Context()
+		defer cancel()
+		_, err = client.GetGrpcClient().NodeClient.Register(ctx, &grpc.NodeServiceRegisterRequest{
+			NodeKey:    svc.cfgSvc.GetNodeKey(),
+			NodeName:   svc.cfgSvc.GetNodeName(),
+			MaxRunners: int32(svc.cfgSvc.GetMaxRunners()),
+		})
+		if err != nil {
+			err = fmt.Errorf("failed to register worker[%s]: %v", svc.cfgSvc.GetNodeKey(), err)
+			return err
+		}
+		svc.n, err = client2.NewModelService[models.Node]().GetOne(bson.M{"key": svc.GetConfigService().GetNodeKey()}, nil)
+		if err != nil {
+			err = fmt.Errorf("failed to get node: %v", err)
+			return err
+		}
+		svc.logger.Infof("worker[%s] registered to master. id: %s", svc.GetConfigService().GetNodeKey(), svc.n.Id.Hex())
+		return nil
+	}
+	b := backoff.NewExponentialBackOff()
+	n := func(err error, duration time.Duration) {
+		svc.logger.Errorf("register worker[%s] error: %v", svc.cfgSvc.GetNodeKey(), err)
+		svc.logger.Infof("retry in %.1f seconds", duration.Seconds())
+	}
+	err := backoff.RetryNotify(op, b, n)
 	if err != nil {
-		log.Fatalf("failed to register worker[%s] to master: %v", svc.cfgSvc.GetNodeKey(), err)
+		svc.logger.Fatalf("failed to register worker[%s]: %v", svc.cfgSvc.GetNodeKey(), err)
 		panic(err)
 	}
-	svc.n, err = client2.NewModelService[models.Node]().GetOne(bson.M{"key": svc.GetConfigService().GetNodeKey()}, nil)
-	if err != nil {
-		log.Fatalf("failed to get node: %v", err)
-		panic(err)
-	}
-	log.Infof("worker[%s] registered to master. id: %s", svc.GetConfigService().GetNodeKey(), svc.n.Id.Hex())
-	return
 }
 
 func (svc *WorkerService) reportStatus() {
@@ -141,7 +154,7 @@ func (svc *WorkerService) subscribe() {
 				NodeKey: svc.cfgSvc.GetNodeKey(),
 			})
 			if err != nil {
-				log.Errorf("failed to subscribe to master: %v", err)
+				svc.logger.Errorf("failed to subscribe to master: %v", err)
 				return err
 			}
 
@@ -154,10 +167,10 @@ func (svc *WorkerService) subscribe() {
 				msg, err := stream.Recv()
 				if err != nil {
 					if client.GetGrpcClient().IsClosed() {
-						log.Errorf("connection to master is closed: %v", err)
+						svc.logger.Errorf("connection to master is closed: %v", err)
 						return err
 					}
-					log.Errorf("failed to receive message from master: %v", err)
+					svc.logger.Errorf("failed to receive message from master: %v", err)
 					return err
 				}
 
@@ -171,7 +184,7 @@ func (svc *WorkerService) subscribe() {
 		// Execute with backoff
 		err := backoff.Retry(operation, b)
 		if err != nil {
-			log.Errorf("subscription failed after max retries: %v", err)
+			svc.logger.Errorf("subscription failed after max retries: %v", err)
 			return
 		}
 
@@ -187,7 +200,7 @@ func (svc *WorkerService) sendHeartbeat() {
 		NodeKey: svc.cfgSvc.GetNodeKey(),
 	})
 	if err != nil {
-		log.Errorf("failed to send heartbeat to master: %v", err)
+		svc.logger.Errorf("failed to send heartbeat to master: %v", err)
 	}
 }
 
@@ -207,9 +220,9 @@ func (svc *WorkerService) startHealthServer() {
 	// serve
 	if err := http.Serve(ln, app); err != nil {
 		if !errors.Is(err, http.ErrServerClosed) {
-			log.Error("run server error:" + err.Error())
+			svc.logger.Errorf("run server error: %v", err)
 		} else {
-			log.Info("server graceful down")
+			svc.logger.Info("server graceful down")
 		}
 	}
 }
@@ -220,6 +233,7 @@ func newWorkerService() *WorkerService {
 		cfgSvc:            nodeconfig.GetNodeConfigService(),
 		handlerSvc:        handler.GetTaskHandlerService(),
 		isReady:           false,
+		logger:            utils.NewServiceLogger("WorkerService"),
 	}
 }
 
