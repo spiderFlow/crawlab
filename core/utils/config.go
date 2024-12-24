@@ -2,7 +2,6 @@ package utils
 
 import (
 	"fmt"
-	"github.com/apex/log"
 	"github.com/gin-gonic/gin"
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
@@ -88,7 +87,7 @@ func IsPro() bool {
 func GetWorkspace() string {
 	homedirPath, err := homedir.Dir()
 	if err != nil {
-		log.Warnf("cannot find home directory: %v", err)
+		logger.Warnf("cannot find home directory: %v", err)
 		return DefaultWorkspace
 	}
 	if res := viper.GetString("workspace"); res != "" {
@@ -232,8 +231,8 @@ func GetNodeMaxRunners() int {
 func GetMetadataConfigPath() string {
 	var homeDirPath, err = homedir.Dir()
 	if err != nil {
-		log.Errorf("failed to get home directory: %v", err)
-		log.Errorf("please set metadata directory path using either CRAWLAB_METADATA environment variable or the metadata path in the configuration file")
+		logger.Errorf("failed to get home directory: %v", err)
+		logger.Errorf("please set metadata directory path using either CRAWLAB_METADATA environment variable or the metadata path in the configuration file")
 		panic(err)
 	}
 

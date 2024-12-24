@@ -1,7 +1,6 @@
 package stats
 
 import (
-	log2 "github.com/apex/log"
 	"github.com/crawlab-team/crawlab/core/constants"
 	"github.com/crawlab-team/crawlab/core/database"
 	interfaces2 "github.com/crawlab-team/crawlab/core/database/interfaces"
@@ -12,7 +11,6 @@ import (
 	"github.com/crawlab-team/crawlab/core/task/log"
 	"github.com/crawlab-team/crawlab/core/utils"
 	"github.com/crawlab-team/crawlab/db/mongo"
-	"github.com/crawlab-team/crawlab/trace"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"sync"
@@ -37,6 +35,7 @@ type Service struct {
 	databaseServiceItems map[string]*databaseServiceItem
 	databaseServiceTll   time.Duration
 	logDriver            log.Driver
+	interfaces.Logger
 }
 
 func (svc *Service) Init() (err error) {
@@ -57,7 +56,7 @@ func (svc *Service) InsertData(taskId primitive.ObjectID, records ...map[string]
 	if utils.IsPro() && dbSvc != nil {
 		for _, record := range records {
 			if err := dbSvc.CreateRow(dbId, "", tableName, svc.normalizeRecord(item, record)); err != nil {
-				log2.Errorf("failed to insert data: %v", err)
+				svc.Errorf("failed to insert data: %v", err)
 				continue
 			}
 			count++
@@ -69,7 +68,7 @@ func (svc *Service) InsertData(taskId primitive.ObjectID, records ...map[string]
 		}
 		_, err = mongo.GetMongoCol(tableName).InsertMany(recordsToInsert)
 		if err != nil {
-			log2.Errorf("failed to insert data: %v", err)
+			svc.Errorf("failed to insert data: %v", err)
 			return err
 		}
 		count = len(records)
@@ -143,7 +142,8 @@ func (svc *Service) updateTaskStats(id primitive.ObjectID, resultCount int) {
 		},
 	})
 	if err != nil {
-		trace.PrintError(err)
+		svc.Errorf("failed to update task stats: %v", err)
+		return
 	}
 }
 
@@ -182,6 +182,7 @@ func NewTaskStatsService() *Service {
 		mu:                   sync.Mutex{},
 		databaseServiceItems: map[string]*databaseServiceItem{},
 		databaseServiceTll:   10 * time.Minute,
+		Logger:               utils.NewLogger("TaskStatsService"),
 	}
 
 	svc.nodeCfgSvc = nodeconfig.GetNodeConfigService()

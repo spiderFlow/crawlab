@@ -3,8 +3,8 @@ package apps
 import (
 	"context"
 	"errors"
-	"github.com/apex/log"
 	"github.com/crawlab-team/crawlab/core/controllers"
+	"github.com/crawlab-team/crawlab/core/interfaces"
 	"github.com/crawlab-team/crawlab/core/middlewares"
 	"github.com/crawlab-team/crawlab/core/utils"
 	"github.com/gin-gonic/gin"
@@ -25,6 +25,7 @@ type Api struct {
 	ln          net.Listener
 	srv         *http.Server
 	initialized bool
+	interfaces.Logger
 }
 
 func (app *Api) Init() {
@@ -59,14 +60,14 @@ func (app *Api) Start() {
 	if err != nil {
 		panic(err)
 	}
-	log.Infof("api server listening on %s", address)
+	app.Infof("api server listening on %s", address)
 
 	// serve
 	if err := http.Serve(app.ln, app.app); err != nil {
 		if !errors.Is(err, http.ErrServerClosed) {
-			log.Errorf("run api server error: %v", err)
+			app.Errorf("run api server error: %v", err)
 		} else {
-			log.Info("api server graceful down")
+			app.Info("api server graceful down")
 		}
 	}
 }
@@ -80,7 +81,7 @@ func (app *Api) Stop() {
 	defer cancel()
 
 	if err := app.srv.Shutdown(ctx); err != nil {
-		log.Errorf("shutdown api server error: %v", err)
+		app.Errorf("shutdown api server error: %v", err)
 	}
 }
 
@@ -100,7 +101,8 @@ func (app *Api) initModuleWithApp(name string, fn func(app *gin.Engine) error) (
 
 func newApi() *Api {
 	api := &Api{
-		app: gin.New(),
+		app:    gin.New(),
+		Logger: utils.NewLogger("Api"),
 	}
 	api.Init()
 	return api

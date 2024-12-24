@@ -2,9 +2,10 @@ package server
 
 import (
 	"context"
-	"github.com/apex/log"
+	"github.com/crawlab-team/crawlab/core/interfaces"
 	"github.com/crawlab-team/crawlab/core/models/models"
 	"github.com/crawlab-team/crawlab/core/models/service"
+	"github.com/crawlab-team/crawlab/core/utils"
 	"github.com/crawlab-team/crawlab/grpc"
 	"go.mongodb.org/mongo-driver/bson"
 	"sync"
@@ -13,13 +14,14 @@ import (
 
 type MetricServiceServer struct {
 	grpc.UnimplementedMetricServiceServer
+	interfaces.Logger
 }
 
 func (svr MetricServiceServer) Send(_ context.Context, req *grpc.MetricServiceSendRequest) (res *grpc.Response, err error) {
-	log.Debugf("[MetricServiceServer] received metric from node: " + req.NodeKey)
+	svr.Debugf("received metric from node: " + req.NodeKey)
 	n, err := service.NewModelService[models.Node]().GetOne(bson.M{"key": req.NodeKey}, nil)
 	if err != nil {
-		log.Errorf("[MetricServiceServer] error getting node: %v", err)
+		svr.Errorf("failed to get node: %v", err)
 		return HandleError(err)
 	}
 	metric := models.Metric{
@@ -42,14 +44,16 @@ func (svr MetricServiceServer) Send(_ context.Context, req *grpc.MetricServiceSe
 	metric.CreatedAt = time.Unix(req.Timestamp, 0)
 	_, err = service.NewModelService[models.Metric]().InsertOne(metric)
 	if err != nil {
-		log.Errorf("[MetricServiceServer] error inserting metric: %v", err)
+		svr.Errorf("failed to insert metric: %v", err)
 		return HandleError(err)
 	}
 	return HandleSuccess()
 }
 
 func newMetricsServer() *MetricServiceServer {
-	return &MetricServiceServer{}
+	return &MetricServiceServer{
+		Logger: utils.NewLogger("MetricServiceServer"),
+	}
 }
 
 var metricsServer *MetricServiceServer

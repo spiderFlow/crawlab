@@ -2,7 +2,6 @@ package utils
 
 import (
 	"errors"
-	"github.com/apex/log"
 	"github.com/shirou/gopsutil/process"
 	"os/exec"
 	"runtime"
@@ -28,7 +27,7 @@ func ProcessIdExists(pid int) (exists bool) {
 func processIdExistsWindows(pid int) (exists bool) {
 	exists, err := process.PidExists(int32(pid))
 	if err != nil {
-		log.Errorf("error checking if process exists: %v", err)
+		logger.Errorf("error checking if process exists: %v", err)
 	}
 	return exists
 }
@@ -36,7 +35,7 @@ func processIdExistsWindows(pid int) (exists bool) {
 func processIdExistsLinuxMac(pid int) (exists bool) {
 	exists, err := process.PidExists(int32(pid))
 	if err != nil {
-		log.Errorf("error checking if process exists: %v", err)
+		logger.Errorf("error checking if process exists: %v", err)
 	}
 	return exists
 }
@@ -44,7 +43,7 @@ func processIdExistsLinuxMac(pid int) (exists bool) {
 func GetProcesses() (processes []*process.Process, err error) {
 	processes, err = process.Processes()
 	if err != nil {
-		log.Errorf("error getting processes: %v", err)
+		logger.Errorf("error getting processes: %v", err)
 		return nil, err
 	}
 	return processes, nil
@@ -58,7 +57,7 @@ func KillProcess(cmd *exec.Cmd, force bool) error {
 	// process
 	p, err := process.NewProcess(int32(cmd.Process.Pid))
 	if err != nil {
-		log.Errorf("failed to get process: %v", err)
+		logger.Errorf("failed to get process: %v", err)
 		return err
 	}
 
@@ -71,7 +70,7 @@ func killProcessRecursive(p *process.Process, force bool) (err error) {
 	cps, err := p.Children()
 	if err != nil {
 		if !errors.Is(err, process.ErrorNoChildren) {
-			log.Errorf("failed to get children processes: %v", err)
+			logger.Errorf("failed to get children processes: %v", err)
 		} else if errors.Is(err, process.ErrorProcessNotRunning) {
 			return nil
 		}
@@ -95,7 +94,7 @@ func killProcess(p *process.Process, force bool) (err error) {
 		err = p.Terminate()
 	}
 	if err != nil {
-		log.Errorf("failed to kill process (force: %v): %v", force, err)
+		logger.Errorf("failed to kill process (force: %v): %v", force, err)
 		return err
 	}
 	return nil

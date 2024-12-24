@@ -2,13 +2,12 @@ package user
 
 import (
 	errors2 "errors"
-	"github.com/apex/log"
 	"github.com/crawlab-team/crawlab/core/constants"
 	"github.com/crawlab-team/crawlab/core/errors"
+	"github.com/crawlab-team/crawlab/core/interfaces"
 	"github.com/crawlab-team/crawlab/core/models/models"
 	"github.com/crawlab-team/crawlab/core/models/service"
 	"github.com/crawlab-team/crawlab/core/utils"
-	"github.com/crawlab-team/crawlab/trace"
 	"github.com/golang-jwt/jwt/v5"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -20,6 +19,7 @@ import (
 type Service struct {
 	jwtSecret        string
 	jwtSigningMethod jwt.SigningMethod
+	interfaces.Logger
 }
 
 func (svc *Service) Init() (err error) {
@@ -70,7 +70,7 @@ func (svc *Service) initPro() (err error) {
 		u.SetUpdatedAt(time.Now())
 		err = service.NewModelService[models.User]().ReplaceById(u.Id, *u)
 		if err != nil {
-			log.Errorf("failed to update user: %v", err)
+			svc.Errorf("failed to update user: %v", err)
 		}
 		return
 	}
@@ -227,12 +227,13 @@ func newUserService() (svc *Service, err error) {
 	svc = &Service{
 		jwtSecret:        "crawlab",
 		jwtSigningMethod: jwt.SigningMethodHS256,
+		Logger:           utils.NewLogger("UserService"),
 	}
 
 	// initialize
 	if err := svc.Init(); err != nil {
-		log.Errorf("failed to initialize user service: %v", err)
-		return nil, trace.TraceError(err)
+		svc.Errorf("failed to initialize user service: %v", err)
+		return nil, err
 	}
 
 	return svc, nil

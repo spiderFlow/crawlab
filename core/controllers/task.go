@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"errors"
-	log2 "github.com/apex/log"
 	"github.com/crawlab-team/crawlab/core/constants"
 	"github.com/crawlab-team/crawlab/core/interfaces"
 	"github.com/crawlab-team/crawlab/core/models/models"
@@ -191,12 +190,12 @@ func DeleteTaskById(c *gin.Context) {
 		// delete task stat
 		_, err = service.NewModelService[models.TaskStat]().GetById(id)
 		if err != nil {
-			log2.Warnf("delete task stat error: %s", err.Error())
+			logger.Warnf("delete task stat error: %s", err.Error())
 			return nil
 		}
 		err = service.NewModelService[models.TaskStat]().DeleteById(id)
 		if err != nil {
-			log2.Warnf("delete task stat error: %s", err.Error())
+			logger.Warnf("delete task stat error: %s", err.Error())
 			return nil
 		}
 
@@ -209,7 +208,7 @@ func DeleteTaskById(c *gin.Context) {
 	// delete task logs
 	logPath := filepath.Join(utils.GetTaskLogPath(), id.Hex())
 	if err := os.RemoveAll(logPath); err != nil {
-		log2.Warnf("failed to remove task log directory: %s", logPath)
+		logger.Warnf("failed to remove task log directory: %s", logPath)
 	}
 
 	HandleSuccess(c)
@@ -240,7 +239,7 @@ func DeleteList(c *gin.Context) {
 				"$in": payload.Ids,
 			},
 		}); err != nil {
-			log2.Warnf("delete task stat error: %s", err.Error())
+			logger.Warnf("delete task stat error: %s", err.Error())
 			return nil
 		}
 
@@ -258,7 +257,7 @@ func DeleteList(c *gin.Context) {
 			// delete task logs
 			logPath := filepath.Join(utils.GetTaskLogPath(), id)
 			if err := os.RemoveAll(logPath); err != nil {
-				log2.Warnf("failed to remove task log directory: %s", logPath)
+				logger.Warnf("failed to remove task log directory: %s", logPath)
 			}
 			wg.Done()
 		}(id.Hex())

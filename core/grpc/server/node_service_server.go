@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"github.com/apex/log"
 	"github.com/crawlab-team/crawlab/core/constants"
 	"github.com/crawlab-team/crawlab/core/errors"
 	"github.com/crawlab-team/crawlab/core/interfaces"
@@ -30,6 +29,7 @@ type NodeServiceServer struct {
 
 	// internals
 	subs map[primitive.ObjectID]grpc.NodeService_SubscribeServer
+	interfaces.Logger
 }
 
 // Register from handler/worker to master
@@ -51,7 +51,7 @@ func (svr NodeServiceServer) Register(_ context.Context, req *grpc.NodeServiceRe
 		if err != nil {
 			return HandleError(err)
 		}
-		log.Infof("[NodeServiceServer] updated worker[%s] in db. id: %s", req.NodeKey, node.Id.Hex())
+		svr.Infof("[NodeServiceServer] updated worker[%s] in db. id: %s", req.NodeKey, node.Id.Hex())
 	} else if errors2.Is(err, mongo.ErrNoDocuments) {
 		// register new
 		node = &models.Node{
@@ -69,13 +69,13 @@ func (svr NodeServiceServer) Register(_ context.Context, req *grpc.NodeServiceRe
 		if err != nil {
 			return HandleError(err)
 		}
-		log.Infof("[NodeServiceServer] added worker[%s] in db. id: %s", req.NodeKey, node.Id.Hex())
+		svr.Infof("[NodeServiceServer] added worker[%s] in db. id: %s", req.NodeKey, node.Id.Hex())
 	} else {
 		// error
 		return HandleError(err)
 	}
 
-	log.Infof("[NodeServiceServer] master registered worker[%s]", req.NodeKey)
+	svr.Infof("[NodeServiceServer] master registered worker[%s]", req.NodeKey)
 
 	return HandleSuccessWithData(node)
 }
@@ -113,12 +113,12 @@ func (svr NodeServiceServer) SendHeartbeat(_ context.Context, req *grpc.NodeServ
 }
 
 func (svr NodeServiceServer) Subscribe(request *grpc.NodeServiceSubscribeRequest, stream grpc.NodeService_SubscribeServer) (err error) {
-	log.Infof("[NodeServiceServer] master received subscribe request from node[%s]", request.NodeKey)
+	svr.Infof("[NodeServiceServer] master received subscribe request from node[%s]", request.NodeKey)
 
 	// find in db
 	node, err := service.NewModelService[models.Node]().GetOne(bson.M{"key": request.NodeKey}, nil)
 	if err != nil {
-		log.Errorf("[NodeServiceServer] error getting node: %v", err)
+		svr.Errorf("[NodeServiceServer] error getting node: %v", err)
 		return err
 	}
 
@@ -136,7 +136,7 @@ func (svr NodeServiceServer) Subscribe(request *grpc.NodeServiceSubscribeRequest
 	nodeServiceMutex.Lock()
 	delete(svr.subs, node.Id)
 	nodeServiceMutex.Unlock()
-	log.Infof("[NodeServiceServer] master unsubscribed from node[%s]", request.NodeKey)
+	svr.Infof("[NodeServiceServer] master unsubscribed from node[%s]", request.NodeKey)
 
 	return nil
 }
@@ -152,6 +152,7 @@ func newNodeServiceServer() *NodeServiceServer {
 	return &NodeServiceServer{
 		cfgSvc: nodeconfig.GetNodeConfigService(),
 		subs:   make(map[primitive.ObjectID]grpc.NodeService_SubscribeServer),
+		Logger: utils.NewLogger("GrpcNodeServiceServer"),
 	}
 }
 

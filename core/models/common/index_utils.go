@@ -3,11 +3,13 @@ package common
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/apex/log"
+	"github.com/crawlab-team/crawlab/core/utils"
 	"github.com/crawlab-team/crawlab/db/mongo"
 	"go.mongodb.org/mongo-driver/bson"
 	mongo2 "go.mongodb.org/mongo-driver/mongo"
 )
+
+var indexUtilsLogger = utils.NewLogger("IndexUtils")
 
 // getIndexKeyString converts index keys to a consistent string representation
 func getIndexKeyString(key interface{}) string {
@@ -64,10 +66,10 @@ func normalizeIndexKey(key interface{}) string {
 	return pairsStr
 }
 
-func RecreateIndexes(col *mongo.Col, desiredIndexes []mongo2.IndexModel) {
+func CreateIndexes(col *mongo.Col, desiredIndexes []mongo2.IndexModel) {
 	existingIndexes, err := col.ListIndexes()
 	if err != nil {
-		log.Errorf("error listing indexes: %v", err)
+		indexUtilsLogger.Errorf("error listing indexes: %v", err)
 		return
 	}
 
@@ -99,15 +101,15 @@ func RecreateIndexes(col *mongo.Col, desiredIndexes []mongo2.IndexModel) {
 		// Drop all existing indexes (except _id)
 		err := col.DeleteAllIndexes()
 		if err != nil {
-			log.Errorf("error dropping indexes: %v", err)
+			indexUtilsLogger.Errorf("error dropping indexes: %v", err)
 		}
 
 		// Create new indexes
 		err = col.CreateIndexes(desiredIndexes)
 		if err != nil {
-			log.Errorf("error creating indexes: %v", err)
+			indexUtilsLogger.Errorf("error creating indexes: %v", err)
 			return
 		}
-		log.Infof("recreated indexes for collection: %s", col.GetCollection().Name())
+		indexUtilsLogger.Infof("created indexes for collection: %s", col.GetCollection().Name())
 	}
 }

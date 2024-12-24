@@ -2,6 +2,8 @@ package config
 
 import (
 	"errors"
+	"github.com/crawlab-team/crawlab/core/interfaces"
+	"github.com/crawlab-team/crawlab/core/utils"
 	"strings"
 	"sync"
 
@@ -12,6 +14,7 @@ import (
 
 type Config struct {
 	Name string
+	interfaces.Logger
 }
 
 func (c *Config) Init() {
@@ -43,7 +46,7 @@ func (c *Config) Init() {
 	if err := viper.ReadInConfig(); err != nil {
 		var configFileNotFoundError viper.ConfigFileNotFoundError
 		if errors.As(err, &configFileNotFoundError) {
-			log.Warn("No config file found. Using default values.")
+			c.Warn("No config file found. Using default values.")
 		}
 	}
 
@@ -54,7 +57,7 @@ func (c *Config) Init() {
 func (c *Config) WatchConfig() {
 	viper.WatchConfig()
 	viper.OnConfigChange(func(e fsnotify.Event) {
-		log.Infof("Config file changed: %s", e.Name)
+		c.Infof("Config file changed: %s", e.Name)
 	})
 }
 
@@ -78,7 +81,9 @@ func (c *Config) initLogLevel() {
 }
 
 func newConfig() *Config {
-	return &Config{}
+	return &Config{
+		Logger: utils.NewLogger("Config"),
+	}
 }
 
 var _config *Config

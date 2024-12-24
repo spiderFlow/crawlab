@@ -104,8 +104,8 @@ func TestRecreateIndexes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Execute RecreateIndexes
-			RecreateIndexes(testCol, tt.desiredIndexes)
+			// Execute CreateIndexes
+			CreateIndexes(testCol, tt.desiredIndexes)
 
 			// Verify indexes
 			indexes, err := testCol.ListIndexes()

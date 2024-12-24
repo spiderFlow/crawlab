@@ -1,10 +1,10 @@
 package apps
 
 import (
-	"fmt"
-	"github.com/apex/log"
-	"github.com/crawlab-team/crawlab/trace"
+	"github.com/crawlab-team/crawlab/core/utils"
 )
+
+var utilsLogger = utils.NewLogger("AppsUtils")
 
 func Start(app App) {
 	start(app)
@@ -19,10 +19,9 @@ func start(app App) {
 
 func initModule(name string, fn func() error) (err error) {
 	if err := fn(); err != nil {
-		log.Error(fmt.Sprintf("init %s error: %s", name, err.Error()))
-		_ = trace.TraceError(err)
+		utilsLogger.Errorf("init %s error: %v", name, err)
 		panic(err)
 	}
-	log.Info(fmt.Sprintf("initialized %s successfully", name))
+	utilsLogger.Infof("initialized %s successfully", name)
 	return nil
 }

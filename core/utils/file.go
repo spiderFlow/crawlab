@@ -5,21 +5,18 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
-	"github.com/apex/log"
 	"github.com/crawlab-team/crawlab/core/entity"
 	"io"
 	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
-	"runtime/debug"
 )
 
 func OpenFile(fileName string) *os.File {
 	file, err := os.OpenFile(fileName, os.O_CREATE|os.O_RDWR, os.ModePerm)
 	if err != nil {
-		log.Errorf("create file error: %s, file_name: %s", err.Error(), fileName)
-		debug.PrintStack()
+		logger.Errorf("create file error: %s, file_name: %s", err.Error(), fileName)
 		return nil
 	}
 	return file
@@ -45,8 +42,7 @@ func IsDir(path string) bool {
 func ListDir(path string) ([]fs.FileInfo, error) {
 	list, err := os.ReadDir(path)
 	if err != nil {
-		log.Errorf(err.Error())
-		debug.PrintStack()
+		logger.Errorf("read dir error: %v, path: %s", err, path)
 		return nil, err
 	}
 
@@ -54,8 +50,7 @@ func ListDir(path string) ([]fs.FileInfo, error) {
 	for _, item := range list {
 		info, err := item.Info()
 		if err != nil {
-			log.Errorf(err.Error())
-			debug.PrintStack()
+			logger.Errorf("get file info error: %v, path: %s", err, item.Name())
 			return nil, err
 		}
 		res = append(res, info)

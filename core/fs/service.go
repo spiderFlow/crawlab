@@ -4,7 +4,6 @@ import (
 	"github.com/crawlab-team/crawlab/core/entity"
 	"github.com/crawlab-team/crawlab/core/interfaces"
 	"github.com/crawlab-team/crawlab/core/utils"
-	"github.com/crawlab-team/crawlab/trace"
 	"github.com/google/uuid"
 	"io"
 	"os"
@@ -15,6 +14,9 @@ type Service struct {
 	// settings
 	rootPath  string
 	skipNames []string
+
+	// internals
+	interfaces.Logger
 }
 
 func (svc *Service) List(path string) (files []interfaces.FsFileInfo, err error) {
@@ -31,11 +33,13 @@ func (svc *Service) List(path string) (files []interfaces.FsFileInfo, err error)
 	// Use filepath.Walk to recursively traverse directories
 	err = filepath.Walk(fullPath, func(p string, info os.FileInfo, err error) error {
 		if err != nil {
+			svc.Errorf("failed to walk path: %v", err)
 			return err
 		}
 
 		relPath, err := filepath.Rel(svc.rootPath, p)
 		if err != nil {
+			svc.Errorf("failed to get relative path: %v", err)
 			return err
 		}
 
@@ -85,6 +89,7 @@ func (svc *Service) GetFile(path string) (data []byte, err error) {
 func (svc *Service) GetFileInfo(path string) (file interfaces.FsFileInfo, err error) {
 	f, err := os.Stat(filepath.Join(svc.rootPath, path))
 	if err != nil {
+		svc.Errorf("failed to get file info: %v", err)
 		return nil, err
 	}
 	return &entity.FsFileInfo{
@@ -105,6 +110,7 @@ func (svc *Service) Save(path string, data []byte) (err error) {
 	dir := filepath.Dir(filepath.Join(svc.rootPath, path))
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		if err := os.MkdirAll(dir, 0755); err != nil {
+			svc.Errorf("failed to create directory: %v", err)
 			return err
 		}
 	}
@@ -135,6 +141,7 @@ func (svc *Service) Copy(path, newPath string) (err error) {
 	// Get source info
 	srcInfo, err := os.Stat(srcPath)
 	if err != nil {
+		svc.Errorf("failed to get source info: %v", err)
 		return err
 	}
 
@@ -142,19 +149,25 @@ func (svc *Service) Copy(path, newPath string) (err error) {
 	if !srcInfo.IsDir() {
 		srcFile, err := os.Open(srcPath)
 		if err != nil {
+			svc.Errorf("failed to open source file: %v", err)
 			return err
 		}
 		defer srcFile.Close()
 
 		destFile, err := os.Create(destPath)
 		if err != nil {
+			svc.Errorf("failed to create destination file: %v", err)
 			return err
 		}
 		defer destFile.Close()
 
 		_, err = io.Copy(destFile, srcFile)
+		if err != nil {
+			svc.Errorf("failed to copy file: %v", err)
+			return err
+		}
 
-		return err
+		return nil
 	} else {
 		// If source is directory, copy it recursively
 		return utils.CopyDir(srcPath, destPath)
@@ -164,7 +177,8 @@ func (svc *Service) Copy(path, newPath string) (err error) {
 func (svc *Service) Export() (resultPath string, err error) {
 	zipFilePath := filepath.Join(os.TempDir(), uuid.New().String()+".zip")
 	if err := utils.ZipDirectory(svc.rootPath, zipFilePath); err != nil {
-		return "", trace.TraceError(err)
+		svc.Errorf("failed to zip directory: %v", err)
+		return "", err
 	}
 
 	return zipFilePath, nil
@@ -174,5 +188,6 @@ func NewFsService(path string) (svc interfaces.FsService) {
 	return &Service{
 		rootPath:  path,
 		skipNames: []string{".git"},
+		Logger:    utils.NewLogger("FsService"),
 	}
 }

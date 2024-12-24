@@ -2,7 +2,6 @@ package notification
 
 import (
 	"context"
-	"github.com/apex/log"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"net/smtp"
@@ -20,14 +19,14 @@ func getGmailOAuth2Token(oauth2Json string) (token *oauth2.Token, err error) {
 	// 使用服务账户 JSON 密钥文件创建 JWT 配置
 	config, err := google.JWTConfigFromJSON(b, "https://mail.google.com/")
 	if err != nil {
-		log.Errorf("Unable to parse service account key file to config: %v", err)
+		logger.Errorf("Unable to parse service account key file to config: %v", err)
 		return nil, err
 	}
 
 	// 使用服务账户的电子邮件和访问令牌
 	token, err = config.TokenSource(ctx).Token()
 	if err != nil {
-		log.Errorf("Unable to generate token: %v", err)
+		logger.Errorf("Unable to generate token: %v", err)
 		return nil, err
 	}
 	return token, nil

@@ -1,13 +1,11 @@
 package schedule
 
 import (
-	"github.com/apex/log"
 	"github.com/crawlab-team/crawlab/core/interfaces"
 	"github.com/crawlab-team/crawlab/core/models/models"
 	"github.com/crawlab-team/crawlab/core/models/service"
 	"github.com/crawlab-team/crawlab/core/spider/admin"
 	"github.com/crawlab-team/crawlab/core/utils"
-	"github.com/crawlab-team/crawlab/trace"
 	"github.com/robfig/cron/v3"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -32,6 +30,7 @@ type Service struct {
 	schedules []models.Schedule
 	stopped   bool
 	mu        sync.Mutex
+	interfaces.Logger
 }
 
 func (svc *Service) GetLocation() (loc *time.Location) {
@@ -67,7 +66,12 @@ func (svc *Service) SetUpdateInterval(interval time.Duration) {
 }
 
 func (svc *Service) Init() (err error) {
-	return svc.fetch()
+	err = svc.fetch()
+	if err != nil {
+		svc.Fatalf("failed to initialize schedule service: %v", err)
+		return err
+	}
+	return nil
 }
 
 func (svc *Service) Start() {
@@ -91,7 +95,8 @@ func (svc *Service) Enable(s models.Schedule, by primitive.ObjectID) (err error)
 
 	id, err := svc.cron.AddFunc(s.Cron, svc.schedule(s.Id))
 	if err != nil {
-		return trace.TraceError(err)
+		svc.Errorf("failed to add cron job: %v", err)
+		return err
 	}
 	s.Enabled = true
 	s.EntryId = id
@@ -129,7 +134,7 @@ func (svc *Service) GetCron() (c *cron.Cron) {
 func (svc *Service) update() {
 	// fetch enabled schedules
 	if err := svc.fetch(); err != nil {
-		trace.PrintError(err)
+		svc.Errorf("failed to fetch schedules: %v", err)
 		return
 	}
 
@@ -145,7 +150,7 @@ func (svc *Service) update() {
 			if !s.Enabled {
 				err := svc.Enable(s, s.GetCreatedBy())
 				if err != nil {
-					trace.PrintError(err)
+					svc.Errorf("failed to enable schedule: %v", err)
 					continue
 				}
 			}
@@ -184,14 +189,14 @@ func (svc *Service) schedule(id primitive.ObjectID) (fn func()) {
 		// schedule
 		s, err := svc.modelSvc.GetById(id)
 		if err != nil {
-			trace.PrintError(err)
+			svc.Errorf("failed to get schedule: %v", err)
 			return
 		}
 
 		// spider
 		spider, err := service.NewModelService[models.Spider]().GetById(s.SpiderId)
 		if err != nil {
-			trace.PrintError(err)
+			svc.Errorf("failed to get spider: %v", err)
 			return
 		}
 
@@ -229,7 +234,8 @@ func (svc *Service) schedule(id primitive.ObjectID) (fn func()) {
 
 		// schedule or assign a task in the task queue
 		if _, err := svc.adminSvc.Schedule(s.SpiderId, opts); err != nil {
-			trace.PrintError(err)
+			svc.Errorf("failed to schedule spider: %v", err)
+			return
 		}
 	}
 }
@@ -244,10 +250,11 @@ func newScheduleService() *Service {
 		updateInterval: 1 * time.Minute,
 		adminSvc:       admin.GetSpiderAdminService(),
 		modelSvc:       service.NewModelService[models.Schedule](),
+		Logger:         utils.NewLogger("ScheduleService"),
 	}
 
 	// logger
-	svc.logger = NewLogger()
+	svc.logger = NewCronLogger()
 
 	// cron
 	svc.cron = cron.New(
@@ -258,7 +265,6 @@ func newScheduleService() *Service {
 
 	// initialize
 	if err := svc.Init(); err != nil {
-		log.Fatalf("failed to initialize schedule service: %v", err)
 		panic(err)
 	}
 

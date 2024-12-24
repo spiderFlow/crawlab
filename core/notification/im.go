@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/apex/log"
 	"github.com/crawlab-team/crawlab/core/entity"
 	"github.com/crawlab-team/crawlab/core/utils"
 	"io"
@@ -13,9 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/apex/log"
 	"github.com/crawlab-team/crawlab/core/models/models"
-	"github.com/crawlab-team/crawlab/trace"
 )
 
 type ResBody struct {
@@ -102,7 +101,8 @@ func SendIMNotification(ch *models.NotificationChannel, title, content string) e
 	// perform request
 	resp, body, err := performRequest("POST", ch.WebhookUrl, data)
 	if err != nil {
-		return trace.TraceError(err)
+		log.Errorf("IM request error: %v", err)
+		return err
 	}
 
 	if resp.StatusCode != http.StatusOK {
@@ -112,11 +112,13 @@ func SendIMNotification(ch *models.NotificationChannel, title, content string) e
 	// parse response
 	var resBody ResBody
 	if err := json.Unmarshal(body, &resBody); err != nil {
-		return trace.TraceError(err)
+		log.Errorf("Parsing IM response error: %v", err)
+		return err
 	}
 
 	// validate response code
 	if resBody.ErrCode != 0 {
+		log.Errorf("IM response error: %s", resBody.ErrMsg)
 		return errors.New(resBody.ErrMsg)
 	}
 
@@ -126,12 +128,12 @@ func SendIMNotification(ch *models.NotificationChannel, title, content string) e
 func performIMRequest(webhookUrl string, data RequestParam) ([]byte, error) {
 	resp, body, err := performRequest("POST", webhookUrl, data)
 	if err != nil {
-		log.Errorf("IM request error: %v", err)
+		logger.Errorf("IM request error: %v", err)
 		return nil, err
 	}
 
 	if resp.StatusCode >= 400 {
-		log.Errorf("IM response status code: %d", resp.StatusCode)
+		logger.Errorf("IM response status code: %d", resp.StatusCode)
 		return nil, fmt.Errorf("IM error response %d: %s", resp.StatusCode, string(body))
 	}
 
@@ -146,8 +148,8 @@ func performIMRequestWithJson[T any](webhookUrl string, data RequestParam) (resB
 
 	// parse response
 	if err := json.Unmarshal(body, &resBody); err != nil {
-		log.Warnf("Parsing IM response error: %v", err)
-		log.Infof("IM response: %s", string(body))
+		logger.Warnf("Parsing IM response error: %v", err)
+		logger.Infof("IM response: %s", string(body))
 		return resBody, nil
 	}
 

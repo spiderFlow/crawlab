@@ -3,7 +3,6 @@ package notification
 import (
 	"context"
 	"encoding/base64"
-	"github.com/apex/log"
 	"github.com/crawlab-team/crawlab/core/models/models"
 	"github.com/crawlab-team/crawlab/trace"
 	"golang.org/x/oauth2/google"
@@ -18,7 +17,7 @@ func sendMailGmail(ch *models.NotificationChannel, smtpConfig smtpAuthentication
 	// 使用服务账户 JSON 密钥文件创建 JWT 配置
 	config, err := google.JWTConfigFromJSON(b, gmail.GmailSendScope)
 	if err != nil {
-		log.Errorf("Unable to parse service account key file to config: %v", err)
+		logger.Errorf("Unable to parse service account key file to config: %v", err)
 		return trace.TraceError(err)
 	}
 
@@ -29,8 +28,8 @@ func sendMailGmail(ch *models.NotificationChannel, smtpConfig smtpAuthentication
 	client := config.Client(context.Background())
 	srv, err := gmail.New(client)
 	if err != nil {
-		log.Errorf("Unable to create Gmail client: %v", err)
-		return trace.TraceError(err)
+		logger.Errorf("Unable to create Gmail client: %v", err)
+		return err
 	}
 
 	// 创建 MIME 邮件
@@ -41,8 +40,8 @@ func sendMailGmail(ch *models.NotificationChannel, smtpConfig smtpAuthentication
 
 	var buf strings.Builder
 	if _, err := m.WriteTo(&buf); err != nil {
-		log.Errorf("Unable to write message: %v", err)
-		return trace.TraceError(err)
+		logger.Errorf("Unable to write message: %v", err)
+		return err
 	}
 
 	// 将邮件内容进行 base64 编码
@@ -53,8 +52,8 @@ func sendMailGmail(ch *models.NotificationChannel, smtpConfig smtpAuthentication
 	// 发送邮件
 	_, err = srv.Users.Messages.Send("me", gmsg).Do()
 	if err != nil {
-		log.Errorf("Unable to send email: %v", err)
-		return trace.TraceError(err)
+		logger.Errorf("Unable to send email: %v", err)
+		return err
 	}
 
 	return nil

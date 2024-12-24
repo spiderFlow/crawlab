@@ -3,16 +3,14 @@ package scheduler
 import (
 	errors2 "errors"
 	"fmt"
-	"github.com/apex/log"
 	"github.com/crawlab-team/crawlab/core/constants"
-	"github.com/crawlab-team/crawlab/core/errors"
 	"github.com/crawlab-team/crawlab/core/grpc/server"
+	"github.com/crawlab-team/crawlab/core/interfaces"
 	"github.com/crawlab-team/crawlab/core/models/models"
 	"github.com/crawlab-team/crawlab/core/models/service"
 	"github.com/crawlab-team/crawlab/core/task/handler"
 	"github.com/crawlab-team/crawlab/core/utils"
 	"github.com/crawlab-team/crawlab/grpc"
-	"github.com/crawlab-team/crawlab/trace"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	mongo2 "go.mongodb.org/mongo-driver/mongo"
@@ -27,6 +25,9 @@ type Service struct {
 
 	// settings
 	interval time.Duration
+
+	// internals
+	interfaces.Logger
 }
 
 func (svc *Service) Start() {
@@ -57,7 +58,8 @@ func (svc *Service) Enqueue(t *models.Task, by primitive.ObjectID) (t2 *models.T
 	// add task stat
 	_, err = service.NewModelService[models.TaskStat]().InsertOne(ts)
 	if err != nil {
-		return nil, trace.TraceError(err)
+		svc.Errorf("failed to add task stat: %s", t.Id.Hex())
+		return nil, err
 	}
 
 	// success
@@ -68,7 +70,7 @@ func (svc *Service) Cancel(id, by primitive.ObjectID, force bool) (err error) {
 	// task
 	t, err := service.NewModelService[models.Task]().GetById(id)
 	if err != nil {
-		log.Errorf("task not found: %s", id.Hex())
+		svc.Errorf("task not found: %s", id.Hex())
 		return err
 	}
 
@@ -101,7 +103,7 @@ func (svc *Service) Cancel(id, by primitive.ObjectID, force bool) (err error) {
 
 func (svc *Service) cancelOnMaster(t *models.Task, by primitive.ObjectID, force bool) (err error) {
 	if err := svc.handlerSvc.Cancel(t.Id, force); err != nil {
-		log.Errorf("failed to cancel task on master: %s", t.Id.Hex())
+		svc.Errorf("failed to cancel task on master: %s", t.Id.Hex())
 		return err
 	}
 
@@ -115,7 +117,7 @@ func (svc *Service) cancelOnWorker(t *models.Task, by primitive.ObjectID, force 
 	stream, ok := svc.svr.TaskSvr.GetSubscribeStream(t.Id)
 	if !ok {
 		err := fmt.Errorf("stream not found for task: %s", t.Id.Hex())
-		log.Errorf(err.Error())
+		svc.Errorf(err.Error())
 		t.Status = constants.TaskStatusAbnormal
 		t.Error = err.Error()
 		return svc.SaveTask(t, by)
@@ -128,7 +130,7 @@ func (svc *Service) cancelOnWorker(t *models.Task, by primitive.ObjectID, force 
 		Force:  force,
 	})
 	if err != nil {
-		log.Errorf("failed to send cancel request to worker: %s", t.Id.Hex())
+		svc.Errorf("failed to send cancel request to worker: %s", t.Id.Hex())
 		return err
 	}
 
@@ -167,14 +169,15 @@ func (svc *Service) initTaskStatus() {
 		if errors2.Is(err, mongo2.ErrNoDocuments) {
 			return
 		}
-		log.Errorf("failed to get running tasks: %v", err)
+		svc.Errorf("failed to get running tasks: %v", err)
 		return
 	}
 	for _, t := range runningTasks {
 		go func(t *models.Task) {
 			t.Status = constants.TaskStatusAbnormal
 			if err := svc.SaveTask(t, primitive.NilObjectID); err != nil {
-				trace.PrintError(err)
+				svc.Errorf("failed to set task status as TaskStatusAbnormal: %s", t.Id.Hex())
+				return
 			}
 		}(&t)
 	}
@@ -182,14 +185,18 @@ func (svc *Service) initTaskStatus() {
 
 func (svc *Service) isMasterNode(t *models.Task) (ok bool, err error) {
 	if t.NodeId.IsZero() {
-		return false, trace.TraceError(errors.ErrorTaskNoNodeId)
+		err = fmt.Errorf("task %s has no node id", t.Id.Hex())
+		svc.Errorf("%v", err)
+		return false, err
 	}
 	n, err := service.NewModelService[models.Node]().GetById(t.NodeId)
 	if err != nil {
 		if errors2.Is(err, mongo2.ErrNoDocuments) {
-			return false, trace.TraceError(errors.ErrorTaskNodeNotFound)
+			svc.Errorf("node not found: %s", t.NodeId.Hex())
+			return false, err
 		}
-		return false, trace.TraceError(err)
+		svc.Errorf("failed to get node: %s", t.NodeId.Hex())
+		return false, err
 	}
 	return n.IsMaster, nil
 }
@@ -218,14 +225,14 @@ func (svc *Service) cleanupTasks() {
 			if err := service.NewModelService[models.Task]().DeleteMany(bson.M{
 				"_id": bson.M{"$in": ids},
 			}); err != nil {
-				trace.PrintError(err)
+				svc.Warnf("failed to remove tasks: %v", err)
 			}
 
 			// remove task stats
 			if err := service.NewModelService[models.TaskStat]().DeleteMany(bson.M{
 				"_id": bson.M{"$in": ids},
 			}); err != nil {
-				trace.PrintError(err)
+				svc.Warnf("failed to remove task stats: %v", err)
 			}
 		}
 

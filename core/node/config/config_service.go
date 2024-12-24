@@ -2,11 +2,9 @@ package config
 
 import (
 	"encoding/json"
-	"github.com/apex/log"
 	"github.com/crawlab-team/crawlab/core/entity"
 	"github.com/crawlab-team/crawlab/core/interfaces"
 	"github.com/crawlab-team/crawlab/core/utils"
-	"github.com/crawlab-team/crawlab/trace"
 	"os"
 	"path/filepath"
 	"sync"
@@ -14,6 +12,7 @@ import (
 
 type Service struct {
 	cfg *entity.NodeInfo
+	interfaces.Logger
 }
 
 func (svc *Service) Init() (err error) {
@@ -23,7 +22,8 @@ func (svc *Service) Init() (err error) {
 	configDirPath := filepath.Dir(metadataConfigPath)
 	if !utils.Exists(configDirPath) {
 		if err := os.MkdirAll(configDirPath, os.FileMode(0766)); err != nil {
-			return trace.TraceError(err)
+			svc.Errorf("create config directory error: %v", err)
+			return err
 		}
 	}
 
@@ -32,22 +32,22 @@ func (svc *Service) Init() (err error) {
 		svc.cfg = newConfig()
 		data, err := json.Marshal(svc.cfg)
 		if err != nil {
-			log.Errorf("marshal config error: %v", err)
+			svc.Errorf("marshal config error: %v", err)
 			return err
 		}
 		if err := os.WriteFile(metadataConfigPath, data, os.FileMode(0766)); err != nil {
-			log.Errorf("write config file error: %v", err)
+			svc.Errorf("write config file error: %v", err)
 			return err
 		}
 	} else {
 		// exists, read and set to config
 		data, err := os.ReadFile(metadataConfigPath)
 		if err != nil {
-			log.Errorf("read config file error: %v", err)
+			svc.Errorf("read config file error: %v", err)
 			return err
 		}
 		if err := json.Unmarshal(data, svc.cfg); err != nil {
-			log.Errorf("unmarshal config error: %v", err)
+			svc.Errorf("unmarshal config error: %v", err)
 			return err
 		}
 	}
@@ -93,7 +93,8 @@ func (svc *Service) GetMaxRunners() (res int) {
 func newNodeConfigService() (svc2 interfaces.NodeConfigService, err error) {
 	// config service
 	svc := &Service{
-		cfg: newConfig(),
+		cfg:    newConfig(),
+		Logger: utils.NewLogger("NodeConfigService"),
 	}
 
 	// init

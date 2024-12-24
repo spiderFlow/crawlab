@@ -20,7 +20,6 @@ import (
 
 	"github.com/crawlab-team/crawlab/core/models/models"
 
-	"github.com/apex/log"
 	"github.com/crawlab-team/crawlab/core/constants"
 	"github.com/crawlab-team/crawlab/core/entity"
 	client2 "github.com/crawlab-team/crawlab/core/grpc/client"
@@ -29,7 +28,6 @@ import (
 	"github.com/crawlab-team/crawlab/core/models/service"
 	"github.com/crawlab-team/crawlab/core/utils"
 	"github.com/crawlab-team/crawlab/grpc"
-	"github.com/crawlab-team/crawlab/trace"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -54,6 +52,7 @@ type Runner struct {
 	err  error                          // captures any process execution errors
 	cwd  string                         // current working directory for task
 	conn grpc.TaskService_ConnectClient // gRPC stream connection for task service
+	interfaces.Logger
 
 	// log handling
 	scannerStdout *bufio.Reader // reader for process stdout
@@ -95,7 +94,7 @@ func (r *Runner) Init() (err error) {
 // and status monitoring. Returns an error if the task execution fails.
 func (r *Runner) Run() (err error) {
 	// log task started
-	log.Infof("task[%s] started", r.tid.Hex())
+	r.Infof("task[%s] started", r.tid.Hex())
 
 	// configure working directory
 	r.configureCwd()
@@ -164,10 +163,10 @@ func (r *Runner) Cancel(force bool) (err error) {
 	// Kill process
 	err = utils.KillProcess(r.cmd, force)
 	if err != nil {
-		log.Errorf("kill process error: %v", err)
+		r.Errorf("kill process error: %v", err)
 		return err
 	}
-	log.Debugf("attempt to kill process[%d]", r.pid)
+	r.Debugf("attempt to kill process[%d]", r.pid)
 
 	// Create a context with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), r.svc.GetCancelTimeout())
@@ -219,7 +218,7 @@ func (r *Runner) configureCmd() (err error) {
 	// get cmd instance
 	r.cmd, err = utils.BuildCmd(cmdStr)
 	if err != nil {
-		log.Errorf("error building command: %v", err)
+		r.Errorf("error building command: %v", err)
 		return err
 	}
 
@@ -229,14 +228,14 @@ func (r *Runner) configureCmd() (err error) {
 	// Configure pipes for IPC
 	r.stdinPipe, err = r.cmd.StdinPipe()
 	if err != nil {
-		log.Errorf("error creating stdin pipe: %v", err)
+		r.Errorf("error creating stdin pipe: %v", err)
 		return err
 	}
 
 	// Add stdout pipe for IPC
 	r.stdoutPipe, err = r.cmd.StdoutPipe()
 	if err != nil {
-		log.Errorf("error creating stdout pipe: %v", err)
+		r.Errorf("error creating stdout pipe: %v", err)
 		return err
 	}
 
@@ -297,7 +296,7 @@ func (r *Runner) configureEnv() {
 	// Global environment variables
 	envs, err := client.NewModelService[models.Environment]().GetMany(nil, nil)
 	if err != nil {
-		trace.PrintError(err)
+		r.Errorf("error getting environment variables: %v", err)
 		return
 	}
 	for _, env := range envs {
@@ -350,20 +349,20 @@ func (r *Runner) syncFiles() (err error) {
 	// get file list from master
 	resp, err := r.createHttpRequest("GET", "/scan?path="+workingDir)
 	if err != nil {
-		log.Errorf("error getting file list from master: %v", err)
+		r.Errorf("error getting file list from master: %v", err)
 		return err
 	}
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Errorf("error reading response body: %v", err)
+		r.Errorf("error reading response body: %v", err)
 		return err
 	}
 	var masterFiles map[string]entity.FsFileInfo
 	err = json.Unmarshal(body, &masterFiles)
 	if err != nil {
-		log.Errorf("error unmarshaling JSON for URL: %s", resp.Request.URL.String())
-		log.Errorf("error details: %v", err)
+		r.Errorf("error unmarshaling JSON for URL: %s", resp.Request.URL.String())
+		r.Errorf("error details: %v", err)
 		return err
 	}
 
@@ -376,7 +375,7 @@ func (r *Runner) syncFiles() (err error) {
 	// create working directory if not exists
 	if _, err := os.Stat(r.cwd); os.IsNotExist(err) {
 		if err := os.MkdirAll(r.cwd, os.ModePerm); err != nil {
-			log.Errorf("error creating worker directory: %v", err)
+			r.Errorf("error creating worker directory: %v", err)
 			return err
 		}
 	}
@@ -384,17 +383,17 @@ func (r *Runner) syncFiles() (err error) {
 	// get file list from worker
 	workerFiles, err := utils.ScanDirectory(r.cwd)
 	if err != nil {
-		log.Errorf("error scanning worker directory: %v", err)
-		return trace.TraceError(err)
+		r.Errorf("error scanning worker directory: %v", err)
+		return err
 	}
 
 	// delete files that are deleted on master node
 	for path, workerFile := range workerFiles {
 		if _, exists := masterFilesMap[path]; !exists {
-			log.Infof("deleting file: %s", path)
+			r.Infof("deleting file: %s", path)
 			err := os.Remove(workerFile.FullPath)
 			if err != nil {
-				log.Errorf("error deleting file: %v", err)
+				r.Errorf("error deleting file: %v", err)
 			}
 		}
 	}
@@ -417,17 +416,17 @@ func (r *Runner) syncFiles() (err error) {
 				defer wg.Done()
 
 				if masterFile.IsDir {
-					log.Infof("directory needs to be synchronized: %s", path)
+					r.Infof("directory needs to be synchronized: %s", path)
 					_err := os.MkdirAll(filepath.Join(r.cwd, path), masterFile.Mode)
 					if _err != nil {
-						log.Errorf("error creating directory: %v", _err)
+						r.Errorf("error creating directory: %v", _err)
 						err = errors.Join(err, _err)
 					}
 				} else {
-					log.Infof("file needs to be synchronized: %s", path)
+					r.Infof("file needs to be synchronized: %s", path)
 					_err := r.downloadFile(path, filepath.Join(r.cwd, path), masterFile)
 					if _err != nil {
-						log.Errorf("error downloading file: %v", _err)
+						r.Errorf("error downloading file: %v", _err)
 						err = errors.Join(err, _err)
 					}
 				}
@@ -449,11 +448,11 @@ func (r *Runner) syncFiles() (err error) {
 func (r *Runner) downloadFile(path string, filePath string, fileInfo *entity.FsFileInfo) error {
 	resp, err := r.createHttpRequest("GET", "/download?path="+path)
 	if err != nil {
-		log.Errorf("error getting file response: %v", err)
+		r.Errorf("error getting file response: %v", err)
 		return err
 	}
 	if resp.StatusCode != http.StatusOK {
-		log.Errorf("error downloading file: %s", resp.Status)
+		r.Errorf("error downloading file: %s", resp.Status)
 		return errors.New(resp.Status)
 	}
 	defer resp.Body.Close()
@@ -463,14 +462,14 @@ func (r *Runner) downloadFile(path string, filePath string, fileInfo *entity.FsF
 	utils.Exists(dirPath)
 	err = os.MkdirAll(dirPath, os.ModePerm)
 	if err != nil {
-		log.Errorf("error creating directory: %v", err)
+		r.Errorf("error creating directory: %v", err)
 		return err
 	}
 
 	// create local file
 	out, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, fileInfo.Mode)
 	if err != nil {
-		log.Errorf("error creating file: %v", err)
+		r.Errorf("error creating file: %v", err)
 		return err
 	}
 	defer out.Close()
@@ -478,7 +477,7 @@ func (r *Runner) downloadFile(path string, filePath string, fileInfo *entity.FsF
 	// copy file content to local file
 	_, err = io.Copy(out, resp.Body)
 	if err != nil {
-		log.Errorf("error copying file: %v", err)
+		r.Errorf("error copying file: %v", err)
 		return err
 	}
 	return nil
@@ -498,33 +497,33 @@ func (r *Runner) getHttpRequestHeaders() (headers map[string]string) {
 func (r *Runner) wait() (err error) {
 	// start a goroutine to wait for process to finish
 	go func() {
-		log.Debugf("waiting for process[%d] to finish", r.pid)
+		r.Debugf("waiting for process[%d] to finish", r.pid)
 		err = r.cmd.Wait()
 		if err != nil {
 			var exitError *exec.ExitError
 			if !errors.As(err, &exitError) {
 				r.ch <- constants.TaskSignalError
-				log.Debugf("process[%d] exited with error: %v", r.pid, err)
+				r.Debugf("process[%d] exited with error: %v", r.pid, err)
 				return
 			}
 			exitCode := exitError.ExitCode()
 			if exitCode == -1 {
 				// cancel error
 				r.ch <- constants.TaskSignalCancel
-				log.Debugf("process[%d] cancelled", r.pid)
+				r.Debugf("process[%d] cancelled", r.pid)
 				return
 			}
 
 			// standard error
 			r.err = err
 			r.ch <- constants.TaskSignalError
-			log.Debugf("process[%d] exited with error: %v", r.pid, err)
+			r.Debugf("process[%d] exited with error: %v", r.pid, err)
 			return
 		}
 
 		// success
 		r.ch <- constants.TaskSignalFinish
-		log.Debugf("process[%d] exited successfully", r.pid)
+		r.Debugf("process[%d] exited successfully", r.pid)
 	}()
 
 	// declare task status
@@ -552,7 +551,7 @@ func (r *Runner) wait() (err error) {
 
 	// update task status
 	if err := r.updateTask(status, err); err != nil {
-		log.Errorf("error updating task status: %v", err)
+		r.Errorf("error updating task status: %v", err)
 		return err
 	}
 
@@ -601,7 +600,7 @@ func (r *Runner) updateTask(status string, e error) (err error) {
 func (r *Runner) initConnection() (err error) {
 	r.conn, err = client2.GetGrpcClient().TaskClient.Connect(context.Background())
 	if err != nil {
-		log.Errorf("error connecting to task service: %v", err)
+		r.Errorf("error connecting to task service: %v", err)
 		return err
 	}
 	return nil
@@ -611,7 +610,7 @@ func (r *Runner) initConnection() (err error) {
 func (r *Runner) writeLogLines(lines []string) {
 	linesBytes, err := json.Marshal(lines)
 	if err != nil {
-		log.Errorf("error marshaling log lines: %v", err)
+		r.Errorf("error marshaling log lines: %v", err)
 		return
 	}
 	msg := &grpc.TaskServiceConnectRequest{
@@ -620,7 +619,7 @@ func (r *Runner) writeLogLines(lines []string) {
 		Data:   linesBytes,
 	}
 	if err := r.conn.Send(msg); err != nil {
-		log.Errorf("error sending log lines: %v", err)
+		r.Errorf("error sending log lines: %v", err)
 		return
 	}
 }
@@ -631,7 +630,7 @@ func (r *Runner) writeLogLines(lines []string) {
 func (r *Runner) _updateTaskStat(status string) {
 	ts, err := client.NewModelService[models.TaskStat]().GetById(r.tid)
 	if err != nil {
-		trace.PrintError(err)
+		r.Errorf("error getting task stat: %v", err)
 		return
 	}
 	switch status {
@@ -652,13 +651,13 @@ func (r *Runner) _updateTaskStat(status string) {
 	if r.svc.GetNodeConfigService().IsMaster() {
 		err = service.NewModelService[models.TaskStat]().ReplaceById(ts.Id, *ts)
 		if err != nil {
-			trace.PrintError(err)
+			r.Errorf("error updating task stat: %v", err)
 			return
 		}
 	} else {
 		err = client.NewModelService[models.TaskStat]().ReplaceById(ts.Id, *ts)
 		if err != nil {
-			trace.PrintError(err)
+			r.Errorf("error updating task stat: %v", err)
 			return
 		}
 	}
@@ -672,8 +671,7 @@ func (r *Runner) sendNotification() {
 	}
 	_, err := client2.GetGrpcClient().TaskClient.SendNotification(context.Background(), req)
 	if err != nil {
-		log.Errorf("error sending notification: %v", err)
-		trace.PrintError(err)
+		r.Errorf("error sending notification: %v", err)
 		return
 	}
 }
@@ -686,7 +684,7 @@ func (r *Runner) _updateSpiderStat(status string) {
 	// task stat
 	ts, err := client.NewModelService[models.TaskStat]().GetById(r.tid)
 	if err != nil {
-		trace.PrintError(err)
+		r.Errorf("error getting task stat: %v", err)
 		return
 	}
 
@@ -715,8 +713,7 @@ func (r *Runner) _updateSpiderStat(status string) {
 			},
 		}
 	default:
-		log.Errorf("Invalid task status: %s", status)
-		trace.PrintError(errors.New("invalid task status"))
+		r.Errorf("Invalid task status: %s", status)
 		return
 	}
 
@@ -724,13 +721,13 @@ func (r *Runner) _updateSpiderStat(status string) {
 	if r.svc.GetNodeConfigService().IsMaster() {
 		err = service.NewModelService[models.SpiderStat]().UpdateById(r.s.Id, update)
 		if err != nil {
-			trace.PrintError(err)
+			r.Errorf("error updating spider stat: %v", err)
 			return
 		}
 	} else {
 		err = client.NewModelService[models.SpiderStat]().UpdateById(r.s.Id, update)
 		if err != nil {
-			trace.PrintError(err)
+			r.Errorf("error updating spider stat: %v", err)
 			return
 		}
 	}
@@ -755,14 +752,14 @@ func (r *Runner) handleIPC() {
 		// Convert message to JSON
 		jsonData, err := json.Marshal(msg)
 		if err != nil {
-			log.Errorf("error marshaling IPC message: %v", err)
+			r.Errorf("error marshaling IPC message: %v", err)
 			continue
 		}
 
 		// Write to child process's stdin
 		_, err = fmt.Fprintln(r.stdinPipe, string(jsonData))
 		if err != nil {
-			log.Errorf("error writing to child process: %v", err)
+			r.Errorf("error writing to child process: %v", err)
 		}
 	}
 }
@@ -800,7 +797,7 @@ func (r *Runner) startIPCReader() {
 					if ipcMsg.Type == "" || ipcMsg.Type == constants.IPCMessageData {
 						r.handleIPCInsertDataMessage(ipcMsg)
 					} else {
-						log.Warnf("no IPC handler set for message: %v", ipcMsg)
+						r.Warnf("no IPC handler set for message: %v", ipcMsg)
 					}
 				}
 			} else {
@@ -815,7 +812,7 @@ func (r *Runner) startIPCReader() {
 func (r *Runner) handleIPCInsertDataMessage(ipcMsg entity.IPCMessage) {
 	// Validate message
 	if ipcMsg.Payload == nil {
-		log.Errorf("empty payload in IPC message")
+		r.Errorf("empty payload in IPC message")
 		return
 	}
 
@@ -829,7 +826,7 @@ func (r *Runner) handleIPCInsertDataMessage(ipcMsg entity.IPCMessage) {
 			if itemMap, ok := item.(map[string]interface{}); ok {
 				records = append(records, itemMap)
 			} else {
-				log.Errorf("invalid record at index %d: %v", i, item)
+				r.Errorf("invalid record at index %d: %v", i, item)
 				continue
 			}
 		}
@@ -841,30 +838,30 @@ func (r *Runner) handleIPCInsertDataMessage(ipcMsg entity.IPCMessage) {
 		if itemMap, ok := payload.(map[string]interface{}); ok {
 			records = []map[string]interface{}{itemMap}
 		} else {
-			log.Errorf("invalid payload type: %T", payload)
+			r.Errorf("invalid payload type: %T", payload)
 			return
 		}
 	default:
-		log.Errorf("unsupported payload type: %T, value: %v", payload, ipcMsg.Payload)
+		r.Errorf("unsupported payload type: %T, value: %v", payload, ipcMsg.Payload)
 		return
 	}
 
 	// Validate records
 	if len(records) == 0 {
-		log.Warnf("no valid records to insert")
+		r.Warnf("no valid records to insert")
 		return
 	}
 
 	// Marshal data with error handling
 	data, err := json.Marshal(records)
 	if err != nil {
-		log.Errorf("error marshaling records: %v", err)
+		r.Errorf("error marshaling records: %v", err)
 		return
 	}
 
 	// Validate connection
 	if r.conn == nil {
-		log.Errorf("gRPC connection not initialized")
+		r.Errorf("gRPC connection not initialized")
 		return
 	}
 
@@ -882,11 +879,11 @@ func (r *Runner) handleIPCInsertDataMessage(ipcMsg entity.IPCMessage) {
 	// Use context for sending
 	select {
 	case <-ctx.Done():
-		log.Errorf("timeout sending IPC message")
+		r.Errorf("timeout sending IPC message")
 		return
 	default:
 		if err := r.conn.Send(grpcMsg); err != nil {
-			log.Errorf("error sending IPC message: %v", err)
+			r.Errorf("error sending IPC message: %v", err)
 			return
 		}
 	}
@@ -898,7 +895,6 @@ func newTaskRunner(id primitive.ObjectID, svc *Service) (r *Runner, err error) {
 	// validate options
 	if id.IsZero() {
 		err = fmt.Errorf("invalid task id: %s", id.Hex())
-		log.Errorf("error creating task runner: %v", err)
 		return nil, err
 	}
 
@@ -910,6 +906,7 @@ func newTaskRunner(id primitive.ObjectID, svc *Service) (r *Runner, err error) {
 		tid:              id,
 		ch:               make(chan constants.TaskSignal),
 		logBatchSize:     20,
+		Logger:           utils.NewLogger("TaskRunner"),
 	}
 
 	// multi error
@@ -936,7 +933,7 @@ func newTaskRunner(id primitive.ObjectID, svc *Service) (r *Runner, err error) {
 
 	// initialize task runner
 	if err := r.Init(); err != nil {
-		log.Errorf("error initializing task runner: %v", err)
+		r.Errorf("error initializing task runner: %v", err)
 		errs.Errors = append(errs.Errors, err)
 	}
 

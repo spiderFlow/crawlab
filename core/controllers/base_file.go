@@ -3,7 +3,6 @@ package controllers
 import (
 	"errors"
 	"fmt"
-	log2 "github.com/apex/log"
 	"github.com/crawlab-team/crawlab/core/fs"
 	"github.com/crawlab-team/crawlab/core/interfaces"
 	"github.com/crawlab-team/crawlab/core/utils"
@@ -138,28 +137,28 @@ func PostBaseFileSaveFiles(rootPath string, c *gin.Context) {
 		go func(path string) {
 			file, err := c.FormFile(path)
 			if err != nil {
-				log2.Warnf("invalid file header: %s", path)
-				log2.Error(err.Error())
+				logger.Warnf("invalid file header: %s", path)
+				logger.Error(err.Error())
 				wg.Done()
 				return
 			}
 			f, err := file.Open()
 			if err != nil {
-				log2.Warnf("unable to open file: %s", path)
-				log2.Error(err.Error())
+				logger.Warnf("unable to open file: %s", path)
+				logger.Error(err.Error())
 				wg.Done()
 				return
 			}
 			fileData, err := io.ReadAll(f)
 			if err != nil {
-				log2.Warnf("unable to read file: %s", path)
-				log2.Error(err.Error())
+				logger.Warnf("unable to read file: %s", path)
+				logger.Error(err.Error())
 				wg.Done()
 				return
 			}
 			if err := fsSvc.Save(path, fileData); err != nil {
-				log2.Warnf("unable to save file: %s", path)
-				log2.Error(err.Error())
+				logger.Warnf("unable to save file: %s", path)
+				logger.Error(err.Error())
 				wg.Done()
 				return
 			}

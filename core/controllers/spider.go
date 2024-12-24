@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/apex/log"
 	"github.com/crawlab-team/crawlab/core/fs"
 	"github.com/crawlab-team/crawlab/core/interfaces"
 	"github.com/crawlab-team/crawlab/core/models/service"
@@ -17,7 +16,6 @@ import (
 	"github.com/crawlab-team/crawlab/core/utils"
 	"github.com/crawlab-team/crawlab/db/generic"
 	"github.com/crawlab-team/crawlab/db/mongo"
-	"github.com/crawlab-team/crawlab/trace"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -398,7 +396,7 @@ func DeleteSpiderById(c *gin.Context) {
 				// delete task logs
 				logPath := filepath.Join(utils.GetTaskLogPath(), id)
 				if err := os.RemoveAll(logPath); err != nil {
-					log.Warnf("failed to remove task log directory: %s", logPath)
+					logger.Warnf("failed to remove task log directory: %s", logPath)
 				}
 				wg.Done()
 			}(id.Hex())
@@ -416,12 +414,12 @@ func DeleteSpiderById(c *gin.Context) {
 			// delete spider directory
 			fsSvc, err := getSpiderFsSvcById(id)
 			if err != nil {
-				log.Errorf("failed to get spider fs service: %s", err.Error())
+				logger.Errorf("failed to get spider fs service: %v", err)
 				return
 			}
 			err = fsSvc.Delete(".")
 			if err != nil {
-				log.Errorf("failed to delete spider directory: %s", err.Error())
+				logger.Errorf("failed to delete spider directory: %v", err)
 				return
 			}
 		}()
@@ -503,7 +501,7 @@ func DeleteSpiderList(c *gin.Context) {
 				// delete task logs
 				logPath := filepath.Join(utils.GetTaskLogPath(), id)
 				if err := os.RemoveAll(logPath); err != nil {
-					log.Warnf("failed to remove task log directory: %s", logPath)
+					logger.Warnf("failed to remove task log directory: %s", logPath)
 				}
 				wg.Done()
 			}(id.Hex())
@@ -532,14 +530,12 @@ func DeleteSpiderList(c *gin.Context) {
 				// Delete spider directory
 				fsSvc, err := getSpiderFsSvcById(s.Id)
 				if err != nil {
-					log.Errorf("failed to get spider fs service: %s", err.Error())
-					trace.PrintError(err)
+					logger.Errorf("failed to get spider fs service: %v", err)
 					return
 				}
 				err = fsSvc.Delete(".")
 				if err != nil {
-					log.Errorf("failed to delete spider directory: %s", err.Error())
-					trace.PrintError(err)
+					logger.Errorf("failed to delete spider directory: %v", err)
 					return
 				}
 			}(&spiders[i])
@@ -719,8 +715,7 @@ func getSpiderFsSvc(s *models.Spider) (svc interfaces.FsService, err error) {
 func getSpiderFsSvcById(id primitive.ObjectID) (svc interfaces.FsService, err error) {
 	s, err := service.NewModelService[models.Spider]().GetById(id)
 	if err != nil {
-		log.Errorf("failed to get spider: %s", err.Error())
-		trace.PrintError(err)
+		logger.Errorf("failed to get spider: %v", err)
 		return nil, err
 	}
 	return getSpiderFsSvc(s)

@@ -3,9 +3,7 @@ package notification
 import (
 	"errors"
 	"github.com/PuerkitoBio/goquery"
-	"github.com/apex/log"
 	"github.com/crawlab-team/crawlab/core/models/models"
-	"github.com/crawlab-team/crawlab/trace"
 	"gopkg.in/gomail.v2"
 	"net/mail"
 	"regexp"
@@ -69,8 +67,7 @@ func isHtml(content string) bool {
 func convertHtmlToText(content string) string {
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(content))
 	if err != nil {
-		log.Errorf("failed to convert html to text: %v", err)
-		trace.PrintError(err)
+		logger.Errorf("failed to convert html to text: %v", err)
 		return ""
 	}
 	return doc.Text()

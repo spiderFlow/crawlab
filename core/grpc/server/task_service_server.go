@@ -4,11 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"strings"
 	"sync"
 
-	"github.com/apex/log"
 	"github.com/crawlab-team/crawlab/core/constants"
 	"github.com/crawlab-team/crawlab/core/interfaces"
 	"github.com/crawlab-team/crawlab/core/models/models"
@@ -19,7 +19,6 @@ import (
 	"github.com/crawlab-team/crawlab/core/utils"
 	"github.com/crawlab-team/crawlab/db/mongo"
 	"github.com/crawlab-team/crawlab/grpc"
-	"github.com/crawlab-team/crawlab/trace"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	mongo2 "go.mongodb.org/mongo-driver/mongo"
@@ -36,6 +35,7 @@ type TaskServiceServer struct {
 
 	// internals
 	subs map[primitive.ObjectID]grpc.TaskService_SubscribeServer
+	interfaces.Logger
 }
 
 func (svr TaskServiceServer) Subscribe(req *grpc.TaskServiceSubscribeRequest, stream grpc.TaskService_SubscribeServer) (err error) {
@@ -62,7 +62,7 @@ func (svr TaskServiceServer) Subscribe(req *grpc.TaskServiceSubscribeRequest, st
 	taskServiceMutex.Lock()
 	delete(svr.subs, taskId)
 	taskServiceMutex.Unlock()
-	log.Infof("[TaskServiceServer] task stream closed: %s", taskId.Hex())
+	svr.Infof("[TaskServiceServer] task stream closed: %s", taskId.Hex())
 
 	return nil
 }
@@ -89,7 +89,7 @@ func (svr TaskServiceServer) Connect(stream grpc.TaskService_ConnectServer) (err
 				return nil
 			}
 			// log other stream receive errors and continue
-			log.Errorf("error receiving stream message: %v", err)
+			svr.Errorf("error receiving stream message: %v", err)
 			continue
 		}
 
@@ -97,7 +97,7 @@ func (svr TaskServiceServer) Connect(stream grpc.TaskService_ConnectServer) (err
 		if taskId.IsZero() {
 			taskId, err = primitive.ObjectIDFromHex(msg.TaskId)
 			if err != nil {
-				log.Errorf("invalid task id: %s", msg.TaskId)
+				svr.Errorf("invalid task id: %s", msg.TaskId)
 				continue
 			}
 		}
@@ -107,7 +107,7 @@ func (svr TaskServiceServer) Connect(stream grpc.TaskService_ConnectServer) (err
 		if spiderId.IsZero() {
 			t, err := service.NewModelService[models.Task]().GetById(taskId)
 			if err != nil {
-				log.Errorf("error getting spider[%s]: %v", taskId.Hex(), err)
+				svr.Errorf("error getting spider[%s]: %v", taskId.Hex(), err)
 				continue
 			}
 			spiderId = t.SpiderId
@@ -123,12 +123,12 @@ func (svr TaskServiceServer) Connect(stream grpc.TaskService_ConnectServer) (err
 			err = svr.handleInsertLogs(taskId, msg)
 		default:
 			// invalid message code received
-			log.Errorf("invalid stream message code: %d", msg.Code)
+			svr.Errorf("invalid stream message code: %d", msg.Code)
 			continue
 		}
 		if err != nil {
 			// log any errors from handlers
-			log.Errorf("grpc error[%d]: %v", msg.Code, err)
+			svr.Errorf("grpc error[%d]: %v", msg.Code, err)
 		}
 	}
 }
@@ -137,11 +137,14 @@ func (svr TaskServiceServer) Connect(stream grpc.TaskService_ConnectServer) (err
 func (svr TaskServiceServer) FetchTask(ctx context.Context, request *grpc.TaskServiceFetchTaskRequest) (response *grpc.TaskServiceFetchTaskResponse, err error) {
 	nodeKey := request.GetNodeKey()
 	if nodeKey == "" {
-		return nil, errors.New("invalid node key")
+		err = fmt.Errorf("invalid node key")
+		svr.Errorf("error fetching task: %v", err)
+		return nil, err
 	}
 	n, err := service.NewModelService[models.Node]().GetOne(bson.M{"key": nodeKey}, nil)
 	if err != nil {
-		return nil, trace.TraceError(err)
+		svr.Errorf("error getting node[%s]: %v", nodeKey, err)
+		return nil, err
 	}
 	var tid primitive.ObjectID
 	opts := &mongo.FindOptions{
@@ -162,7 +165,7 @@ func (svr TaskServiceServer) FetchTask(ctx context.Context, request *grpc.TaskSe
 			t.Status = constants.TaskStatusAssigned
 			return svr.saveTask(t)
 		} else if !errors.Is(err, mongo2.ErrNoDocuments) {
-			log.Errorf("error fetching task for node[%s]: %v", nodeKey, err)
+			svr.Errorf("error fetching task for node[%s]: %v", nodeKey, err)
 			return err
 		}
 
@@ -177,7 +180,7 @@ func (svr TaskServiceServer) FetchTask(ctx context.Context, request *grpc.TaskSe
 			t.Status = constants.TaskStatusAssigned
 			return svr.saveTask(t)
 		} else if !errors.Is(err, mongo2.ErrNoDocuments) {
-			log.Errorf("error fetching task for any node: %v", err)
+			svr.Errorf("error fetching task for any node: %v", err)
 			return err
 		}
 
@@ -198,7 +201,7 @@ func (svr TaskServiceServer) SendNotification(_ context.Context, request *grpc.T
 	// task id
 	taskId, err := primitive.ObjectIDFromHex(request.TaskId)
 	if err != nil {
-		log.Errorf("invalid task id: %s", request.TaskId)
+		svr.Errorf("invalid task id: %s", request.TaskId)
 		return nil, err
 	}
 
@@ -208,7 +211,7 @@ func (svr TaskServiceServer) SendNotification(_ context.Context, request *grpc.T
 	// task
 	task, err := service.NewModelService[models.Task]().GetById(taskId)
 	if err != nil {
-		log.Errorf("error getting task[%s]: %v", request.TaskId, err)
+		svr.Errorf("error getting task[%s]: %v", request.TaskId, err)
 		return nil, err
 	}
 	args = append(args, task)
@@ -216,7 +219,7 @@ func (svr TaskServiceServer) SendNotification(_ context.Context, request *grpc.T
 	// task stat
 	taskStat, err := service.NewModelService[models.TaskStat]().GetById(task.Id)
 	if err != nil {
-		log.Errorf("error getting task stat for task[%s]: %v", request.TaskId, err)
+		svr.Errorf("error getting task stat for task[%s]: %v", request.TaskId, err)
 		return nil, err
 	}
 	args = append(args, taskStat)
@@ -224,7 +227,7 @@ func (svr TaskServiceServer) SendNotification(_ context.Context, request *grpc.T
 	// spider
 	spider, err := service.NewModelService[models.Spider]().GetById(task.SpiderId)
 	if err != nil {
-		log.Errorf("error getting spider[%s]: %v", task.SpiderId.Hex(), err)
+		svr.Errorf("error getting spider[%s]: %v", task.SpiderId.Hex(), err)
 		return nil, err
 	}
 	args = append(args, spider)
@@ -232,7 +235,7 @@ func (svr TaskServiceServer) SendNotification(_ context.Context, request *grpc.T
 	// node
 	node, err := service.NewModelService[models.Node]().GetById(task.NodeId)
 	if err != nil {
-		log.Errorf("error getting node[%s]: %v", task.NodeId.Hex(), err)
+		svr.Errorf("error getting node[%s]: %v", task.NodeId.Hex(), err)
 		return nil, err
 	}
 	args = append(args, node)
@@ -242,7 +245,7 @@ func (svr TaskServiceServer) SendNotification(_ context.Context, request *grpc.T
 	if !task.ScheduleId.IsZero() {
 		schedule, err = service.NewModelService[models.Schedule]().GetById(task.ScheduleId)
 		if err != nil {
-			log.Errorf("error getting schedule[%s]: %v", task.ScheduleId.Hex(), err)
+			svr.Errorf("error getting schedule[%s]: %v", task.ScheduleId.Hex(), err)
 			return nil, err
 		}
 		args = append(args, schedule)
@@ -256,7 +259,7 @@ func (svr TaskServiceServer) SendNotification(_ context.Context, request *grpc.T
 		},
 	}, nil)
 	if err != nil {
-		log.Errorf("error getting notification settings: %v", err)
+		svr.Errorf("error getting notification settings: %v", err)
 		return nil, err
 	}
 
@@ -303,7 +306,7 @@ func (svr TaskServiceServer) handleInsertData(taskId, spiderId primitive.ObjectI
 	var records []map[string]interface{}
 	err = json.Unmarshal(msg.Data, &records)
 	if err != nil {
-		log.Errorf("error unmarshalling data: %v", err)
+		svr.Errorf("error unmarshalling data: %v", err)
 		return err
 	}
 	for i := range records {
@@ -317,7 +320,7 @@ func (svr TaskServiceServer) handleInsertLogs(taskId primitive.ObjectID, msg *gr
 	var logs []string
 	err = json.Unmarshal(msg.Data, &logs)
 	if err != nil {
-		log.Errorf("error unmarshalling logs: %v", err)
+		svr.Errorf("error unmarshalling logs: %v", err)
 		return err
 	}
 	return svr.statsSvc.InsertLogs(taskId, logs...)
@@ -333,6 +336,7 @@ func newTaskServiceServer() *TaskServiceServer {
 		cfgSvc:   nodeconfig.GetNodeConfigService(),
 		subs:     make(map[primitive.ObjectID]grpc.TaskService_SubscribeServer),
 		statsSvc: stats.GetTaskStatsService(),
+		Logger:   utils.NewLogger("GrpcTaskServiceServer"),
 	}
 }
 

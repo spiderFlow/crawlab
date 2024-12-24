@@ -2,8 +2,8 @@ package server
 
 import (
 	"fmt"
-	"github.com/apex/log"
 	"github.com/crawlab-team/crawlab/core/grpc/middlewares"
+	"github.com/crawlab-team/crawlab/core/interfaces"
 	"github.com/crawlab-team/crawlab/core/utils"
 	grpc2 "github.com/crawlab-team/crawlab/grpc"
 	grpcmiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
@@ -23,6 +23,7 @@ type GrpcServer struct {
 	svr     *grpc.Server
 	l       net.Listener
 	stopped bool
+	interfaces.Logger
 
 	// servers
 	NodeSvr             *NodeServiceServer
@@ -40,10 +41,10 @@ func (svr *GrpcServer) Start() (err error) {
 	// listener
 	svr.l, err = net.Listen("tcp", svr.address)
 	if err != nil {
-		log.Errorf("[GrpcServer] failed to listen: %v", err)
+		svr.Errorf("failed to listen: %v", err)
 		return err
 	}
-	log.Infof("[GrpcServer] grpc server listens to %s", svr.address)
+	svr.Infof("server listens to %s", svr.address)
 
 	// start grpc server
 	go func() {
@@ -51,7 +52,7 @@ func (svr *GrpcServer) Start() (err error) {
 			if errors2.Is(err, grpc.ErrServerStopped) {
 				return
 			}
-			log.Errorf("[GrpcServer] failed to serve: %v", err)
+			svr.Errorf("failed to serve: %v", err)
 		}
 	}()
 
@@ -65,18 +66,18 @@ func (svr *GrpcServer) Stop() (err error) {
 	}
 
 	// graceful stop
-	log.Infof("[GrpcServer] grpc server stopping...")
+	svr.Infof("server stopping...")
 	svr.svr.Stop()
 
 	// close listener
-	log.Infof("[GrpcServer] grpc server closing listener...")
+	svr.Infof("server closing listener...")
 	_ = svr.l.Close()
 
 	// mark as stopped
 	svr.stopped = true
 
 	// log
-	log.Infof("[GrpcServer] grpc server stopped")
+	svr.Infof("server stopped")
 
 	return nil
 }
@@ -90,7 +91,7 @@ func (svr *GrpcServer) register() {
 }
 
 func (svr *GrpcServer) recoveryHandlerFunc(p interface{}) (err error) {
-	log.Errorf("[GrpcServer] recovered from panic: %v", p)
+	svr.Errorf("recovered from panic: %v", p)
 	return fmt.Errorf("recovered from panic: %v", p)
 }
 
@@ -98,6 +99,7 @@ func newGrpcServer() *GrpcServer {
 	// server
 	svr := &GrpcServer{
 		address: utils.GetGrpcServerAddress(),
+		Logger:  utils.NewLogger("GrpcServer"),
 	}
 
 	// services servers

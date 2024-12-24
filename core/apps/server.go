@@ -2,7 +2,6 @@ package apps
 
 import (
 	"fmt"
-	"github.com/apex/log"
 	"github.com/crawlab-team/crawlab/core/interfaces"
 	"github.com/crawlab-team/crawlab/core/node/service"
 	"github.com/crawlab-team/crawlab/core/utils"
@@ -16,6 +15,9 @@ type Server struct {
 	// modules
 	nodeSvc interfaces.NodeService
 	api     *Api
+
+	// internals
+	interfaces.Logger
 }
 
 func (app *Server) Init() {
@@ -53,7 +55,7 @@ func (app *Server) GetNodeService() interfaces.NodeService {
 }
 
 func (app *Server) logNodeInfo() {
-	log.Infof("current node type: %s", utils.GetNodeType())
+	app.Infof("current node type: %s", utils.GetNodeType())
 }
 
 func (app *Server) initPprof() {
@@ -66,7 +68,9 @@ func (app *Server) initPprof() {
 
 func newServer() App {
 	// server
-	svr := &Server{}
+	svr := &Server{
+		Logger: utils.NewLogger("Server"),
+	}
 
 	// master modules
 	if utils.IsMaster() {

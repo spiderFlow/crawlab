@@ -1,8 +1,6 @@
 package controllers
 
 import (
-	"github.com/apex/log"
-	"github.com/crawlab-team/crawlab/trace"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"io"
@@ -16,7 +14,7 @@ type WsWriter struct {
 }
 
 func (w *WsWriter) Write(data []byte) (n int, err error) {
-	log.Infof("websocket write: %s", string(data))
+	logger.Infof("websocket write: %s", string(data))
 	err = w.conn.WriteMessage(websocket.TextMessage, data)
 	if err != nil {
 		return 0, err
@@ -47,8 +45,7 @@ func NewWsWriter(c *gin.Context) (writer *WsWriter, err error) {
 
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		log.Errorf("websocket open connection error: %v", err)
-		trace.PrintError(err)
+		logger.Errorf("websocket open connection error: %v", err)
 	}
 
 	return &WsWriter{

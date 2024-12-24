@@ -5,11 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"github.com/cenkalti/backoff/v4"
+	"github.com/crawlab-team/crawlab/core/interfaces"
+	"github.com/crawlab-team/crawlab/core/utils"
 	"io"
 	"sync"
 	"time"
 
-	"github.com/apex/log"
 	"github.com/crawlab-team/crawlab/core/constants"
 	"github.com/crawlab-team/crawlab/core/models/models"
 	"github.com/crawlab-team/crawlab/core/models/service"
@@ -24,17 +25,18 @@ type DependencyServiceServer struct {
 	grpc.UnimplementedDependencyServiceServer
 	mu      *sync.Mutex
 	streams map[string]*grpc.DependencyService_ConnectServer
+	interfaces.Logger
 }
 
 func (svr DependencyServiceServer) Connect(req *grpc.DependencyServiceConnectRequest, stream grpc.DependencyService_ConnectServer) (err error) {
 	svr.mu.Lock()
 	svr.streams[req.NodeKey] = &stream
 	svr.mu.Unlock()
-	log.Info("[DependencyServiceServer] connected: " + req.NodeKey)
+	svr.Info("[DependencyServiceServer] connected: " + req.NodeKey)
 
 	// Keep this scope alive because once this scope exits - the stream is closed
 	<-stream.Context().Done()
-	log.Info("[DependencyServiceServer] disconnected: " + req.NodeKey)
+	svr.Info("[DependencyServiceServer] disconnected: " + req.NodeKey)
 
 	return nil
 }
@@ -54,7 +56,7 @@ func (svr DependencyServiceServer) Sync(_ context.Context, request *grpc.Depende
 	}, nil)
 	if err != nil {
 		if !errors.Is(err, mongo.ErrNoDocuments) {
-			log.Errorf("[DependencyService] get dependencies from db error: %v", err)
+			svr.Errorf("[DependencyService] get dependencies from db error: %v", err)
 			return nil, err
 		}
 	}
@@ -117,7 +119,7 @@ func (svr DependencyServiceServer) Sync(_ context.Context, request *grpc.Depende
 				"_id": bson.M{"$in": depIdsToDelete},
 			})
 			if err != nil {
-				log.Errorf("[DependencyServiceServer] delete dependencies in db error: %v", err)
+				svr.Errorf("[DependencyServiceServer] delete dependencies in db error: %v", err)
 				return err
 			}
 		}
@@ -126,7 +128,7 @@ func (svr DependencyServiceServer) Sync(_ context.Context, request *grpc.Depende
 		if len(depsToInsert) > 0 {
 			_, err = service.NewModelService[models.Dependency]().InsertMany(depsToInsert)
 			if err != nil {
-				log.Errorf("[DependencyServiceServer] insert dependencies in db error: %v", err)
+				svr.Errorf("[DependencyServiceServer] insert dependencies in db error: %v", err)
 				return err
 			}
 		}
@@ -135,7 +137,7 @@ func (svr DependencyServiceServer) Sync(_ context.Context, request *grpc.Depende
 		for _, d := range depsToUpdate {
 			err = service.NewModelService[models.Dependency]().ReplaceById(d.Id, d)
 			if err != nil {
-				log.Errorf("[DependencyServiceServer] update dependency in db error: %v", err)
+				svr.Errorf("[DependencyServiceServer] update dependency in db error: %v", err)
 				return err
 			}
 		}
@@ -161,7 +163,7 @@ func (svr DependencyServiceServer) UpdateLogs(stream grpc.DependencyService_Upda
 		// get id
 		id, err := primitive.ObjectIDFromHex(req.TargetId)
 		if err != nil {
-			log.Errorf("[DependencyServiceServer] convert dependency id error: %v", err)
+			svr.Errorf("[DependencyServiceServer] convert dependency id error: %v", err)
 			return err
 		}
 
@@ -176,7 +178,7 @@ func (svr DependencyServiceServer) UpdateLogs(stream grpc.DependencyService_Upda
 		}
 		_, err = service.NewModelService[models.DependencyLog]().InsertMany(depLogs)
 		if err != nil {
-			log.Errorf("[DependencyServiceServer] insert dependency logs error: %v", err)
+			svr.Errorf("[DependencyServiceServer] insert dependency logs error: %v", err)
 			return err
 		}
 	}
@@ -202,7 +204,7 @@ func (svr DependencyServiceServer) SyncConfigSetup(_ context.Context, request *g
 	}, nil)
 	if err != nil {
 		if !errors.Is(err, mongo.ErrNoDocuments) {
-			log.Errorf("[DependencyService] get dependency config setup from db error: %v", err)
+			svr.Errorf("[DependencyService] get dependency config setup from db error: %v", err)
 			return nil, err
 		}
 	}
@@ -230,7 +232,7 @@ func (svr DependencyServiceServer) SyncConfigSetup(_ context.Context, request *g
 		}
 		_, err = service.NewModelService[models.DependencyConfigSetup]().InsertOne(*cs)
 		if err != nil {
-			log.Errorf("[DependencyService] insert dependency config setup error: %v", err)
+			svr.Errorf("[DependencyService] insert dependency config setup error: %v", err)
 			return nil, err
 		}
 	} else {
@@ -243,7 +245,7 @@ func (svr DependencyServiceServer) SyncConfigSetup(_ context.Context, request *g
 		cs.Drivers = drivers
 		err = service.NewModelService[models.DependencyConfigSetup]().ReplaceById(cs.Id, *cs)
 		if err != nil {
-			log.Errorf("[DependencyService] update dependency config setup error: %v", err)
+			svr.Errorf("[DependencyService] update dependency config setup error: %v", err)
 			return nil, err
 		}
 	}
@@ -257,7 +259,7 @@ func (svr DependencyServiceServer) GetStream(nodeKey string) (stream *grpc.Depen
 		return err
 	}, b)
 	if err != nil {
-		log.Errorf("get stream error: %v", err)
+		svr.Errorf("get stream error: %v", err)
 		return nil, err
 	}
 	return stream, nil
@@ -277,6 +279,7 @@ func newDependencyServer() *DependencyServiceServer {
 	return &DependencyServiceServer{
 		mu:      new(sync.Mutex),
 		streams: make(map[string]*grpc.DependencyService_ConnectServer),
+		Logger:  utils.NewLogger("DependencyServiceServer"),
 	}
 }
 

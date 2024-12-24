@@ -2,23 +2,24 @@ package notification
 
 import (
 	"fmt"
+	"github.com/crawlab-team/crawlab/core/interfaces"
+	"github.com/crawlab-team/crawlab/core/utils"
 	"regexp"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/apex/log"
 	"github.com/crawlab-team/crawlab/core/constants"
 	"github.com/crawlab-team/crawlab/core/entity"
 	"github.com/crawlab-team/crawlab/core/models/models"
 	"github.com/crawlab-team/crawlab/core/models/service"
-	"github.com/crawlab-team/crawlab/trace"
 	"github.com/gomarkdown/markdown"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type Service struct {
+	interfaces.Logger
 }
 
 func (svc *Service) Send(s *models.NotificationSetting, args ...any) {
@@ -31,7 +32,7 @@ func (svc *Service) Send(s *models.NotificationSetting, args ...any) {
 			defer wg.Done()
 			ch, err := service.NewModelService[models.NotificationChannel]().GetById(chId)
 			if err != nil {
-				log.Errorf("[NotificationService] get channel error: %v", err)
+				svc.Errorf("[NotificationService] get channel error: %v", err)
 				return
 			}
 			content := svc.getContent(s, ch, args...)
@@ -57,7 +58,7 @@ func (svc *Service) SendMail(s *models.NotificationSetting, ch *models.Notificat
 	// send mail
 	err := SendMail(s, ch, mailTo, mailCc, mailBcc, title, content)
 	if err != nil {
-		log.Errorf("[NotificationService] send mail error: %v", err)
+		svc.Errorf("[NotificationService] send mail error: %v", err)
 	}
 
 	// save request
@@ -71,7 +72,7 @@ func (svc *Service) SendIM(ch *models.NotificationChannel, title, content string
 	// send mobile notification
 	err := SendIMNotification(ch, title, content)
 	if err != nil {
-		log.Errorf("[NotificationService] send mobile notification error: %v", err)
+		svc.Errorf("[NotificationService] send mobile notification error: %v", err)
 	}
 
 	// save request
@@ -107,7 +108,7 @@ func (svc *Service) SendTestMessage(locale string, ch *models.NotificationChanne
 		// For email
 		err = SendMail(nil, ch, toMail, nil, nil, title, content)
 		if err != nil {
-			log.Errorf("failed to send test email: %v", err)
+			svc.Errorf("failed to send test email: %v", err)
 		}
 
 	case TypeIM:
@@ -117,7 +118,7 @@ func (svc *Service) SendTestMessage(locale string, ch *models.NotificationChanne
 		// For instant messaging
 		err = SendIMNotification(ch, title, content)
 		if err != nil {
-			log.Errorf("failed to send test IM notification: %v", err)
+			svc.Errorf("failed to send test IM notification: %v", err)
 		}
 
 	default:
@@ -417,7 +418,7 @@ func (svc *Service) getUsernameById(id primitive.ObjectID) (username string) {
 	}
 	u, err := service.NewModelService[models.User]().GetById(id)
 	if err != nil {
-		log.Errorf("[NotificationService] get user error: %v", err)
+		svc.Errorf("[NotificationService] get user error: %v", err)
 		return ""
 	}
 	return u.Username
@@ -494,8 +495,7 @@ func (svc *Service) SendNodeNotification(node *models.Node) {
 		},
 	}, nil)
 	if err != nil {
-		log.Errorf("get notification settings error: %v", err)
-		trace.PrintError(err)
+		svc.Errorf("get notification settings error: %v", err)
 		return
 	}
 
@@ -537,7 +537,7 @@ func (svc *Service) createRequestMail(s *models.NotificationSetting, ch *models.
 	r.SetUpdatedAt(time.Now())
 	r.Id, err = service.NewModelService[models.NotificationRequest]().InsertOne(r)
 	if err != nil {
-		log.Errorf("[NotificationService] save request error: %v", err)
+		svc.Errorf("[NotificationService] save request error: %v", err)
 		return nil, err
 	}
 	return &r, nil
@@ -563,7 +563,7 @@ func (svc *Service) createRequestMailTest(ch *models.NotificationChannel, title,
 	r.SetUpdatedAt(time.Now())
 	r.Id, err = service.NewModelService[models.NotificationRequest]().InsertOne(r)
 	if err != nil {
-		log.Errorf("[NotificationService] save request error: %v", err)
+		svc.Errorf("[NotificationService] save request error: %v", err)
 		return nil, err
 	}
 	return &r, nil
@@ -581,7 +581,7 @@ func (svc *Service) createRequestIM(ch *models.NotificationChannel, title, conte
 	r.SetUpdatedAt(time.Now())
 	r.Id, err = service.NewModelService[models.NotificationRequest]().InsertOne(r)
 	if err != nil {
-		log.Errorf("[NotificationService] save request error: %v", err)
+		svc.Errorf("[NotificationService] save request error: %v", err)
 		return nil, err
 	}
 	return &r, nil
@@ -601,12 +601,14 @@ func (svc *Service) saveRequest(r *models.NotificationRequest, err error) {
 	r.SetUpdatedAt(time.Now())
 	err = service.NewModelService[models.NotificationRequest]().ReplaceById(r.Id, *r)
 	if err != nil {
-		log.Errorf("[NotificationService] save request error: %v", err)
+		svc.Errorf("[NotificationService] save request error: %v", err)
 	}
 }
 
 func newNotificationService() *Service {
-	return &Service{}
+	return &Service{
+		Logger: utils.NewLogger("NotificationService"),
+	}
 }
 
 var _service *Service
