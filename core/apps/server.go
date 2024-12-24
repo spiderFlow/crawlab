@@ -46,7 +46,7 @@ func (app *Server) Stop() {
 	app.api.Stop()
 }
 
-func (app *Server) GetApi() ApiApp {
+func (app *Server) GetApi() *Api {
 	return app.api
 }
 

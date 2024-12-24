@@ -73,11 +73,7 @@ func GetGinMode() string {
 	if res := viper.GetString("gin.mode"); res != "" {
 		return res
 	}
-	if IsDev() {
-		return gin.DebugMode
-	} else {
-		return gin.ReleaseMode
-	}
+	return gin.ReleaseMode
 }
 
 func IsPro() bool {
