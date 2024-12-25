@@ -9,7 +9,6 @@ COPY ./backend ./backend/
 
 # Copy required modules from relative paths
 COPY ./core ./core/
-COPY ./db ./db/
 COPY ./grpc ./grpc/
 COPY ./trace ./trace/
 COPY ./vcs ./vcs/
