@@ -13,6 +13,7 @@ require (
 	github.com/ReneKroon/ttlcache v1.7.0
 	github.com/apex/log v1.9.0
 	github.com/cenkalti/backoff/v4 v4.3.0
+	github.com/common-nighthawk/go-figure v0.0.0-20210622060536-734e95fb86be
 	github.com/crawlab-team/crawlab/grpc v0.0.0
 	github.com/crawlab-team/crawlab/trace v0.0.0
 	github.com/crawlab-team/crawlab/vcs v0.0.0
@@ -56,7 +57,6 @@ require (
 	github.com/cloudflare/circl v1.3.7 // indirect
 	github.com/cloudwego/base64x v0.1.4 // indirect
 	github.com/cloudwego/iasm v0.2.0 // indirect
-	github.com/common-nighthawk/go-figure v0.0.0-20210622060536-734e95fb86be // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
