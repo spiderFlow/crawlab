@@ -35,8 +35,8 @@ apt-get install -y \
 # Install pyenv
 curl https://pyenv.run | bash
 
-# Create a file in /etc/profile.d/
-cat > /etc/profile.d/pyenv.sh << 'EOF'
+# Create a file in $HOME/.pyenv-env.sh
+cat > $HOME/.pyenv-env.sh << 'EOF'
 export PYENV_ROOT="$HOME/.pyenv"
 [[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
 eval "$(pyenv init -)"
@@ -44,10 +44,10 @@ eval "$(pyenv virtualenv-init -)"
 EOF
 
 # Make the file executable
-chmod +x /etc/profile.d/pyenv.sh
+chmod +x $HOME/.pyenv-env.sh
 
 # Source it immediately for the rest of the installation
-source /etc/profile.d/pyenv.sh
+source $HOME/.pyenv-env.sh
 
 # Install python ${version} via pyenv
 pyenv install ${version}
