@@ -3,12 +3,12 @@ package controllers
 import (
 	"errors"
 	"fmt"
+	"github.com/crawlab-team/crawlab/core/mongo"
 	"regexp"
 
 	"github.com/crawlab-team/crawlab/core/models/models"
 	"github.com/crawlab-team/crawlab/core/models/service"
 	"github.com/crawlab-team/crawlab/core/utils"
-	"github.com/crawlab-team/crawlab/db/mongo"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"

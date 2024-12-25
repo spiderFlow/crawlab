@@ -6,11 +6,11 @@ import (
 	"github.com/crawlab-team/crawlab/core/interfaces"
 	"github.com/crawlab-team/crawlab/core/models/models"
 	"github.com/crawlab-team/crawlab/core/models/service"
+	mongo3 "github.com/crawlab-team/crawlab/core/mongo"
 	"github.com/crawlab-team/crawlab/core/spider/admin"
 	"github.com/crawlab-team/crawlab/core/task/log"
 	"github.com/crawlab-team/crawlab/core/task/scheduler"
 	"github.com/crawlab-team/crawlab/core/utils"
-	"github.com/crawlab-team/crawlab/db/mongo"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -80,7 +80,7 @@ func GetTaskList(c *gin.Context) {
 	sort := MustGetSortOption(c)
 
 	// get tasks
-	tasks, err := service.NewModelService[models.Task]().GetMany(query, &mongo.FindOptions{
+	tasks, err := service.NewModelService[models.Task]().GetMany(query, &mongo3.FindOptions{
 		Sort:  sort,
 		Skip:  pagination.Size * (pagination.Page - 1),
 		Limit: pagination.Size,
@@ -176,7 +176,7 @@ func DeleteTaskById(c *gin.Context) {
 	}
 
 	// delete in db
-	if err := mongo.RunTransaction(func(context mongo2.SessionContext) (err error) {
+	if err := mongo3.RunTransaction(func(context mongo2.SessionContext) (err error) {
 		// delete task
 		_, err = service.NewModelService[models.Task]().GetById(id)
 		if err != nil {
@@ -223,7 +223,7 @@ func DeleteList(c *gin.Context) {
 		return
 	}
 
-	if err := mongo.RunTransaction(func(context mongo2.SessionContext) error {
+	if err := mongo3.RunTransaction(func(context mongo2.SessionContext) error {
 		// delete tasks
 		if err := service.NewModelService[models.Task]().DeleteMany(bson.M{
 			"_id": bson.M{

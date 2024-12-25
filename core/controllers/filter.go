@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"github.com/crawlab-team/crawlab/core/entity"
-	"github.com/crawlab-team/crawlab/db/mongo"
+	"github.com/crawlab-team/crawlab/core/mongo"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	mongo2 "go.mongodb.org/mongo-driver/mongo"

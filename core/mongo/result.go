@@ -12,7 +12,6 @@ type FindResultInterface interface {
 	GetCol() (col *Col)
 	GetSingleResult() (res *mongo.SingleResult)
 	GetCursor() (cur *mongo.Cursor)
-	GetError() (err error)
 }
 
 type FindResult struct {
@@ -20,11 +19,6 @@ type FindResult struct {
 	res *mongo.SingleResult
 	cur *mongo.Cursor
 	err error
-}
-
-func (fr *FindResult) GetError() (err error) {
-	//TODO implement me
-	panic("implement me")
 }
 
 func (fr *FindResult) One(val interface{}) (err error) {

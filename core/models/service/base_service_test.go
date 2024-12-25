@@ -4,11 +4,11 @@ import (
 	"context"
 	"github.com/apex/log"
 	"github.com/crawlab-team/crawlab/core/models/models"
+	"github.com/crawlab-team/crawlab/core/mongo"
 	"testing"
 	"time"
 
 	"github.com/crawlab-team/crawlab/core/models/service"
-	"github.com/crawlab-team/crawlab/db/mongo"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

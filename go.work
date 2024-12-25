@@ -3,7 +3,6 @@ go 1.22.9
 use (
 	backend
 	core
-	db
 	grpc
 	trace
 	vcs

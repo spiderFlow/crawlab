@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	mongo3 "github.com/crawlab-team/crawlab/core/mongo"
 	"io"
 	"strings"
 	"sync"
@@ -17,7 +18,6 @@ import (
 	"github.com/crawlab-team/crawlab/core/notification"
 	"github.com/crawlab-team/crawlab/core/task/stats"
 	"github.com/crawlab-team/crawlab/core/utils"
-	"github.com/crawlab-team/crawlab/db/mongo"
 	"github.com/crawlab-team/crawlab/grpc"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -147,14 +147,14 @@ func (svr TaskServiceServer) FetchTask(ctx context.Context, request *grpc.TaskSe
 		return nil, err
 	}
 	var tid primitive.ObjectID
-	opts := &mongo.FindOptions{
+	opts := &mongo3.FindOptions{
 		Sort: bson.D{
 			{"priority", 1},
 			{"_id", 1},
 		},
 		Limit: 1,
 	}
-	if err := mongo.RunTransactionWithContext(ctx, func(sc mongo2.SessionContext) (err error) {
+	if err := mongo3.RunTransactionWithContext(ctx, func(sc mongo2.SessionContext) (err error) {
 		// fetch task for the given node
 		t, err := service.NewModelService[models.Task]().GetOne(bson.M{
 			"node_id": n.Id,

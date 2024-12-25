@@ -4,13 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/apex/log"
 	"github.com/cenkalti/backoff/v4"
-	"github.com/crawlab-team/crawlab/trace"
 	"github.com/spf13/viper"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"sync"
+	"time"
 )
 
 var AppName = "crawlab-db"
@@ -70,7 +69,7 @@ func GetMongoClient(opts ...ClientOption) (c *mongo.Client, err error) {
 	// client options key json string
 	_optsKeyBytes, err := json.Marshal(_opts)
 	if err != nil {
-		return nil, trace.TraceError(err)
+		return nil, err
 	}
 	_optsKey := string(_optsKeyBytes)
 
@@ -81,8 +80,9 @@ func GetMongoClient(opts ...ClientOption) (c *mongo.Client, err error) {
 	}
 
 	// create new mongo client
-	c, err = newMongoClient(_opts.Context, _opts)
+	c, err = newMongoClient(_opts)
 	if err != nil {
+		logger.Errorf("create mongo client error: %v", err)
 		return nil, err
 	}
 
@@ -94,7 +94,7 @@ func GetMongoClient(opts ...ClientOption) (c *mongo.Client, err error) {
 	return c, nil
 }
 
-func newMongoClient(ctx context.Context, _opts *ClientOptions) (c *mongo.Client, err error) {
+func newMongoClient(_opts *ClientOptions) (c *mongo.Client, err error) {
 	// mongo client options
 	mongoOpts := &options.ClientOptions{
 		AppName: &AppName,
@@ -105,9 +105,8 @@ func newMongoClient(ctx context.Context, _opts *ClientOptions) (c *mongo.Client,
 		mongoOpts.ApplyURI(_opts.Uri)
 	} else {
 		// uri is unset
-
-		// username and password are set
 		if _opts.Username != "" && _opts.Password != "" {
+			// username and password are set
 			mongoOpts.SetAuth(options.Credential{
 				AuthMechanism:           _opts.AuthMechanism,
 				AuthMechanismProperties: _opts.AuthMechanismProperties,
@@ -128,20 +127,27 @@ func newMongoClient(ctx context.Context, _opts *ClientOptions) (c *mongo.Client,
 	}
 
 	// attempt to connect with retry
-	bp := backoff.NewExponentialBackOff()
-	err = backoff.Retry(func() error {
-		errMsg := fmt.Sprintf("waiting for connect mongo database, after %f seconds try again.", bp.NextBackOff().Seconds())
-		c, err = mongo.NewClient(mongoOpts)
+	op := func() error {
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+
+		logger.Infof("connecting to mongo")
+		c, err = mongo.Connect(ctx, mongoOpts)
 		if err != nil {
-			log.WithError(err).Warnf(errMsg)
 			return err
 		}
-		if err := c.Connect(ctx); err != nil {
-			log.WithError(err).Warnf(errMsg)
-			return err
-		}
+		logger.Infof("connected to mongo")
 		return nil
-	}, bp)
+	}
+	b := backoff.NewExponentialBackOff()
+	n := func(err error, duration time.Duration) {
+		logger.Errorf("connect to mongo error: %v. retrying in %s", err, duration)
+	}
+	err = backoff.RetryNotify(op, b, n)
+	if err != nil {
+		logger.Errorf("connect to mongo error: %v", err)
+		return nil, err
+	}
 
 	return c, nil
 }

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/crawlab-team/crawlab/core/constants"
 	"github.com/crawlab-team/crawlab/core/models/models"
+	mongo2 "github.com/crawlab-team/crawlab/core/mongo"
 	"math"
 	"os"
 	"path/filepath"
@@ -14,12 +15,10 @@ import (
 	"github.com/crawlab-team/crawlab/core/models/service"
 	"github.com/crawlab-team/crawlab/core/spider/admin"
 	"github.com/crawlab-team/crawlab/core/utils"
-	"github.com/crawlab-team/crawlab/db/generic"
-	"github.com/crawlab-team/crawlab/db/mongo"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	mongo2 "go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func GetSpiderById(c *gin.Context) {
@@ -29,7 +28,7 @@ func GetSpiderById(c *gin.Context) {
 		return
 	}
 	s, err := service.NewModelService[models.Spider]().GetById(id)
-	if errors.Is(err, mongo2.ErrNoDocuments) {
+	if errors.Is(err, mongo.ErrNoDocuments) {
 		HandleErrorNotFound(c, err)
 		return
 	}
@@ -41,7 +40,7 @@ func GetSpiderById(c *gin.Context) {
 	// stat
 	s.Stat, err = service.NewModelService[models.SpiderStat]().GetById(s.Id)
 	if err != nil {
-		if !errors.Is(err, mongo2.ErrNoDocuments) {
+		if !errors.Is(err, mongo.ErrNoDocuments) {
 			HandleErrorInternalServerError(c, err)
 			return
 		}
@@ -51,7 +50,7 @@ func GetSpiderById(c *gin.Context) {
 	if s.ColName == "" && !s.ColId.IsZero() {
 		col, err := service.NewModelService[models.DataCollection]().GetById(s.ColId)
 		if err != nil {
-			if !errors.Is(err, mongo2.ErrNoDocuments) {
+			if !errors.Is(err, mongo.ErrNoDocuments) {
 				HandleErrorInternalServerError(c, err)
 				return
 			}
@@ -64,7 +63,7 @@ func GetSpiderById(c *gin.Context) {
 	if utils.IsPro() && !s.GitId.IsZero() {
 		s.Git, err = service.NewModelService[models.Git]().GetById(s.GitId)
 		if err != nil {
-			if !errors.Is(err, mongo2.ErrNoDocuments) {
+			if !errors.Is(err, mongo.ErrNoDocuments) {
 				HandleErrorInternalServerError(c, err)
 				return
 			}
@@ -100,13 +99,13 @@ func getSpiderListWithStats(c *gin.Context) {
 	sort := MustGetSortOption(c)
 
 	// get list
-	spiders, err := service.NewModelService[models.Spider]().GetMany(query, &mongo.FindOptions{
+	spiders, err := service.NewModelService[models.Spider]().GetMany(query, &mongo2.FindOptions{
 		Sort:  sort,
 		Skip:  pagination.Size * (pagination.Page - 1),
 		Limit: pagination.Size,
 	})
 	if err != nil {
-		if err.Error() != mongo2.ErrNoDocuments.Error() {
+		if err.Error() != mongo.ErrNoDocuments.Error() {
 			HandleErrorInternalServerError(c, err)
 		}
 		return
@@ -347,7 +346,7 @@ func DeleteSpiderById(c *gin.Context) {
 		return
 	}
 
-	if err := mongo.RunTransaction(func(context mongo2.SessionContext) (err error) {
+	if err := mongo2.RunTransaction(func(context mongo.SessionContext) (err error) {
 		// delete spider
 		err = service.NewModelService[models.Spider]().DeleteById(id)
 		if err != nil {
@@ -448,7 +447,7 @@ func DeleteSpiderList(c *gin.Context) {
 		return
 	}
 
-	if err := mongo.RunTransaction(func(context mongo2.SessionContext) (err error) {
+	if err := mongo2.RunTransaction(func(context mongo.SessionContext) (err error) {
 		// delete spiders
 		if err := service.NewModelService[models.Spider]().DeleteMany(bson.M{
 			"_id": bson.M{
@@ -683,11 +682,11 @@ func GetSpiderResults(c *gin.Context) {
 	pagination := MustGetPagination(c)
 	query := getResultListQuery(c)
 
-	col := mongo.GetMongoCol(s.ColName)
+	col := mongo2.GetMongoCol(s.ColName)
 
 	var results []bson.M
-	err = col.Find(utils.GetMongoQuery(query), utils.GetMongoOpts(&generic.ListOptions{
-		Sort:  []generic.ListSort{{"_id", generic.SortDirectionDesc}},
+	err = col.Find(mongo2.GetMongoQuery(query), mongo2.GetMongoOpts(&mongo2.ListOptions{
+		Sort:  []mongo2.ListSort{{"_id", mongo2.SortDirectionDesc}},
 		Skip:  pagination.Size * (pagination.Page - 1),
 		Limit: pagination.Size,
 	})).All(&results)
@@ -696,7 +695,7 @@ func GetSpiderResults(c *gin.Context) {
 		return
 	}
 
-	total, err := mongo.GetMongoCol(s.ColName).Count(utils.GetMongoQuery(query))
+	total, err := mongo2.GetMongoCol(s.ColName).Count(mongo2.GetMongoQuery(query))
 	if err != nil {
 		HandleErrorInternalServerError(c, err)
 		return

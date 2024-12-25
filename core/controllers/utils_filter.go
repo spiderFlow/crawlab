@@ -5,8 +5,8 @@ import (
 	errors2 "errors"
 	"github.com/crawlab-team/crawlab/core/constants"
 	"github.com/crawlab-team/crawlab/core/entity"
+	"github.com/crawlab-team/crawlab/core/mongo"
 	"github.com/crawlab-team/crawlab/core/utils"
-	"github.com/crawlab-team/crawlab/db/generic"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -125,13 +125,13 @@ func MustGetFilterAll(c *gin.Context) (res bool) {
 	return res
 }
 
-func getResultListQuery(c *gin.Context) (q generic.ListQuery) {
+func getResultListQuery(c *gin.Context) (q mongo.ListQuery) {
 	f, err := GetFilter(c)
 	if err != nil {
 		return q
 	}
 	for _, cond := range f.Conditions {
-		q = append(q, generic.ListQueryCondition{
+		q = append(q, mongo.ListQueryCondition{
 			Key:   cond.Key,
 			Op:    cond.Op,
 			Value: utils.NormalizeObjectId(cond.Value),

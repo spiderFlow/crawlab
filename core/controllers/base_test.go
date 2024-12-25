@@ -8,13 +8,13 @@ import (
 	"github.com/crawlab-team/crawlab/core/middlewares"
 	"github.com/crawlab-team/crawlab/core/models/models"
 	"github.com/crawlab-team/crawlab/core/models/service"
+	"github.com/crawlab-team/crawlab/core/mongo"
 	"github.com/crawlab-team/crawlab/core/user"
 	"github.com/spf13/viper"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"github.com/crawlab-team/crawlab/db/mongo"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )

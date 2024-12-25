@@ -31,6 +31,6 @@ func (l *CronLogger) getPlaceholder(n int) (s string) {
 
 func NewCronLogger() cron.Logger {
 	return &CronLogger{
-		Logger: utils.NewLogger("CronLogger"),
+		Logger: utils.NewLogger("Cron"),
 	}
 }

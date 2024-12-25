@@ -2,9 +2,9 @@ package common
 
 import (
 	"fmt"
+	"github.com/crawlab-team/crawlab/core/mongo"
 	"testing"
 
-	"github.com/crawlab-team/crawlab/db/mongo"
 	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/bson"
 	mongo2 "go.mongodb.org/mongo-driver/mongo"

@@ -1,4 +1,4 @@
-package generic
+package mongo
 
 type ListQueryCondition struct {
 	Key   string

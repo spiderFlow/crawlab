@@ -4,7 +4,6 @@ go 1.22.9
 
 replace (
 	github.com/crawlab-team/crawlab/core => ../core
-	github.com/crawlab-team/crawlab/db => ../db
 	github.com/crawlab-team/crawlab/grpc => ../grpc
 	github.com/crawlab-team/crawlab/trace => ../trace
 	github.com/crawlab-team/crawlab/vcs => ../vcs
@@ -29,7 +28,6 @@ require (
 	github.com/cloudflare/circl v1.3.7 // indirect
 	github.com/cloudwego/base64x v0.1.4 // indirect
 	github.com/cloudwego/iasm v0.2.0 // indirect
-	github.com/crawlab-team/crawlab/db v0.0.0 // indirect
 	github.com/crawlab-team/crawlab/grpc v0.0.0 // indirect
 	github.com/crawlab-team/crawlab/trace v0.0.0 // indirect
 	github.com/crawlab-team/crawlab/vcs v0.0.0 // indirect

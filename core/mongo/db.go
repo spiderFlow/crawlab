@@ -1,7 +1,6 @@
 package mongo
 
 import (
-	"github.com/apex/log"
 	"github.com/spf13/viper"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -16,7 +15,7 @@ func GetMongoDb(dbName string) *mongo.Database {
 
 	c, err := GetMongoClient()
 	if err != nil {
-		log.Errorf("error getting mongo client: %v", err)
+		logger.Errorf("error getting mongo client: %v", err)
 		return nil
 	}
 
