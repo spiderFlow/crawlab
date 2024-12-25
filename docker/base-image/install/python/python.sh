@@ -106,7 +106,7 @@ handle_requirements() {
 
 # Main logic
 command="${1:-install}"
-version="${2:-3.12}"
+version="${2:-3.12.8}"
 requirements="${3:-}"
 
 case $command in
