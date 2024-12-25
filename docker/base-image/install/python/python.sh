@@ -3,82 +3,132 @@
 # Fail on error
 set -e
 
-# Get version from first argument
-version="${1:-3.12}"
+# Function to print usage
+print_usage() {
+	echo "Usage: $0 <command> [version]"
+	echo "Commands:"
+	echo "  install <version>  - Install Python version (default: 3.12)"
+	echo "  uninstall <version> - Uninstall Python version"
+	echo "  switch <version>   - Switch to a different Python version"
+	echo "  list              - List installed Python versions"
+}
 
-# Check if version is provided
-if [ -z "$version" ]; then
-	echo "Please provide a version number"
-	exit 1
-fi
+# Function to install Python dependencies
+install_dependencies() {
+	apt-get install -y \
+		make \
+		build-essential \
+		libssl-dev \
+		zlib1g-dev \
+		libbz2-dev \
+		libreadline-dev \
+		libsqlite3-dev \
+		wget \
+		curl \
+		llvm \
+		libncursesw5-dev \
+		xz-utils \
+		tk-dev \
+		libxml2-dev \
+		libxmlsec1-dev \
+		libffi-dev \
+		liblzma-dev
+}
 
-# Install build dependencies
-apt-get install -y \
-	make \
-	build-essential \
-	libssl-dev \
-	zlib1g-dev \
-	libbz2-dev \
-	libreadline-dev \
-	libsqlite3-dev \
-	wget \
-	curl \
-	llvm \
-	libncursesw5-dev \
-	xz-utils \
-	tk-dev \
-	libxml2-dev \
-	libxmlsec1-dev \
-	libffi-dev \
-	liblzma-dev
-
-# Install pyenv
-curl https://pyenv.run | bash
-
-# Create a file in $HOME/.pyenv-env.sh
-cat > $HOME/.pyenv-env.sh << 'EOF'
+# Function to setup pyenv
+setup_pyenv() {
+	# Install pyenv if not already installed
+	if [ ! -d "$HOME/.pyenv" ]; then
+		curl https://pyenv.run | bash
+		
+		# Create a file in $HOME/.pyenv-env.sh
+		cat > $HOME/.pyenv-env.sh << 'EOF'
 export PYENV_ROOT="$HOME/.pyenv"
 [[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
 eval "$(pyenv init -)"
 eval "$(pyenv virtualenv-init -)"
 EOF
+		chmod +x $HOME/.pyenv-env.sh
+	fi
+	
+	source $HOME/.pyenv-env.sh
+}
 
-# Make the file executable
-chmod +x $HOME/.pyenv-env.sh
+# Function to verify Python installation
+verify_python() {
+	local version=$1
+	python_version=$(python -V)
+	if [[ ! $python_version =~ "Python ${version}" ]]; then
+		echo "ERROR: python version does not match. expect \"Python ${version}\", but actual is \"${python_version}\""
+		return 1
+	fi
+	
+	pip_version=$(pip -V)
+	if [[ ! $pip_version =~ "python ${version}" ]]; then
+		echo "ERROR: pip version does not match. expected: \"python ${version}\", but actual is \"${pip_version}\""
+		return 1
+	fi
+	return 0
+}
 
-# Source it immediately for the rest of the installation
-source $HOME/.pyenv-env.sh
+# Function to create symlinks
+create_symlinks() {
+	ln -sf $(pyenv which python) /usr/local/bin/python
+	ln -sf $(pyenv which python3) /usr/local/bin/python3
+	ln -sf $(pyenv which pip) /usr/local/bin/pip
+}
 
-# Install python ${version} via pyenv
-pyenv install ${version}
-pyenv global ${version}
+# Function to cleanup
+cleanup() {
+	pip cache purge
+	rm -rf ~/.cache/pip/*
+	apt-get remove -y make build-essential
+	apt-get autoremove -y
+}
 
-# Verify
-python_version=$(python -V)
-if [[ $python_version =~ "Python ${version}" ]]; then
-	:
-else
-	echo "ERROR: python version does not match. expect \"Python ${version}\", but actual is \"${python_version}\""
-	exit 1
-fi
-pip_version=$(pip -V)
-if [[ $pip_version =~ "python ${version}" ]]; then
-	:
-else
-	echo "ERROR: pip version does not match. expected: \"python ${version}\", but actual is \"${pip_version}\""
-	exit 1
-fi
+# Main logic
+command="${1:-install}"
+version="${2:-3.12}"
 
-# Install python dependencies
-pip install -r /app/install/python/requirements.txt
-
-# Create symbolic links
-ln -sf $(pyenv which python) /usr/local/bin/python
-ln -sf $(pyenv which python3) /usr/local/bin/python3
-ln -sf $(pyenv which pip) /usr/local/bin/pip
-
-# After pip install
-pip cache purge && \
-rm -rf ~/.cache/pip/* && \
-apt-get remove -y make build-essential && \
-apt-get autoremove -y
+case $command in
+	"install")
+		install_dependencies
+		setup_pyenv
+		pyenv install $version
+		pyenv global $version
+		verify_python $version
+		pip install -r /app/install/python/requirements.txt
+		create_symlinks
+		cleanup
+		;;
+	
+	"uninstall")
+		if [ -z "$version" ]; then
+			echo "Please specify a version to uninstall"
+			exit 1
+		fi
+		setup_pyenv
+		pyenv uninstall -f $version
+		;;
+	
+	"switch")
+		if [ -z "$version" ]; then
+			echo "Please specify a version to switch to"
+			exit 1
+		fi
+		setup_pyenv
+		pyenv global $version
+		verify_python $version
+		create_symlinks
+		;;
+	
+	"list")
+		setup_pyenv
+		pyenv versions
+		;;
+	
+	*)
+		print_usage
+		exit 1
+		;;
+esac
