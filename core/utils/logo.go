@@ -12,6 +12,7 @@ func PrintLogoWithWelcomeInfo() {
 
 func printLogo() {
 	figure.NewColorFigure("Crawlab", "slant", "blue", true).Print()
+	fmt.Println()
 }
 
 func printWelcomeInfo() {
@@ -23,4 +24,5 @@ func printWelcomeInfo() {
 	if IsMaster() {
 		fmt.Println("Visit https://localhost:8080 for the web ui, once the server is ready.")
 	}
+	fmt.Println()
 }
