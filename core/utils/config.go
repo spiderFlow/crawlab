@@ -34,7 +34,8 @@ const (
 )
 
 func IsDev() bool {
-	return viper.GetBool("dev")
+	res := viper.GetBool("dev")
+	return res
 }
 
 func IsAuthDisabled() bool {

@@ -1,7 +1,9 @@
 package utils
 
 import (
+	"errors"
 	"fmt"
+	"github.com/crawlab-team/crawlab/trace"
 	"io"
 	"os"
 	"sync"
@@ -14,22 +16,22 @@ import (
 
 var logger = NewLogger("Utils")
 
-// ServiceLogger represents a logger with a specific service prefix.
-type ServiceLogger struct {
+// Logger represents a logger with a specific service prefix.
+type Logger struct {
 	prefix string
 }
 
-type ServiceLoggerOption func(logger *ServiceLogger)
+type ServiceLoggerOption func(logger *Logger)
 
 func WithHandler(handlerType string, output *os.File) ServiceLoggerOption {
-	return func(logger *ServiceLogger) {
+	return func(logger *Logger) {
 		SetHandler(handlerType, output)
 	}
 }
 
 // NewLogger creates a new logger with the given service name as a prefix.
-func NewLogger(prefix string, opts ...ServiceLoggerOption) *ServiceLogger {
-	logger := &ServiceLogger{
+func NewLogger(prefix string, opts ...ServiceLoggerOption) *Logger {
+	logger := &Logger{
 		prefix: prefix,
 	}
 
@@ -45,56 +47,68 @@ func NewLogger(prefix string, opts ...ServiceLoggerOption) *ServiceLogger {
 }
 
 // Debug logs a debug message.
-func (l *ServiceLogger) Debug(message string) {
+func (l *Logger) Debug(message string) {
 	log.Debug(l.getFormat(message))
 }
 
 // Info logs an informational message.
-func (l *ServiceLogger) Info(message string) {
+func (l *Logger) Info(message string) {
 	log.Info(l.getFormat(message))
 }
 
 // Warn logs a warning message.
-func (l *ServiceLogger) Warn(message string) {
+func (l *Logger) Warn(message string) {
 	log.Warn(l.getFormat(message))
 }
 
 // Error logs an error message.
-func (l *ServiceLogger) Error(message string) {
+func (l *Logger) Error(message string) {
 	log.Error(l.getFormat(message))
+	if IsDev() {
+		trace.PrintError(errors.New(message))
+	}
 }
 
 // Fatal logs a fatal message.
-func (l *ServiceLogger) Fatal(message string) {
+func (l *Logger) Fatal(message string) {
 	log.Fatal(l.getFormat(message))
+	if IsDev() {
+		trace.PrintError(errors.New(message))
+	}
 }
 
 // Debugf logs a debug message with formatted content.
-func (l *ServiceLogger) Debugf(format string, args ...interface{}) {
+func (l *Logger) Debugf(format string, args ...interface{}) {
 	log.Debugf(l.getFormat(format), args...)
 }
 
 // Infof logs an informational message with formatted content.
-func (l *ServiceLogger) Infof(format string, args ...interface{}) {
+func (l *Logger) Infof(format string, args ...interface{}) {
 	log.Infof(l.getFormat(format), args...)
 }
 
 // Warnf logs a warning message with formatted content.
-func (l *ServiceLogger) Warnf(format string, args ...interface{}) {
+func (l *Logger) Warnf(format string, args ...interface{}) {
 	log.Warnf(l.getFormat(format), args...)
 }
 
 // Errorf logs an error message with formatted content.
-func (l *ServiceLogger) Errorf(format string, args ...interface{}) {
+func (l *Logger) Errorf(format string, args ...interface{}) {
 	log.Errorf(l.getFormat(format), args...)
+	if IsDev() {
+		trace.PrintError(errors.New(fmt.Sprintf(format, args...)))
+	}
 }
 
 // Fatalf logs an error message with formatted content.
-func (l *ServiceLogger) Fatalf(format string, args ...interface{}) {
+func (l *Logger) Fatalf(format string, args ...interface{}) {
 	log.Fatalf(l.getFormat(format), args...)
+	if IsDev() {
+		trace.PrintError(errors.New(fmt.Sprintf(format, args...)))
+	}
 }
 
-func (l *ServiceLogger) getFormat(format string) string {
+func (l *Logger) getFormat(format string) string {
 	timestamp := time.Now().Local().Format("2006-01-02 15:04:05")
 	return fmt.Sprintf("[%s] [%s] %s", timestamp, l.prefix, format)
 }

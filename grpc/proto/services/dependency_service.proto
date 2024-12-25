@@ -16,9 +16,10 @@ message DependencyServiceConnectRequest {
 
 enum DependencyServiceCode {
   SYNC = 0;
-  INSTALL = 1;
-  UNINSTALL = 2;
-  SETUP = 3;
+  INSTALL_DEPS = 1;
+  UNINSTALL_DEPS = 2;
+  INSTALL_SETUP = 3;
+  UNINSTALL_SETUP = 4;
 }
 
 message DependencyServiceConnectResponse {

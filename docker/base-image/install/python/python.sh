@@ -40,7 +40,9 @@ setup_pyenv() {
 	# Install pyenv if not already installed
 	if [ ! -d "$HOME/.pyenv" ]; then
 		curl https://pyenv.run | bash
+	fi
 		
+	if [ ! -f "$HOME/.pyenv-env.sh" ]; then
 		# Create a file in $HOME/.pyenv-env.sh
 		cat > $HOME/.pyenv-env.sh << 'EOF'
 export PYENV_ROOT="$HOME/.pyenv"
@@ -136,9 +138,9 @@ case $command in
 	
 	"list")
 		setup_pyenv
-		pyenv versions
+		pyenv install --list | awk '/^  [23]/ {print $1}' | grep -v "[a-zA-Z]" | tac
 		;;
-	
+
 	*)
 		print_usage
 		exit 1
