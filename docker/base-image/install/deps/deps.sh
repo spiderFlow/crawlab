@@ -24,6 +24,7 @@ apt-get install -y \
     nginx \
     unzip \
     zip \
+    jq \
     gnupg2 \
     libc6
 

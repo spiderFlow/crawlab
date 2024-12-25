@@ -5,7 +5,7 @@ set -e
 
 # Function to print usage
 print_usage() {
-	echo "Usage: $0 <command> [version]"
+	echo "Usage: $0 <command> [version] [requirements]"
 	echo "Commands:"
 	echo "  install <version>  - Install Python version (default: 3.12)"
 	echo "  uninstall <version> - Uninstall Python version"
@@ -86,18 +86,41 @@ cleanup() {
 	apt-get autoremove -y
 }
 
+# Function to handle requirements
+handle_requirements() {
+	local requirements_content="$1"
+	if [ -n "$requirements_content" ]; then
+		REQUIREMENTS_FILE="/tmp/requirements_$(date +%s)_$RANDOM.txt"
+		echo "$requirements_content" > "$REQUIREMENTS_FILE"
+		pip install -r "$REQUIREMENTS_FILE"
+		rm "$REQUIREMENTS_FILE"
+	else
+		# Fallback to default requirements file if it exists
+		if [ -f "/app/install/python/requirements.txt" ]; then
+			pip install -r /app/install/python/requirements.txt
+		fi
+	fi
+}
+
 # Main logic
 command="${1:-install}"
 version="${2:-3.12}"
+requirements="${3:-}"
 
 case $command in
 	"install")
-		install_dependencies
 		setup_pyenv
-		pyenv install $version
-		pyenv global $version
+		# Check if version is already installed
+		if pyenv versions | grep -q $version; then
+			echo "Python $version is already installed. Switching to it..."
+			pyenv global $version
+		else
+			install_dependencies
+			pyenv install $version
+			pyenv global $version
+		fi
 		verify_python $version
-		pip install -r /app/install/python/requirements.txt
+		handle_requirements "$requirements"
 		create_symlinks
 		cleanup
 		;;
@@ -109,17 +132,6 @@ case $command in
 		fi
 		setup_pyenv
 		pyenv uninstall -f $version
-		;;
-	
-	"switch")
-		if [ -z "$version" ]; then
-			echo "Please specify a version to switch to"
-			exit 1
-		fi
-		setup_pyenv
-		pyenv global $version
-		verify_python $version
-		create_symlinks
 		;;
 	
 	"list")
