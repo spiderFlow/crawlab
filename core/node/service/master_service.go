@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"github.com/apex/log"
 	"github.com/cenkalti/backoff/v4"
 	"github.com/crawlab-team/crawlab/core/constants"
 	"github.com/crawlab-team/crawlab/core/grpc/server"
@@ -17,7 +18,6 @@ import (
 	"github.com/crawlab-team/crawlab/core/task/scheduler"
 	"github.com/crawlab-team/crawlab/core/utils"
 	"github.com/crawlab-team/crawlab/grpc"
-	"github.com/crawlab-team/crawlab/trace"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	mongo2 "go.mongodb.org/mongo-driver/mongo"
@@ -244,7 +244,7 @@ func (svc *MasterService) setWorkerNodeOffline(node *models.Node) {
 		return service.NewModelService[models.Node]().ReplaceById(node.Id, *node)
 	}, backoff.WithMaxRetries(backoff.NewConstantBackOff(1*time.Second), 3))
 	if err != nil {
-		trace.PrintError(err)
+		log.Errorf("failed to set worker node[%s] offline: %v", node.Key, err)
 	}
 	svc.sendNotification(node)
 }

@@ -145,11 +145,13 @@ func (svc *WorkerService) subscribe() {
 
 	for {
 		if svc.stopped {
+			svc.Infof("subscription stopped. exiting...")
 			return
 		}
 
 		// Use backoff for connection attempts
 		operation := func() error {
+			svc.Debugf("attempting to subscribe to master")
 			stream, err := client.GetGrpcClient().NodeClient.Subscribe(context.Background(), &grpc.NodeServiceSubscribeRequest{
 				NodeKey: svc.cfgSvc.GetNodeKey(),
 			})
@@ -157,6 +159,7 @@ func (svc *WorkerService) subscribe() {
 				svc.Errorf("failed to subscribe to master: %v", err)
 				return err
 			}
+			svc.Debugf("subscribed to master")
 
 			// Handle messages
 			for {
