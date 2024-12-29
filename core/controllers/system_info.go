@@ -2,14 +2,14 @@ package controllers
 
 import (
 	"github.com/crawlab-team/crawlab/core/entity"
+	"github.com/crawlab-team/crawlab/core/utils"
 	"github.com/gin-gonic/gin"
-	"github.com/spf13/viper"
 )
 
 func GetSystemInfo(c *gin.Context) {
 	info := &entity.SystemInfo{
-		Edition: viper.GetString("edition"),
-		Version: viper.GetString("version"),
+		Edition: utils.GetEdition(),
+		Version: utils.GetVersion(),
 	}
 	HandleSuccessWithData(c, info)
 }

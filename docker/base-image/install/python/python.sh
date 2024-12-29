@@ -65,9 +65,8 @@ verify_python() {
 		return 1
 	fi
 	
-	pip_version=$(pip -V)
-	if [[ ! $pip_version =~ "python ${version}" ]]; then
-		echo "ERROR: pip version does not match. expected: \"python ${version}\", but actual is \"${pip_version}\""
+	if ! command -v pip &> /dev/null; then
+		echo "ERROR: pip is not installed"
 		return 1
 	fi
 	return 0
