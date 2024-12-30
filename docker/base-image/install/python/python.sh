@@ -7,7 +7,7 @@ set -e
 print_usage() {
 	echo "Usage: $0 <command> [version] [requirements]"
 	echo "Commands:"
-	echo "  install <version>  - Install Python version (default: 3.12)"
+	echo "  install <version>  - Install Python version (default: latest)"
 	echo "  uninstall <version> - Uninstall Python version"
 	echo "  switch <version>   - Switch to a different Python version"
 	echo "  list              - List installed Python versions"
@@ -104,8 +104,8 @@ handle_requirements() {
 }
 
 # Main logic
-command="${1:-install}"
-version="${2:-3.12.8}"
+command="${1:-}"
+version="${2:-}"
 requirements="${3:-}"
 
 case $command in
@@ -113,6 +113,10 @@ case $command in
 		setup_pyenv
 		;;
 	"install")
+		if [ -z "$version" ]; then
+			echo "Please specify a version to install"
+			exit 1
+		fi
 		setup_pyenv
 		# Check if version is already installed
 		if pyenv versions | grep -q $version; then
