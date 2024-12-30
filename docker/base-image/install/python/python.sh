@@ -109,6 +109,9 @@ version="${2:-3.12.8}"
 requirements="${3:-}"
 
 case $command in
+	"setup")
+		setup_pyenv
+		;;
 	"install")
 		setup_pyenv
 		# Check if version is already installed
