@@ -7,8 +7,7 @@ type DependencyConfig struct {
 	Name                        string `json:"name" bson:"name"`
 	ExecCmd                     string `json:"exec_cmd" bson:"exec_cmd"`
 	PkgCmd                      string `json:"pkg_cmd" bson:"pkg_cmd"`
-	Proxy                       string `json:"proxy" bson:"proxy"`
-	DefaultVersion              string `json:"default_version" bson:"default_version"`
+	PkgSrcURL                   string `json:"pkg_src_url" bson:"pkg_src_url"`
 	Setup                       bool   `json:"setup" bson:"-"`
 	TotalDependencies           int    `json:"total_dependencies" bson:"-"`
 	SearchReady                 bool   `json:"search_ready" bson:"-"`
