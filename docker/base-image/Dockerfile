@@ -6,7 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Install dependencies
 COPY ./install /app/install
 RUN bash /app/install/deps/deps.sh && \
-    bash /app/install/python/python.sh
+    bash /app/install/python/python.sh install 3.12
 
 # Working directory
 WORKDIR /app/backend
