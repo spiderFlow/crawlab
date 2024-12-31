@@ -51,7 +51,7 @@ func (svr NodeServiceServer) Register(_ context.Context, req *grpc.NodeServiceRe
 		if err != nil {
 			return HandleError(err)
 		}
-		svr.Infof("[NodeServiceServer] updated worker[%s] in db. id: %s", req.NodeKey, node.Id.Hex())
+		svr.Infof("updated worker[%s] in db. id: %s", req.NodeKey, node.Id.Hex())
 	} else if errors2.Is(err, mongo.ErrNoDocuments) {
 		// register new
 		node = &models.Node{
@@ -69,13 +69,13 @@ func (svr NodeServiceServer) Register(_ context.Context, req *grpc.NodeServiceRe
 		if err != nil {
 			return HandleError(err)
 		}
-		svr.Infof("[NodeServiceServer] added worker[%s] in db. id: %s", req.NodeKey, node.Id.Hex())
+		svr.Infof("added worker[%s] in db. id: %s", req.NodeKey, node.Id.Hex())
 	} else {
 		// error
 		return HandleError(err)
 	}
 
-	svr.Infof("[NodeServiceServer] master registered worker[%s]", req.NodeKey)
+	svr.Infof("master registered worker[%s]", req.NodeKey)
 
 	return HandleSuccessWithData(node)
 }
@@ -113,12 +113,12 @@ func (svr NodeServiceServer) SendHeartbeat(_ context.Context, req *grpc.NodeServ
 }
 
 func (svr NodeServiceServer) Subscribe(request *grpc.NodeServiceSubscribeRequest, stream grpc.NodeService_SubscribeServer) (err error) {
-	svr.Infof("[NodeServiceServer] master received subscribe request from node[%s]", request.NodeKey)
+	svr.Infof("master received subscribe request from node[%s]", request.NodeKey)
 
 	// find in db
 	node, err := service.NewModelService[models.Node]().GetOne(bson.M{"key": request.NodeKey}, nil)
 	if err != nil {
-		svr.Errorf("[NodeServiceServer] error getting node: %v", err)
+		svr.Errorf("error getting node: %v", err)
 		return err
 	}
 
@@ -136,7 +136,7 @@ func (svr NodeServiceServer) Subscribe(request *grpc.NodeServiceSubscribeRequest
 	nodeServiceMutex.Lock()
 	delete(svr.subs, node.Id)
 	nodeServiceMutex.Unlock()
-	svr.Infof("[NodeServiceServer] master unsubscribed from node[%s]", request.NodeKey)
+	svr.Infof("master unsubscribed from node[%s]", request.NodeKey)
 
 	return nil
 }

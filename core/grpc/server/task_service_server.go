@@ -62,7 +62,7 @@ func (svr TaskServiceServer) Subscribe(req *grpc.TaskServiceSubscribeRequest, st
 	taskServiceMutex.Lock()
 	delete(svr.subs, taskId)
 	taskServiceMutex.Unlock()
-	svr.Infof("[TaskServiceServer] task stream closed: %s", taskId.Hex())
+	svr.Infof("task stream closed: %s", taskId.Hex())
 
 	return nil
 }
