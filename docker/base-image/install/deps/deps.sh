@@ -13,6 +13,8 @@ apt-get update
 apt-get install -y \
     curl \
     wget \
+    zip \
+    unzip \
     git \
     iputils-ping \
     nginx \

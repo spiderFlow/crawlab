@@ -7,10 +7,10 @@ set -e
 print_usage() {
 	echo "Usage: $0 <command> [version] [requirements]"
 	echo "Commands:"
-	echo "  install <version>  - Install Python version (default: latest)"
+	echo "  setup               - Setup pyenv"
+	echo "  install <version>   - Install Python version (default: latest)"
 	echo "  uninstall <version> - Uninstall Python version"
-	echo "  switch <version>   - Switch to a different Python version"
-	echo "  list              - List installed Python versions"
+	echo "  list                - List installed Python versions"
 }
 
 # Function to install Python dependencies
