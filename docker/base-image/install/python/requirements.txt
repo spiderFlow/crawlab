@@ -1,9 +1,5 @@
-scrapy>=2.9.0
-pymongo
-bs4
 crawlab-sdk>=0.7.0rc1
-crawlab-demo<=0.1.0
+scrapy
 selenium
-pyopenssl
-playwright
-feapder
+bs4
+requests
