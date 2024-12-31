@@ -223,7 +223,7 @@ func (svc *Service) getRunnerCount() (count int) {
 }
 
 func (svc *Service) getRunner(taskId primitive.ObjectID) (r interfaces.TaskRunner, err error) {
-	svc.Debugf("[TaskHandlerService] getRunner: taskId[%v]", taskId)
+	svc.Debugf("get runner: taskId[%v]", taskId)
 	v, ok := svc.runners.Load(taskId)
 	if !ok {
 		err = fmt.Errorf("task[%s] not exists", taskId.Hex())
@@ -242,12 +242,12 @@ func (svc *Service) getRunner(taskId primitive.ObjectID) (r interfaces.TaskRunne
 }
 
 func (svc *Service) addRunner(taskId primitive.ObjectID, r interfaces.TaskRunner) {
-	svc.Debugf("[TaskHandlerService] addRunner: taskId[%s]", taskId.Hex())
+	svc.Debugf("add runner: taskId[%s]", taskId.Hex())
 	svc.runners.Store(taskId, r)
 }
 
 func (svc *Service) deleteRunner(taskId primitive.ObjectID) {
-	svc.Debugf("[TaskHandlerService] deleteRunner: taskId[%v]", taskId)
+	svc.Debugf("delete runner: taskId[%v]", taskId)
 	svc.runners.Delete(taskId)
 }
 

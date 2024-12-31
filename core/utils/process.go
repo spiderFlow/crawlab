@@ -2,18 +2,21 @@ package utils
 
 import (
 	"errors"
-	"github.com/shirou/gopsutil/process"
 	"os/exec"
 	"runtime"
-	"strings"
+
+	"github.com/shirou/gopsutil/process"
 )
 
 func BuildCmd(cmdStr string) (cmd *exec.Cmd, err error) {
 	if cmdStr == "" {
 		return nil, errors.New("command string is empty")
 	}
-	args := strings.Split(cmdStr, " ")
-	return exec.Command(args[0], args[1:]...), nil
+
+	if runtime.GOOS == "windows" {
+		return exec.Command("cmd", "/C", cmdStr), nil
+	}
+	return exec.Command("sh", "-c", cmdStr), nil
 }
 
 func ProcessIdExists(pid int) (exists bool) {

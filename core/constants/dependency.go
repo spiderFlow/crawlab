@@ -20,6 +20,8 @@ const (
 const (
 	DependencyFileTypeRequirementsTxt = "requirements.txt"
 	DependencyFileTypePackageJson     = "package.json"
+	DependencyFileTypeGoMod           = "go.mod"
+	DependencyFileTypePomXml          = "pom.xml"
 )
 const (
 	DependencyActionSync  = "sync"
