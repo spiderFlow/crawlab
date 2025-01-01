@@ -237,7 +237,7 @@ func (d *FileLogDriver) cleanup() {
 	if !utils.Exists(utils.GetTaskLogPath()) {
 		// create log directory if not exists
 		if err := os.MkdirAll(utils.GetTaskLogPath(), os.FileMode(0770)); err != nil {
-			d.Errorf("failed to create log directory: %s", utils.GetTaskLogPath())
+			d.Errorf("failed to create log directory: %s. error: %v", utils.GetTaskLogPath(), err)
 			return
 		}
 	}
@@ -249,13 +249,13 @@ func (d *FileLogDriver) cleanup() {
 		case <-ticker.C:
 			dirs, err := utils.ListDir(utils.GetTaskLogPath())
 			if err != nil {
-				d.Errorf("failed to list log directory: %s", utils.GetTaskLogPath())
+				d.Errorf("failed to list log directory: %s. error: %v", utils.GetTaskLogPath(), err)
 				continue
 			}
 			for _, dir := range dirs {
 				if time.Now().After(dir.ModTime().Add(d.getTtl())) {
 					if err := os.RemoveAll(d.getBasePath(dir.Name())); err != nil {
-						d.Errorf("failed to remove outdated log directory: %s", d.getBasePath(dir.Name()))
+						d.Errorf("failed to remove outdated log directory: %s. error: %s", d.getBasePath(dir.Name()), err)
 						continue
 					}
 					d.Infof("removed outdated log directory: %s", d.getBasePath(dir.Name()))
