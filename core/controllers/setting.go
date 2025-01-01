@@ -11,7 +11,7 @@ import (
 
 func GetSetting(c *gin.Context) {
 	// key
-	key := c.Param("id")
+	key := c.Param("key")
 
 	// setting
 	s, err := service.NewModelService[models.Setting]().GetOne(bson.M{"key": key}, nil)
@@ -29,7 +29,7 @@ func GetSetting(c *gin.Context) {
 
 func PostSetting(c *gin.Context) {
 	// key
-	key := c.Param("id")
+	key := c.Param("key")
 
 	// settings
 	var s models.Setting
@@ -59,7 +59,7 @@ func PostSetting(c *gin.Context) {
 
 func PutSetting(c *gin.Context) {
 	// key
-	key := c.Param("id")
+	key := c.Param("key")
 
 	// settings
 	var s models.Setting

@@ -339,17 +339,17 @@ func InitRoutes(app *gin.Engine) (err error) {
 	RegisterActions(groups.AuthGroup, "/settings", []Action{
 		{
 			Method:      http.MethodGet,
-			Path:        "/:id",
+			Path:        "/:key",
 			HandlerFunc: GetSetting,
 		},
 		{
 			Method:      http.MethodPost,
-			Path:        "/:id",
+			Path:        "/:key",
 			HandlerFunc: PostSetting,
 		},
 		{
 			Method:      http.MethodPut,
-			Path:        "/:id",
+			Path:        "/:key",
 			HandlerFunc: PutSetting,
 		},
 	})

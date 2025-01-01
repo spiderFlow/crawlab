@@ -1044,12 +1044,20 @@ func (r *Runner) installDependenciesIfAvailable() (err error) {
 		return nil
 	}
 
+	// Get dependency installer service
 	depSvc := dependency.GetDependencyInstallerRegistryService()
 	if depSvc == nil {
 		r.Warnf("dependency installer service not available")
 		return nil
 	}
 
+	// Check if auto install is enabled
+	if !depSvc.IsAutoInstallEnabled() {
+		r.Debug("auto dependency installation is disabled")
+		return nil
+	}
+
+	// Get install command
 	cmd, err := depSvc.GetInstallDependencyRequirementsCmdBySpiderId(r.s.Id)
 	if err != nil {
 		return err
