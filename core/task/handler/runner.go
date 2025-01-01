@@ -15,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/crawlab-team/crawlab/core/dependency"
 	"github.com/crawlab-team/crawlab/core/fs"
 	"github.com/hashicorp/go-multierror"
 
@@ -31,6 +32,57 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
+
+// newTaskRunner creates a new task runner instance with the specified task ID
+// It initializes all necessary components and establishes required connections
+func newTaskRunner(id primitive.ObjectID, svc *Service) (r *Runner, err error) {
+	// validate options
+	if id.IsZero() {
+		err = fmt.Errorf("invalid task id: %s", id.Hex())
+		return nil, err
+	}
+
+	// runner
+	r = &Runner{
+		subscribeTimeout: 30 * time.Second,
+		bufferSize:       1024 * 1024,
+		svc:              svc,
+		tid:              id,
+		ch:               make(chan constants.TaskSignal),
+		logBatchSize:     20,
+		Logger:           utils.NewLogger("TaskRunner"),
+	}
+
+	// multi error
+	var errs multierror.Error
+
+	// task
+	r.t, err = svc.GetTaskById(id)
+	if err != nil {
+		errs.Errors = append(errs.Errors, err)
+	} else {
+		// spider
+		r.s, err = svc.GetSpiderById(r.t.SpiderId)
+		if err != nil {
+			errs.Errors = append(errs.Errors, err)
+		} else {
+			// task fs service
+			r.fsSvc = fs.NewFsService(filepath.Join(utils.GetWorkspace(), r.s.Id.Hex()))
+		}
+	}
+
+	// Initialize context and done channel
+	r.ctx, r.cancel = context.WithCancel(context.Background())
+	r.done = make(chan struct{})
+
+	// initialize task runner
+	if err := r.Init(); err != nil {
+		r.Errorf("error initializing task runner: %v", err)
+		errs.Errors = append(errs.Errors, err)
+	}
+
+	return r, errs.ErrorOrNil()
+}
 
 // Runner represents a task execution handler that manages the lifecycle of a running task
 type Runner struct {
@@ -104,6 +156,11 @@ func (r *Runner) Run() (err error) {
 		if err := r.syncFiles(); err != nil {
 			return r.updateTask(constants.TaskStatusError, err)
 		}
+	}
+
+	// install dependencies
+	if err := r.installDependenciesIfAvailable(); err != nil {
+		r.Warnf("error installing dependencies: %v", err)
 	}
 
 	// configure cmd
@@ -289,7 +346,7 @@ func (r *Runner) configureNodePath() {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		r.Errorf("error getting user home directory: %v", err)
-		home = "/root" // fallback to root if can't get home dir
+		home = "/root" // fallback to root if it can't get home dir
 	}
 
 	// Configure nvm-based Node.js paths
@@ -630,7 +687,7 @@ func (r *Runner) updateTask(status string, e error) (err error) {
 		if e != nil {
 			r.t.Error = e.Error()
 		}
-		if r.svc.GetNodeConfigService().IsMaster() {
+		if utils.IsMaster() {
 			err = service.NewModelService[models.Task]().ReplaceById(r.t.Id, *r.t)
 			if err != nil {
 				return err
@@ -720,7 +777,7 @@ func (r *Runner) _updateTaskStat(status string) {
 		ts.RuntimeDuration = ts.EndTs.Sub(ts.StartTs).Milliseconds()
 		ts.TotalDuration = ts.EndTs.Sub(ts.CreatedAt).Milliseconds()
 	}
-	if r.svc.GetNodeConfigService().IsMaster() {
+	if utils.IsMaster() {
 		err = service.NewModelService[models.TaskStat]().ReplaceById(ts.Id, *ts)
 		if err != nil {
 			r.Errorf("error updating task stat: %v", err)
@@ -790,7 +847,7 @@ func (r *Runner) _updateSpiderStat(status string) {
 	}
 
 	// perform update
-	if r.svc.GetNodeConfigService().IsMaster() {
+	if utils.IsMaster() {
 		err = service.NewModelService[models.SpiderStat]().UpdateById(r.s.Id, update)
 		if err != nil {
 			r.Errorf("error updating spider stat: %v", err)
@@ -982,55 +1039,79 @@ func (r *Runner) handleIPCInsertDataMessage(ipcMsg entity.IPCMessage) {
 	}
 }
 
-// newTaskRunner creates a new task runner instance with the specified task ID
-// It initializes all necessary components and establishes required connections
-func newTaskRunner(id primitive.ObjectID, svc *Service) (r *Runner, err error) {
-	// validate options
-	if id.IsZero() {
-		err = fmt.Errorf("invalid task id: %s", id.Hex())
-		return nil, err
+func (r *Runner) installDependenciesIfAvailable() (err error) {
+	if !utils.IsPro() {
+		return nil
 	}
 
-	// runner
-	r = &Runner{
-		subscribeTimeout: 30 * time.Second,
-		bufferSize:       1024 * 1024,
-		svc:              svc,
-		tid:              id,
-		ch:               make(chan constants.TaskSignal),
-		logBatchSize:     20,
-		Logger:           utils.NewLogger("TaskRunner"),
+	depSvc := dependency.GetDependencyInstallerRegistryService()
+	if depSvc == nil {
+		r.Warnf("dependency installer service not available")
+		return nil
 	}
 
-	// multi error
-	var errs multierror.Error
-
-	// task
-	r.t, err = svc.GetTaskById(id)
+	cmd, err := depSvc.GetInstallDependencyRequirementsCmdBySpiderId(r.s.Id)
 	if err != nil {
-		errs.Errors = append(errs.Errors, err)
-	} else {
-		// spider
-		r.s, err = svc.GetSpiderById(r.t.SpiderId)
-		if err != nil {
-			errs.Errors = append(errs.Errors, err)
-		} else {
-			// task fs service
-			r.fsSvc = fs.NewFsService(filepath.Join(utils.GetWorkspace(), r.s.Id.Hex()))
+		return err
+	}
+	if cmd == nil {
+		return nil
+	}
+
+	// Set up pipes for stdout and stderr
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		r.Errorf("error creating stdout pipe for dependency installation: %v", err)
+		return err
+	}
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		r.Errorf("error creating stderr pipe for dependency installation: %v", err)
+		return err
+	}
+
+	// Start the command
+	r.Infof("installing dependencies for spider: %s", r.s.Id.Hex())
+	r.Infof("command for dependencies installation: %s", cmd.String())
+	if err := cmd.Start(); err != nil {
+		r.Errorf("error starting dependency installation command: %v", err)
+		return err
+	}
+
+	// Create wait group for log readers
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	// Read stdout
+	go func() {
+		defer wg.Done()
+		scanner := bufio.NewScanner(stdout)
+		for scanner.Scan() {
+			line := scanner.Text()
+			r.Info(line)
 		}
+	}()
+
+	// Read stderr
+	go func() {
+		defer wg.Done()
+		scanner := bufio.NewScanner(stderr)
+		for scanner.Scan() {
+			line := scanner.Text()
+			r.Error(line)
+		}
+	}()
+
+	// Wait for command to complete
+	if err := cmd.Wait(); err != nil {
+		r.Errorf("dependency installation failed: %v", err)
+		return err
 	}
 
-	// Initialize context and done channel
-	r.ctx, r.cancel = context.WithCancel(context.Background())
-	r.done = make(chan struct{})
+	// Wait for log readers to finish
+	wg.Wait()
 
-	// initialize task runner
-	if err := r.Init(); err != nil {
-		r.Errorf("error initializing task runner: %v", err)
-		errs.Errors = append(errs.Errors, err)
-	}
-
-	return r, errs.ErrorOrNil()
+	return nil
 }
 
 // logInternally sends internal runner logs to the same logging system as the task
@@ -1060,6 +1141,26 @@ func (r *Runner) logInternally(level string, message string) {
 	case "DEBUG":
 		r.Logger.Debug(message)
 	}
+}
+
+func (r *Runner) Error(message string) {
+	msg := fmt.Sprintf(message)
+	r.logInternally("ERROR", msg)
+}
+
+func (r *Runner) Warn(message string) {
+	msg := fmt.Sprintf(message)
+	r.logInternally("WARN", msg)
+}
+
+func (r *Runner) Info(message string) {
+	msg := fmt.Sprintf(message)
+	r.logInternally("INFO", msg)
+}
+
+func (r *Runner) Debug(message string) {
+	msg := fmt.Sprintf(message)
+	r.logInternally("DEBUG", msg)
 }
 
 func (r *Runner) Errorf(format string, args ...interface{}) {
