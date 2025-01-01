@@ -11,7 +11,7 @@ import (
 
 const (
 	DefaultWorkspace           = "crawlab_workspace"
-	DefaultTaskLogPath         = "/var/log/crawlab/tasks"
+	DefaultTaskLogPath         = "/app/logs/tasks"
 	DefaultServerHost          = "0.0.0.0"
 	DefaultServerPort          = 8000
 	DefaultGrpcHost            = "localhost"
