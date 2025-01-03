@@ -15,14 +15,20 @@ print_usage() {
 
 # Function to install Python dependencies
 install_dependencies() {
-	apt-get install -y \
+	apt install -y \
 		make \
 		build-essential \
 		libssl-dev \
 		zlib1g-dev \
 		libxml2-dev \
 		libxslt-dev \
-		libffi-dev
+		libffi-dev \
+		libbz2-dev \
+		libreadline-dev \
+		libsqlite3-dev \
+		zlib1g-dev \
+		xz-utils \
+		liblzma-dev
 }
 
 # Function to setup pyenv
