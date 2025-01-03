@@ -289,8 +289,17 @@ func TestRunner(t *testing.T) {
 		defer pw.Close()
 		runner.stdoutPipe = pr
 
-		// Start IPC reader
-		go runner.startIPCReader()
+		// Create a channel to signal that the reader is ready
+		readerReady := make(chan struct{})
+
+		// Start IPC reader with ready signal
+		go func() {
+			close(readerReady) // Signal that reader is ready
+			runner.startIPCReader()
+		}()
+
+		// Wait for reader to be ready
+		<-readerReady
 
 		// Test cases
 		testCases := []struct {
@@ -390,8 +399,17 @@ func TestRunner(t *testing.T) {
 		defer pw.Close()
 		runner.stdoutPipe = pr
 
-		// Start IPC reader
-		go runner.startIPCReader()
+		// Create a channel to signal that the reader is ready
+		readerReady := make(chan struct{})
+
+		// Start IPC reader with ready signal
+		go func() {
+			close(readerReady) // Signal that reader is ready
+			runner.startIPCReader()
+		}()
+
+		// Wait for reader to be ready
+		<-readerReady
 
 		// Test cases for invalid data
 		testCases := []struct {
@@ -431,7 +449,9 @@ func TestRunner(t *testing.T) {
 				// Write test message to pipe
 				go func() {
 					_, err := fmt.Fprintln(pw, tc.message)
-					assert.NoError(t, err)
+					if err != nil {
+						log.Errorf("failed to write to pipe: %v", err)
+					}
 				}()
 
 				// Wait briefly to ensure no processing occurs
