@@ -148,6 +148,11 @@ func (r *Runner) Run() (err error) {
 	// log task started
 	r.Infof("task[%s] started", r.tid.Hex())
 
+	// update task status (processing)
+	if err := r.updateTask(constants.TaskStatusRunning, nil); err != nil {
+		return err
+	}
+
 	// configure working directory
 	r.configureCwd()
 
@@ -183,11 +188,6 @@ func (r *Runner) Run() (err error) {
 	}
 	r.pid = r.cmd.Process.Pid
 	r.t.Pid = r.pid
-
-	// update task status (processing)
-	if err := r.updateTask(constants.TaskStatusRunning, nil); err != nil {
-		return err
-	}
 
 	// start health check
 	go r.startHealthCheck()

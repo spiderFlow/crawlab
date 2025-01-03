@@ -16,7 +16,7 @@ func BuildCmd(cmdStr string) (cmd *exec.Cmd, err error) {
 	if runtime.GOOS == "windows" {
 		return exec.Command("cmd", "/C", cmdStr), nil
 	}
-	return exec.Command("sh", "-c", cmdStr), nil
+	return exec.Command("bash", "-c", cmdStr), nil
 }
 
 func ProcessIdExists(pid int) (exists bool) {
