@@ -342,36 +342,15 @@ func (r *Runner) startHealthCheck() {
 
 // configureNodePath sets up the Node.js environment paths, handling both nvm and default installations
 func (r *Runner) configureNodePath() {
-	// Get user's home directory
-	home, err := os.UserHomeDir()
-	if err != nil {
-		r.Errorf("error getting user home directory: %v", err)
-		home = "/root" // fallback to root if it can't get home dir
-	}
-
 	// Configure nvm-based Node.js paths
 	envPath := os.Getenv("PATH")
-	nvmPath := filepath.Join(home, ".nvm/versions/node")
 
-	// Check if nvm is being used
-	if utils.Exists(nvmPath) {
-		// Get the current node version from NVM
-		currentVersion := os.Getenv("NVM_BIN")
-		if currentVersion != "" {
-			nodePath := filepath.Dir(currentVersion) + "/lib/node_modules"
-			if !strings.Contains(envPath, nodePath) {
-				_ = os.Setenv("PATH", nodePath+":"+envPath)
-			}
-			_ = os.Setenv("NODE_PATH", nodePath)
-		}
-	} else {
-		// Fallback to default global node_modules path
-		nodePath := "/usr/lib/node_modules"
-		if !strings.Contains(envPath, nodePath) {
-			_ = os.Setenv("PATH", nodePath+":"+envPath)
-		}
-		_ = os.Setenv("NODE_PATH", nodePath)
+	// Configure global node_modules path
+	nodePath := utils.GetNodeModulesPath()
+	if !strings.Contains(envPath, nodePath) {
+		_ = os.Setenv("PATH", nodePath+":"+envPath)
 	}
+	_ = os.Setenv("NODE_PATH", nodePath)
 }
 
 // configureEnv sets up the environment variables for the task process, including:

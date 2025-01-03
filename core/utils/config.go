@@ -31,6 +31,7 @@ const (
 	MetadataConfigDirName      = ".crawlab"
 	MetadataConfigName         = "config.json"
 	PyenvRoot                  = "/root/.pyenv"
+	DefaultNodeModulesPath     = "/usr/lib/node_modules"
 )
 
 func IsDev() bool {
@@ -246,4 +247,11 @@ func GetInstallRoot() string {
 		return res
 	}
 	return DefaultInstallRoot
+}
+
+func GetNodeModulesPath() string {
+	if res := viper.GetString("install.node.path"); res != "" {
+		return res
+	}
+	return DefaultNodeModulesPath
 }
