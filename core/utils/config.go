@@ -32,6 +32,7 @@ const (
 	MetadataConfigName         = "config.json"
 	PyenvRoot                  = "/root/.pyenv"
 	DefaultNodeModulesPath     = "/usr/lib/node_modules"
+	DefaultGoPath              = "/root/go"
 )
 
 func IsDev() bool {
@@ -254,4 +255,11 @@ func GetNodeModulesPath() string {
 		return res
 	}
 	return DefaultNodeModulesPath
+}
+
+func GetGoPath() string {
+	if res := viper.GetString("install.go.path"); res != "" {
+		return res
+	}
+	return DefaultGoPath
 }

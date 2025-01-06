@@ -353,6 +353,14 @@ func (r *Runner) configureNodePath() {
 	_ = os.Setenv("NODE_PATH", nodePath)
 }
 
+func (r *Runner) configureGoPath() {
+	// Configure global go path
+	goPath := utils.GetGoPath()
+	if goPath != "" {
+		_ = os.Setenv("GOPATH", goPath)
+	}
+}
+
 // configureEnv sets up the environment variables for the task process, including:
 // - Node.js paths
 // - Crawlab-specific variables
@@ -360,6 +368,9 @@ func (r *Runner) configureNodePath() {
 func (r *Runner) configureEnv() {
 	// Configure Node.js paths
 	r.configureNodePath()
+
+	// Configure Go path
+	r.configureGoPath()
 
 	// Default envs
 	r.cmd.Env = os.Environ()
