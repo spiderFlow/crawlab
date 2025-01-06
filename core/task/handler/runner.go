@@ -340,6 +340,19 @@ func (r *Runner) startHealthCheck() {
 	}
 }
 
+// configurePythonPath sets up the Python environment paths, handling both pyenv and default installations
+func (r *Runner) configurePythonPath() {
+	// Configure global node_modules path
+	pyenvRoot := utils.GetPyenvPath()
+	pyenvShimsPath := pyenvRoot + "/shims"
+	pyenvBinPath := pyenvRoot + "/bin"
+
+	// Configure global pyenv path
+	_ = os.Setenv("PYENV_ROOT", pyenvRoot)
+	_ = os.Setenv("PATH", pyenvShimsPath+":"+os.Getenv("PATH"))
+	_ = os.Setenv("PATH", pyenvBinPath+":"+os.Getenv("PATH"))
+}
+
 // configureNodePath sets up the Node.js environment paths, handling both nvm and default installations
 func (r *Runner) configureNodePath() {
 	// Configure nvm-based Node.js paths
@@ -366,7 +379,10 @@ func (r *Runner) configureGoPath() {
 // - Crawlab-specific variables
 // - Global environment variables from the system
 func (r *Runner) configureEnv() {
-	// Configure Node.js paths
+	// Configure Python path
+	r.configurePythonPath()
+
+	// Configure Node.js path
 	r.configureNodePath()
 
 	// Configure Go path
@@ -375,8 +391,6 @@ func (r *Runner) configureEnv() {
 	// Default envs
 	r.cmd.Env = os.Environ()
 	r.cmd.Env = append(r.cmd.Env, "CRAWLAB_TASK_ID="+r.tid.Hex())
-	r.cmd.Env = append(r.cmd.Env, "PYENV_ROOT="+utils.PyenvRoot)
-	r.cmd.Env = append(r.cmd.Env, "PATH="+os.Getenv("PATH")+":"+utils.PyenvRoot+"/shims:"+utils.PyenvRoot+"/bin")
 
 	// Global environment variables
 	envs, err := client.NewModelService[models.Environment]().GetMany(nil, nil)

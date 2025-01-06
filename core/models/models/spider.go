@@ -20,6 +20,12 @@ type Spider struct {
 	GitId             primitive.ObjectID   `json:"git_id" bson:"git_id"`                 // related Git.Id
 	GitRootPath       string               `json:"git_root_path" bson:"git_root_path"`
 	Git               *Git                 `json:"git,omitempty" bson:"-"`
+	Template          string               `json:"template,omitempty" bson:"template,omitempty"` // spider template
+	TemplateParams    *struct {
+		SpiderName string `json:"spider_name,omitempty" bson:"spider_name,omitempty"`
+		StartUrls  string `json:"start_urls,omitempty" bson:"start_urls,omitempty"`
+		Domains    string `json:"domains,omitempty" bson:"domains,omitempty"`
+	} `json:"template_params,omitempty" bson:"template_params,omitempty"`
 
 	// stats
 	Stat *SpiderStat `json:"stat,omitempty" bson:"-"`

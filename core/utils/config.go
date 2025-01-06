@@ -30,7 +30,7 @@ const (
 	DefaultInstallRoot         = "/app/install"
 	MetadataConfigDirName      = ".crawlab"
 	MetadataConfigName         = "config.json"
-	PyenvRoot                  = "/root/.pyenv"
+	DefaultPyenvPath           = "/root/.pyenv"
 	DefaultNodeModulesPath     = "/usr/lib/node_modules"
 	DefaultGoPath              = "/root/go"
 )
@@ -248,6 +248,13 @@ func GetInstallRoot() string {
 		return res
 	}
 	return DefaultInstallRoot
+}
+
+func GetPyenvPath() string {
+	if res := viper.GetString("install.pyenv.path"); res != "" {
+		return res
+	}
+	return DefaultPyenvPath
 }
 
 func GetNodeModulesPath() string {

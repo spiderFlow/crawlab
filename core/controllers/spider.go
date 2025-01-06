@@ -5,6 +5,7 @@ import (
 	"github.com/crawlab-team/crawlab/core/constants"
 	"github.com/crawlab-team/crawlab/core/models/models"
 	mongo2 "github.com/crawlab-team/crawlab/core/mongo"
+	"github.com/crawlab-team/crawlab/core/spider"
 	"math"
 	"os"
 	"path/filepath"
@@ -291,6 +292,17 @@ func PostSpider(c *gin.Context) {
 	if err != nil {
 		HandleErrorInternalServerError(c, err)
 		return
+	}
+
+	// create template if available
+	if utils.IsPro() && s.Template != "" {
+		if templateSvc := spider.GetSpiderTemplateRegistryService(); templateSvc != nil {
+			err = templateSvc.CreateTemplate(s.Id)
+			if err != nil {
+				HandleErrorInternalServerError(c, err)
+				return
+			}
+		}
 	}
 
 	HandleSuccessWithData(c, s)
