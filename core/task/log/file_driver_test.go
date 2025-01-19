@@ -2,36 +2,47 @@ package log
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/require"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/spf13/viper"
+	"github.com/stretchr/testify/require"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+var testLogDir string
+
 func setupFileDriverTest() {
-	cleanupFileDriverTest()
-	_ = os.MkdirAll("./tmp", os.ModePerm)
+	var err error
+	testLogDir, err = os.MkdirTemp("", "crawlab-test-logs")
+	if err != nil {
+		panic(err)
+	}
+	// Set the log path in viper configuration
+	viper.Set("log.path", testLogDir)
 }
 
 func cleanupFileDriverTest() {
-	_ = os.RemoveAll("./tmp")
+	_ = os.RemoveAll(testLogDir)
+	// Reset the log path in viper configuration
+	viper.Set("log.path", "")
 }
 
 func TestFileDriver_WriteLine(t *testing.T) {
 	setupFileDriverTest()
 	t.Cleanup(cleanupFileDriverTest)
 
-	d, err := newFileLogDriver(nil)
-	require.Nil(t, err)
+	d := newFileLogDriver()
 	defer d.Close()
 
 	id := primitive.NewObjectID()
 
-	err = d.WriteLine(id.Hex(), "it works")
+	err := d.WriteLine(id.Hex(), "it works")
 	require.Nil(t, err)
 
-	logFilePath := fmt.Sprintf("/var/log/crawlab/%s/log.txt", id.Hex())
+	logFilePath := filepath.Join(testLogDir, id.Hex(), "log.txt")
 	require.FileExists(t, logFilePath)
 	text, err := os.ReadFile(logFilePath)
 	require.Nil(t, err)
@@ -42,18 +53,17 @@ func TestFileDriver_WriteLines(t *testing.T) {
 	setupFileDriverTest()
 	t.Cleanup(cleanupFileDriverTest)
 
-	d, err := newFileLogDriver(nil)
-	require.Nil(t, err)
+	d := newFileLogDriver()
 	defer d.Close()
 
 	id := primitive.NewObjectID()
 
 	for i := 0; i < 100; i++ {
-		err = d.WriteLine(id.Hex(), "it works")
+		err := d.WriteLine(id.Hex(), "it works")
 		require.Nil(t, err)
 	}
 
-	logFilePath := fmt.Sprintf("/var/log/crawlab/%s/log.txt", id.Hex())
+	logFilePath := filepath.Join(testLogDir, id.Hex(), "log.txt")
 	require.FileExists(t, logFilePath)
 	text, err := os.ReadFile(logFilePath)
 	require.Nil(t, err)
@@ -66,8 +76,7 @@ func TestFileDriver_Find(t *testing.T) {
 	setupFileDriverTest()
 	t.Cleanup(cleanupFileDriverTest)
 
-	d, err := newFileLogDriver(nil)
-	require.Nil(t, err)
+	d := newFileLogDriver()
 	defer d.Close()
 
 	id := primitive.NewObjectID()
@@ -79,14 +88,14 @@ func TestFileDriver_Find(t *testing.T) {
 			line := fmt.Sprintf("line: %d", i*batch+j+1)
 			lines = append(lines, line)
 		}
-		err = d.WriteLines(id.Hex(), lines)
+		err := d.WriteLines(id.Hex(), lines)
 		require.Nil(t, err)
 		lines = []string{}
 	}
 
 	driver := d
 
-	lines, err = driver.Find(id.Hex(), "", 0, 10)
+	lines, err := driver.Find(id.Hex(), "", 0, 10)
 	require.Nil(t, err)
 	require.Equal(t, 10, len(lines))
 	require.Equal(t, "line: 1", lines[0])

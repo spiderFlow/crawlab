@@ -1,0 +1,58 @@
+version: '3.3'
+services:
+  backend:
+    build:
+      context: ./backend
+    image: crawlabteam/crawlab-backend:${CRAWLAB_TAG:-develop}
+    env_file:
+      - .env.local
+
+  frontend:
+    build:
+      context: ./frontend
+    image: crawlabteam/crawlab-frontend:${CRAWLAB_TAG:-develop}
+    env_file:
+      - .env.local
+
+  base-image:
+    build:
+      context: ./docker/base-image
+    image: crawlabteam/crawlab-base:${CRAWLAB_TAG:-develop}
+    env_file:
+      - .env.local
+
+  crawlab:
+    build:
+      context: .
+    image: crawlabteam/crawlab:${CRAWLAB_TAG:-develop}
+    depends_on:
+      - backend
+      - frontend
+      - base-image
+    env_file:
+      - .env.local
+
+  master:
+    image: crawlabteam/crawlab:${CRAWLAB_TAG:-develop}
+    environment:
+      CRAWLAB_NODE_MASTER: "Y"
+      CRAWLAB_MONGO_HOST: "mongo"
+    ports:
+      - "${CRAWLAB_PORT:-8082}:8080"
+    depends_on:
+      - mongo
+    env_file:
+      - .env.local
+
+  worker:
+    image: crawlabteam/crawlab:${CRAWLAB_TAG:-develop}
+    environment:
+      CRAWLAB_NODE_MASTER: "N"
+      CRAWLAB_MASTER_HOST: "master"
+    depends_on:
+      - master
+    env_file:
+      - .env.local
+
+  mongo:
+    image: mongo:5

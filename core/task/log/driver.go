@@ -1,18 +1,16 @@
 package log
 
-func GetLogDriver(logDriverType string) (driver Driver, err error) {
+import "fmt"
+
+func GetLogDriver(logDriverType string) Driver {
 	switch logDriverType {
 	case DriverTypeFile:
-		driver, err = GetFileLogDriver()
-		if err != nil {
-			return driver, err
-		}
+		return GetFileLogDriver()
 	case DriverTypeMongo:
-		return driver, ErrNotImplemented
+		panic("mongo driver not implemented")
 	case DriverTypeEs:
-		return driver, ErrNotImplemented
+		panic("es driver not implemented")
 	default:
-		return driver, ErrInvalidType
+		panic(fmt.Sprintf("invalid log driver type: %s", logDriverType))
 	}
-	return driver, nil
 }

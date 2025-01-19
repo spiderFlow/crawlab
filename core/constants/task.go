@@ -2,6 +2,7 @@ package constants
 
 const (
 	TaskStatusPending   = "pending"
+	TaskStatusAssigned  = "assigned"
 	TaskStatusRunning   = "running"
 	TaskStatusFinished  = "finished"
 	TaskStatusError     = "error"
@@ -15,11 +16,6 @@ const (
 	RunTypeSelectedNodes = "selected-nodes"
 )
 
-const (
-	TaskTypeSpider = "spider"
-	TaskTypeSystem = "system"
-)
-
 type TaskSignal int
 
 const (
@@ -30,10 +26,6 @@ const (
 )
 
 const (
-	TaskListQueuePrefixPublic = "tasks:public"
-	TaskListQueuePrefixNodes  = "tasks:nodes"
-)
-
-const (
-	TaskKey = "_tid"
+	TaskKey   = "_tid"
+	SpiderKey = "_sid"
 )

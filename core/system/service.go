@@ -1,17 +1,18 @@
 package system
 
 import (
+	"errors"
 	"github.com/crawlab-team/crawlab/core/interfaces"
 	"github.com/crawlab-team/crawlab/core/models/models"
 	"github.com/crawlab-team/crawlab/core/models/service"
-	mongo2 "github.com/crawlab-team/crawlab/db/mongo"
+	"github.com/crawlab-team/crawlab/core/utils"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
+	"sync"
 )
 
 type Service struct {
-	col      *mongo2.Col
-	modelSvc service.ModelService
+	interfaces.Logger
 }
 
 func (svc *Service) Init() (err error) {
@@ -24,50 +25,41 @@ func (svc *Service) Init() (err error) {
 }
 
 func (svc *Service) initData() (err error) {
-	total, err := svc.col.Count(bson.M{
-		"key": "site_title",
-	})
-	if err != nil {
-		return err
-	}
-	if total > 0 {
-		return nil
-	}
-
-	// data to initialize
-	settings := []models.Setting{
+	// initial settings data
+	initData := []models.Setting{
 		{
-			Id:  primitive.NewObjectID(),
-			Key: "site_title",
+			Key: "dependency",
 			Value: bson.M{
-				"customize_site_title": false,
-				"site_title":           "",
+				"auto_install": true,
 			},
 		},
 	}
-	var data []interface{}
-	for _, s := range settings {
-		data = append(data, s)
+
+	for _, setting := range initData {
+		_, err := service.NewModelService[models.Setting]().GetOne(bson.M{"key": setting.Key}, nil)
+		if err != nil {
+			if !errors.Is(err, mongo.ErrNoDocuments) {
+				svc.Errorf("error getting setting: %v", err)
+				continue
+			}
+
+			// not found, insert
+			_, err := service.NewModelService[models.Setting]().InsertOne(setting)
+			if err != nil {
+				svc.Errorf("error inserting setting: %v", err)
+				continue
+			}
+		}
 	}
-	_, err = svc.col.InsertMany(data)
-	if err != nil {
-		return err
-	}
+
 	return nil
 }
 
-func NewService() *Service {
+func newSystemService() *Service {
 	// service
 	svc := &Service{
-		col: mongo2.GetMongoCol(interfaces.ModelColNameSetting),
+		Logger: utils.NewLogger("SystemService"),
 	}
-
-	// model service
-	modelSvc, err := service.GetService()
-	if err != nil {
-		panic(err)
-	}
-	svc.modelSvc = modelSvc
 
 	if err := svc.Init(); err != nil {
 		panic(err)
@@ -77,10 +69,14 @@ func NewService() *Service {
 }
 
 var _service *Service
+var _serviceOnce sync.Once
 
-func GetService() *Service {
+func GetSystemService() *Service {
 	if _service == nil {
-		_service = NewService()
+		_service = newSystemService()
 	}
+	_serviceOnce.Do(func() {
+		_service = newSystemService()
+	})
 	return _service
 }

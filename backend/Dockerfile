@@ -1,15 +1,24 @@
-FROM golang:1.18 AS build
+FROM golang:1.22.9 AS build
+
+# Context path is the root of the repository
 
 WORKDIR /go/src/app
-COPY . .
+
+# Copy the current directory (backend) first
+COPY ./backend ./backend/
+
+# Copy required modules from relative paths
+COPY ./core ./core/
+COPY ./grpc ./grpc/
+COPY ./trace ./trace/
+COPY ./vcs ./vcs/
 
 ENV GO111MODULE on
-#ENV GOPROXY https://goproxy.io
 
-RUN go mod tidy \
-  && go install -v ./...
+# Build from the backend directory which contains the main.go
+RUN cd backend && go install -v ./...
 
 FROM alpine:3.14
 
-# copy files
+# Copy the built binary
 COPY --from=build /go/bin/crawlab /go/bin/crawlab

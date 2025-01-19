@@ -3,12 +3,7 @@ package constants
 const (
 	FilterQueryFieldConditions = "conditions"
 	FilterQueryFieldAll        = "all"
-)
-
-const (
-	FilterObjectTypeString  = "string"
-	FilterObjectTypeNumber  = "number"
-	FilterObjectTypeBoolean = "boolean"
+	FilterQueryFieldFilter     = "filter"
 )
 
 const (

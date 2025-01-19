@@ -1,19 +1,38 @@
 package notification
 
 import (
-	"net/http"
+	"github.com/crawlab-team/crawlab/core/entity"
 	"testing"
-	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
-func TestService_sendMobile(t *testing.T) {
-	T.Setup(t)
-	e := T.NewExpect(t)
-	time.Sleep(1 * time.Second)
-
-	data := map[string]interface{}{
-		"task_id": T.TestTask.GetId().Hex(),
+func TestParseTemplateVariables_WithValidTemplate_ReturnsVariables(t *testing.T) {
+	svc := Service{}
+	template := "Dear ${user:name}, your task ${task:id} is ${task:status}."
+	expected := []entity.NotificationVariable{
+		{Category: "user", Name: "name"},
+		{Category: "task", Name: "id"},
+		{Category: "task", Name: "status"},
 	}
-	e.POST("/send/mobile").WithJSON(data).
-		Expect().Status(http.StatusOK)
+
+	variables := svc.parseTemplateVariables(template)
+
+	// contains all expected variables
+	assert.ElementsMatch(t, expected, variables)
+}
+
+func TestParseTemplateVariables_WithRepeatedVariables_ReturnsUniqueVariables(t *testing.T) {
+	svc := Service{}
+	template := "Dear ${user:name}, your task ${task:id} is ${task:status}. Again, ${user:name} and ${task:id}."
+	expected := []entity.NotificationVariable{
+		{Category: "user", Name: "name"},
+		{Category: "task", Name: "id"},
+		{Category: "task", Name: "status"},
+	}
+
+	variables := svc.parseTemplateVariables(template)
+
+	// contains all expected variables
+	assert.ElementsMatch(t, expected, variables)
 }

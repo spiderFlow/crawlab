@@ -3,10 +3,9 @@ package log
 import (
 	"bufio"
 	"bytes"
-	"errors"
-	"github.com/apex/log"
+	"fmt"
+	"github.com/crawlab-team/crawlab/core/interfaces"
 	"github.com/crawlab-team/crawlab/core/utils"
-	"github.com/crawlab-team/crawlab/trace"
 	"github.com/spf13/viper"
 	"io"
 	"os"
@@ -24,12 +23,11 @@ type FileLogDriver struct {
 
 	// internals
 	mu sync.Mutex
+	interfaces.Logger
 }
 
-func (d *FileLogDriver) Init() (err error) {
+func (d *FileLogDriver) Init() {
 	go d.cleanup()
-
-	return nil
 }
 
 func (d *FileLogDriver) Close() (err error) {
@@ -45,18 +43,21 @@ func (d *FileLogDriver) WriteLine(id string, line string) (err error) {
 
 	f, err := os.OpenFile(filePath, os.O_WRONLY|os.O_APPEND|os.O_CREATE, os.FileMode(0760))
 	if err != nil {
-		return trace.TraceError(err)
+		d.Errorf("open file error: %v", err)
+		return err
 	}
 	defer func(f *os.File) {
 		err := f.Close()
 		if err != nil {
-			log.Errorf("close file error: %s", err.Error())
+			d.Errorf("close file error: %v", err)
+			return
 		}
 	}(f)
 
 	_, err = f.WriteString(line + "\n")
 	if err != nil {
-		return trace.TraceError(err)
+		d.Errorf("write file error: %v", err)
+		return err
 	}
 
 	return nil
@@ -65,6 +66,7 @@ func (d *FileLogDriver) WriteLine(id string, line string) (err error) {
 func (d *FileLogDriver) WriteLines(id string, lines []string) (err error) {
 	linesString := strings.Join(lines, "\n")
 	if err := d.WriteLine(id, linesString); err != nil {
+		d.Errorf("write line error: %v", err)
 		return err
 	}
 	return nil
@@ -72,7 +74,9 @@ func (d *FileLogDriver) WriteLines(id string, lines []string) (err error) {
 
 func (d *FileLogDriver) Find(id string, pattern string, skip int, limit int) (lines []string, err error) {
 	if pattern != "" {
-		return lines, errors.New("not implemented")
+		err = fmt.Errorf("find with pattern not implemented")
+		d.Errorf("%v", err)
+		return lines, err
 	}
 	if !utils.Exists(d.getLogFilePath(id, d.logFileName)) {
 		return nil, nil
@@ -80,7 +84,8 @@ func (d *FileLogDriver) Find(id string, pattern string, skip int, limit int) (li
 
 	f, err := os.Open(d.getLogFilePath(id, d.logFileName))
 	if err != nil {
-		return nil, trace.TraceError(err)
+		d.Errorf("failed to open file: %v", err)
+		return nil, err
 	}
 	defer f.Close()
 
@@ -112,7 +117,9 @@ func (d *FileLogDriver) Find(id string, pattern string, skip int, limit int) (li
 
 func (d *FileLogDriver) Count(id string, pattern string) (n int, err error) {
 	if pattern != "" {
-		return n, errors.New("not implemented")
+		err = fmt.Errorf("count with pattern not implemented")
+		d.Errorf("%v", err)
+		return n, err
 	}
 	if !utils.Exists(d.getLogFilePath(id, d.logFileName)) {
 		return 0, nil
@@ -120,7 +127,8 @@ func (d *FileLogDriver) Count(id string, pattern string) (n int, err error) {
 
 	f, err := os.Open(d.getLogFilePath(id, d.logFileName))
 	if err != nil {
-		return n, trace.TraceError(err)
+		d.Errorf("failed to open file: %v", err)
+		return n, err
 	}
 	return d.lineCounter(f)
 }
@@ -129,12 +137,8 @@ func (d *FileLogDriver) Flush() (err error) {
 	return nil
 }
 
-func (d *FileLogDriver) getLogPath() (logPath string) {
-	return viper.GetString("log.path")
-}
-
 func (d *FileLogDriver) getBasePath(id string) (filePath string) {
-	return filepath.Join(d.getLogPath(), id)
+	return filepath.Join(utils.GetTaskLogPath(), id)
 }
 
 func (d *FileLogDriver) getMetadataPath(id string) (filePath string) {
@@ -146,10 +150,9 @@ func (d *FileLogDriver) getLogFilePath(id, fileName string) (filePath string) {
 }
 
 func (d *FileLogDriver) getLogFiles(id string) (files []os.FileInfo) {
-	// 增加了对返回异常的捕获
 	files, err := utils.ListDir(d.getBasePath(id))
 	if err != nil {
-		trace.PrintError(err)
+		d.Errorf("failed to list log files: %v", err)
 		return nil
 	}
 	return
@@ -158,7 +161,8 @@ func (d *FileLogDriver) getLogFiles(id string) (files []os.FileInfo) {
 func (d *FileLogDriver) initDir(id string) {
 	if !utils.Exists(d.getBasePath(id)) {
 		if err := os.MkdirAll(d.getBasePath(id), os.FileMode(0770)); err != nil {
-			trace.PrintError(err)
+			d.Errorf("failed to create log directory: %s", d.getBasePath(id))
+			return
 		}
 	}
 }
@@ -223,62 +227,64 @@ func (d *FileLogDriver) getTtl() time.Duration {
 }
 
 func (d *FileLogDriver) cleanup() {
-	if d.getLogPath() == "" {
+	// check if log path is set
+	if utils.GetTaskLogPath() == "" {
+		d.Errorf("log path is not set")
 		return
 	}
-	if !utils.Exists(d.getLogPath()) {
-		if err := os.MkdirAll(d.getLogPath(), os.FileMode(0770)); err != nil {
-			log.Errorf("failed to create log directory: %s", d.getLogPath())
-			trace.PrintError(err)
+
+	// check if log path exists
+	if !utils.Exists(utils.GetTaskLogPath()) {
+		// create log directory if not exists
+		if err := os.MkdirAll(utils.GetTaskLogPath(), os.FileMode(0770)); err != nil {
+			d.Errorf("failed to create log directory: %s. error: %v", utils.GetTaskLogPath(), err)
 			return
 		}
 	}
+
+	ticker := time.NewTicker(10 * time.Minute)
+
 	for {
-		// 增加对目录不存在的判断
-		dirs, err := utils.ListDir(d.getLogPath())
-		if err != nil {
-			trace.PrintError(err)
-			time.Sleep(10 * time.Minute)
-			continue
-		}
-		for _, dir := range dirs {
-			if time.Now().After(dir.ModTime().Add(d.getTtl())) {
-				if err := os.RemoveAll(d.getBasePath(dir.Name())); err != nil {
-					trace.PrintError(err)
-					continue
+		select {
+		case <-ticker.C:
+			dirs, err := utils.ListDir(utils.GetTaskLogPath())
+			if err != nil {
+				d.Errorf("failed to list log directory: %s. error: %v", utils.GetTaskLogPath(), err)
+				continue
+			}
+			for _, dir := range dirs {
+				if time.Now().After(dir.ModTime().Add(d.getTtl())) {
+					if err := os.RemoveAll(d.getBasePath(dir.Name())); err != nil {
+						d.Errorf("failed to remove outdated log directory: %s. error: %s", d.getBasePath(dir.Name()), err)
+						continue
+					}
+					d.Infof("removed outdated log directory: %s", d.getBasePath(dir.Name()))
 				}
-				log.Infof("removed outdated log directory: %s", d.getBasePath(dir.Name()))
 			}
 		}
-
-		time.Sleep(10 * time.Minute)
 	}
 }
 
-var logDriver Driver
-
-func newFileLogDriver() (driver Driver, err error) {
+func newFileLogDriver() Driver {
 	// driver
-	driver = &FileLogDriver{
+	driver := &FileLogDriver{
 		logFileName: "log.txt",
 		mu:          sync.Mutex{},
+		Logger:      utils.NewLogger("FileLogDriver"),
 	}
 
 	// init
-	if err := driver.Init(); err != nil {
-		return nil, err
-	}
+	driver.Init()
 
-	return driver, nil
+	return driver
 }
 
-func GetFileLogDriver() (driver Driver, err error) {
-	if logDriver != nil {
-		return logDriver, nil
-	}
-	logDriver, err = newFileLogDriver()
-	if err != nil {
-		return nil, err
-	}
-	return logDriver, nil
+var logDriver Driver
+var logDriverOnce sync.Once
+
+func GetFileLogDriver() Driver {
+	logDriverOnce.Do(func() {
+		logDriver = newFileLogDriver()
+	})
+	return logDriver
 }

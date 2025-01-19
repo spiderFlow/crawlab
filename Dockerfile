@@ -1,30 +1,24 @@
-FROM crawlabteam/crawlab-backend:latest AS backend-build
+ARG CRAWLAB_TAG=latest
 
-FROM crawlabteam/crawlab-frontend:latest AS frontend-build
+FROM crawlabteam/crawlab-backend:${CRAWLAB_TAG} AS backend-build
 
-FROM crawlabteam/crawlab-public-plugins:latest AS public-plugins-build
+FROM crawlabteam/crawlab-frontend:${CRAWLAB_TAG} AS frontend-build
 
-# images
-FROM crawlabteam/crawlab-base:latest
+FROM crawlabteam/crawlab-base:${CRAWLAB_TAG}
 
-# add files
-COPY ./backend/conf /app/backend/conf
-COPY ./nginx /app/nginx
-COPY ./bin /app/bin
-
-# copy backend files
-RUN mkdir -p /opt/bin
-COPY --from=backend-build /go/bin/crawlab /opt/bin
-RUN cp /opt/bin/crawlab /usr/local/bin/crawlab-server
-
-# copy frontend files
+# Copy files
+COPY --from=backend-build /go/bin/crawlab /usr/local/bin/crawlab-server
 COPY --from=frontend-build /app/dist /app/dist
+COPY ./backend/conf /app/backend/conf
+COPY ./docker/nginx/crawlab.conf /etc/nginx/conf.d
+COPY ./docker/bin/docker-init.sh /app/bin/docker-init.sh
 
-# copy public-plugins files
-COPY --from=public-plugins-build /app/plugins /app/plugins
-
-# copy nginx config files
-COPY ./nginx/crawlab.conf /etc/nginx/conf.d
-
-# start backend
+# Start backend
 CMD ["/bin/bash", "/app/bin/docker-init.sh"]
+
+# Frontend port
+EXPOSE 8080
+
+# Healthcheck for backend
+HEALTHCHECK --interval=1m --timeout=3s \
+  CMD curl -f http://localhost:8000/health || exit 1

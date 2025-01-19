@@ -5,13 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/ReneKroon/ttlcache"
-	"github.com/apex/log"
 	"github.com/crawlab-team/crawlab/core/constants"
 	"github.com/crawlab-team/crawlab/core/entity"
 	"github.com/crawlab-team/crawlab/core/interfaces"
+	"github.com/crawlab-team/crawlab/core/mongo"
 	"github.com/crawlab-team/crawlab/core/utils"
-	"github.com/crawlab-team/crawlab/db/mongo"
-	"github.com/crawlab-team/crawlab/trace"
 	"github.com/hashicorp/go-uuid"
 	mongo2 "go.mongodb.org/mongo-driver/mongo"
 	"os"
@@ -21,12 +19,14 @@ import (
 
 type JsonService struct {
 	cache *ttlcache.Cache
+	interfaces.Logger
 }
 
 func (svc *JsonService) GenerateId() (exportId string, err error) {
 	exportId, err = uuid.GenerateUUID()
 	if err != nil {
-		return "", trace.TraceError(err)
+		svc.Errorf("failed to generate export id: %v", err)
+		return "", err
 	}
 	return exportId, nil
 }
@@ -64,7 +64,8 @@ func (svc *JsonService) GetExport(exportId string) (export interfaces.Export, er
 	// get export from cache
 	res, ok := svc.cache.Get(exportId)
 	if !ok {
-		return nil, trace.TraceError(errors.New("export not found"))
+		svc.Errorf("export not found (id: %s)", exportId)
+		return nil, err
 	}
 	export = res.(interfaces.Export)
 	return export, nil
@@ -76,8 +77,7 @@ func (svc *JsonService) export(export *entity.Export) {
 		err := errors.New("empty target")
 		export.Status = constants.TaskStatusError
 		export.EndTs = time.Now()
-		log.Errorf("export error (id: %s): %v", export.Id, err)
-		trace.PrintError(err)
+		svc.Errorf("export error (id: %s): %v", export.Id, err)
 		svc.cache.Set(export.Id, export)
 		return
 	}
@@ -90,8 +90,7 @@ func (svc *JsonService) export(export *entity.Export) {
 	if err != nil {
 		export.Status = constants.TaskStatusError
 		export.EndTs = time.Now()
-		log.Errorf("export error (id: %s): %v", export.Id, err)
-		trace.PrintError(err)
+		svc.Errorf("export error (id: %s): %v", export.Id, err)
 		svc.cache.Set(export.Id, export)
 		return
 	}
@@ -111,17 +110,17 @@ func (svc *JsonService) export(export *entity.Export) {
 		// check error
 		err := cur.Err()
 		if err != nil {
-			if err != mongo2.ErrNoDocuments {
+			if !errors.Is(err, mongo2.ErrNoDocuments) {
 				// error
 				export.Status = constants.TaskStatusError
 				export.EndTs = time.Now()
-				log.Errorf("export error (id: %s): %v", export.Id, err)
-				trace.PrintError(err)
+				svc.Errorf("export error (id: %s): %v", export.Id, err)
+
 			} else {
 				// no more data
 				export.Status = constants.TaskStatusFinished
 				export.EndTs = time.Now()
-				log.Infof("export finished (id: %s)", export.Id)
+				svc.Infof("export finished (id: %s)", export.Id)
 			}
 			svc.cache.Set(export.Id, export)
 			return
@@ -132,7 +131,7 @@ func (svc *JsonService) export(export *entity.Export) {
 			// no more data
 			export.Status = constants.TaskStatusFinished
 			export.EndTs = time.Now()
-			log.Infof("export finished (id: %s)", export.Id)
+			svc.Infof("export finished (id: %s)", export.Id)
 			svc.cache.Set(export.Id, export)
 			break
 		}
@@ -144,8 +143,7 @@ func (svc *JsonService) export(export *entity.Export) {
 			// error
 			export.Status = constants.TaskStatusError
 			export.EndTs = time.Now()
-			log.Errorf("export error (id: %s): %v", export.Id, err)
-			trace.PrintError(err)
+			svc.Errorf("export error (id: %s): %v", export.Id, err)
 			svc.cache.Set(export.Id, export)
 			return
 		}
@@ -158,8 +156,7 @@ func (svc *JsonService) export(export *entity.Export) {
 		// error
 		export.Status = constants.TaskStatusError
 		export.EndTs = time.Now()
-		log.Errorf("export error (id: %s): %v", export.Id, err)
-		trace.PrintError(err)
+		svc.Errorf("export error (id: %s): %v", export.Id, err)
 		svc.cache.Set(export.Id, export)
 		return
 	}
@@ -170,8 +167,7 @@ func (svc *JsonService) export(export *entity.Export) {
 		// error
 		export.Status = constants.TaskStatusError
 		export.EndTs = time.Now()
-		log.Errorf("export error (id: %s): %v", export.Id, err)
-		trace.PrintError(err)
+		svc.Errorf("export error (id: %s): %v", export.Id, err)
 		svc.cache.Set(export.Id, export)
 		return
 	}
@@ -208,7 +204,8 @@ func NewJsonService() (svc2 interfaces.ExportService) {
 	cache := ttlcache.NewCache()
 	cache.SetTTL(time.Minute * 5)
 	svc := &JsonService{
-		cache: cache,
+		cache:  cache,
+		Logger: utils.NewLogger("JsonService"),
 	}
 	return svc
 }

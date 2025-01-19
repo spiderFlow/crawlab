@@ -1,181 +1,202 @@
 package scheduler
 
 import (
+	errors2 "errors"
+	"fmt"
 	"github.com/crawlab-team/crawlab/core/constants"
-	"github.com/crawlab-team/crawlab/core/container"
-	"github.com/crawlab-team/crawlab/core/errors"
+	"github.com/crawlab-team/crawlab/core/grpc/server"
 	"github.com/crawlab-team/crawlab/core/interfaces"
-	"github.com/crawlab-team/crawlab/core/models/delegate"
 	"github.com/crawlab-team/crawlab/core/models/models"
 	"github.com/crawlab-team/crawlab/core/models/service"
-	"github.com/crawlab-team/crawlab/core/task"
-	"github.com/crawlab-team/crawlab/db/mongo"
-	grpc "github.com/crawlab-team/crawlab/grpc"
-	"github.com/crawlab-team/crawlab/trace"
+	"github.com/crawlab-team/crawlab/core/task/handler"
+	"github.com/crawlab-team/crawlab/core/utils"
+	"github.com/crawlab-team/crawlab/grpc"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	mongo2 "go.mongodb.org/mongo-driver/mongo"
+	"sync"
 	"time"
 )
 
 type Service struct {
 	// dependencies
-	interfaces.TaskBaseService
-	nodeCfgSvc interfaces.NodeConfigService
-	modelSvc   service.ModelService
-	svr        interfaces.GrpcServer
-	handlerSvc interfaces.TaskHandlerService
+	svr        *server.GrpcServer
+	handlerSvc *handler.Service
 
 	// settings
 	interval time.Duration
+
+	// internals
+	interfaces.Logger
 }
 
 func (svc *Service) Start() {
 	go svc.initTaskStatus()
 	go svc.cleanupTasks()
-	svc.Wait()
-	svc.Stop()
+	utils.DefaultWait()
 }
 
-func (svc *Service) Enqueue(t interfaces.Task) (t2 interfaces.Task, err error) {
+func (svc *Service) Enqueue(t *models.Task, by primitive.ObjectID) (t2 *models.Task, err error) {
 	// set task status
-	t.SetStatus(constants.TaskStatusPending)
-
-	// user
-	var u *models.User
-	if !t.GetUserId().IsZero() {
-		u, _ = svc.modelSvc.GetUserById(t.GetUserId())
-	}
+	t.Status = constants.TaskStatusPending
+	t.SetCreated(by)
+	t.SetUpdated(by)
 
 	// add task
-	if err = delegate.NewModelDelegate(t, u).Add(); err != nil {
+	taskModelSvc := service.NewModelService[models.Task]()
+	t.Id, err = taskModelSvc.InsertOne(*t)
+	if err != nil {
 		return nil, err
 	}
 
-	// task queue item
-	tq := &models.TaskQueueItem{
-		Id:       t.GetId(),
-		Priority: t.GetPriority(),
-		NodeId:   t.GetNodeId(),
-	}
-
 	// task stat
-	ts := &models.TaskStat{
-		Id:       t.GetId(),
-		CreateTs: time.Now(),
-	}
-
-	// enqueue task
-	_, err = mongo.GetMongoCol(interfaces.ModelColNameTaskQueue).Insert(tq)
-	if err != nil {
-		return nil, trace.TraceError(err)
-	}
+	ts := models.TaskStat{}
+	ts.SetId(t.Id)
+	ts.SetCreated(by)
+	ts.SetUpdated(by)
 
 	// add task stat
-	_, err = mongo.GetMongoCol(interfaces.ModelColNameTaskStat).Insert(ts)
+	_, err = service.NewModelService[models.TaskStat]().InsertOne(ts)
 	if err != nil {
-		return nil, trace.TraceError(err)
+		svc.Errorf("failed to add task stat: %s", t.Id.Hex())
+		return nil, err
 	}
 
 	// success
 	return t, nil
 }
 
-func (svc *Service) Cancel(id primitive.ObjectID, args ...interface{}) (err error) {
+func (svc *Service) Cancel(id, by primitive.ObjectID, force bool) (err error) {
 	// task
-	t, err := svc.modelSvc.GetTaskById(id)
+	t, err := service.NewModelService[models.Task]().GetById(id)
 	if err != nil {
-		return trace.TraceError(err)
+		svc.Errorf("task not found: %s", id.Hex())
+		return err
 	}
 
 	// initial status
 	initialStatus := t.Status
 
-	// set task status as "cancelled"
-	_ = svc.SaveTask(t, constants.TaskStatusCancelled)
-
-	// set status of pending tasks as "cancelled" and remove from task item queue
+	// set status of pending tasks as "cancelled"
 	if initialStatus == constants.TaskStatusPending {
-		// remove from task item queue
-		if err := mongo.GetMongoCol(interfaces.ModelColNameTaskQueue).DeleteId(t.GetId()); err != nil {
-			return trace.TraceError(err)
-		}
-		return nil
+		t.Status = constants.TaskStatusCancelled
+		return svc.SaveTask(t, by)
 	}
 
 	// whether task is running on master node
 	isMasterTask, err := svc.isMasterNode(t)
 	if err != nil {
-		// when error, force status being set as "cancelled"
-		return svc.SaveTask(t, constants.TaskStatusCancelled)
-	}
-
-	// node
-	n, err := svc.modelSvc.GetNodeById(t.GetNodeId())
-	if err != nil {
-		return trace.TraceError(err)
+		err := fmt.Errorf("failed to check if task is running on master node: %s", t.Id.Hex())
+		t.Status = constants.TaskStatusAbnormal
+		t.Error = err.Error()
+		return svc.SaveTask(t, by)
 	}
 
 	if isMasterTask {
 		// cancel task on master
-		if err := svc.handlerSvc.Cancel(id); err != nil {
-			return trace.TraceError(err)
-		}
-		// cancel success
-		return nil
+		return svc.cancelOnMaster(t, by, force)
 	} else {
 		// send to cancel task on worker nodes
-		if err := svc.svr.SendStreamMessageWithData("node:"+n.GetKey(), grpc.StreamMessageCode_CANCEL_TASK, t); err != nil {
-			return trace.TraceError(err)
-		}
-		// cancel success
-		return nil
+		return svc.cancelOnWorker(t, by, force)
 	}
+}
+
+func (svc *Service) cancelOnMaster(t *models.Task, by primitive.ObjectID, force bool) (err error) {
+	if err := svc.handlerSvc.Cancel(t.Id, force); err != nil {
+		svc.Errorf("failed to cancel task on master: %s", t.Id.Hex())
+		return err
+	}
+
+	// set task status as "cancelled"
+	t.Status = constants.TaskStatusCancelled
+	return svc.SaveTask(t, by)
+}
+
+func (svc *Service) cancelOnWorker(t *models.Task, by primitive.ObjectID, force bool) (err error) {
+	// get subscribe stream
+	stream, ok := svc.svr.TaskSvr.GetSubscribeStream(t.Id)
+	if !ok {
+		err := fmt.Errorf("stream not found for task: %s", t.Id.Hex())
+		svc.Errorf(err.Error())
+		t.Status = constants.TaskStatusAbnormal
+		t.Error = err.Error()
+		return svc.SaveTask(t, by)
+	}
+
+	// send cancel request
+	err = stream.Send(&grpc.TaskServiceSubscribeResponse{
+		Code:   grpc.TaskServiceSubscribeCode_CANCEL,
+		TaskId: t.Id.Hex(),
+		Force:  force,
+	})
+	if err != nil {
+		svc.Errorf("failed to send cancel request to worker: %s", t.Id.Hex())
+		return err
+	}
+
+	return nil
 }
 
 func (svc *Service) SetInterval(interval time.Duration) {
 	svc.interval = interval
 }
 
+func (svc *Service) SaveTask(t *models.Task, by primitive.ObjectID) (err error) {
+	if t.Id.IsZero() {
+		t.SetCreated(by)
+		t.SetUpdated(by)
+		_, err = service.NewModelService[models.Task]().InsertOne(*t)
+		return err
+	} else {
+		t.SetUpdated(by)
+		return service.NewModelService[models.Task]().ReplaceById(t.Id, *t)
+	}
+}
+
 // initTaskStatus initialize task status of existing tasks
 func (svc *Service) initTaskStatus() {
 	// set status of running tasks as TaskStatusAbnormal
-	runningTasks, err := svc.modelSvc.GetTaskList(bson.M{
+	runningTasks, err := service.NewModelService[models.Task]().GetMany(bson.M{
 		"status": bson.M{
 			"$in": []string{
 				constants.TaskStatusPending,
+				constants.TaskStatusAssigned,
 				constants.TaskStatusRunning,
 			},
 		},
 	}, nil)
 	if err != nil {
-		if err == mongo2.ErrNoDocuments {
+		if errors2.Is(err, mongo2.ErrNoDocuments) {
 			return
 		}
-		trace.PrintError(err)
+		svc.Errorf("failed to get running tasks: %v", err)
+		return
 	}
 	for _, t := range runningTasks {
 		go func(t *models.Task) {
-			if err := svc.SaveTask(t, constants.TaskStatusAbnormal); err != nil {
-				trace.PrintError(err)
+			t.Status = constants.TaskStatusAbnormal
+			if err := svc.SaveTask(t, primitive.NilObjectID); err != nil {
+				svc.Errorf("failed to set task status as TaskStatusAbnormal: %s", t.Id.Hex())
+				return
 			}
 		}(&t)
-	}
-	if err := svc.modelSvc.GetBaseService(interfaces.ModelIdTaskQueue).DeleteList(nil); err != nil {
-		return
 	}
 }
 
 func (svc *Service) isMasterNode(t *models.Task) (ok bool, err error) {
-	if t.GetNodeId().IsZero() {
-		return false, trace.TraceError(errors.ErrorTaskNoNodeId)
+	if t.NodeId.IsZero() {
+		err = fmt.Errorf("task %s has no node id", t.Id.Hex())
+		svc.Errorf("%v", err)
+		return false, err
 	}
-	n, err := svc.modelSvc.GetNodeById(t.GetNodeId())
+	n, err := service.NewModelService[models.Node]().GetById(t.NodeId)
 	if err != nil {
-		if err == mongo2.ErrNoDocuments {
-			return false, trace.TraceError(errors.ErrorTaskNodeNotFound)
+		if errors2.Is(err, mongo2.ErrNoDocuments) {
+			svc.Errorf("node not found: %s", t.NodeId.Hex())
+			return false, err
 		}
-		return false, trace.TraceError(err)
+		svc.Errorf("failed to get node: %s", t.NodeId.Hex())
+		return false, err
 	}
 	return n.IsMaster, nil
 }
@@ -183,8 +204,8 @@ func (svc *Service) isMasterNode(t *models.Task) (ok bool, err error) {
 func (svc *Service) cleanupTasks() {
 	for {
 		// task stats over 30 days ago
-		taskStats, err := svc.modelSvc.GetTaskStatList(bson.M{
-			"create_ts": bson.M{
+		taskStats, err := service.NewModelService[models.TaskStat]().GetMany(bson.M{
+			"created_ts": bson.M{
 				"$lt": time.Now().Add(-30 * 24 * time.Hour),
 			},
 		}, nil)
@@ -201,17 +222,17 @@ func (svc *Service) cleanupTasks() {
 
 		if len(ids) > 0 {
 			// remove tasks
-			if err := svc.modelSvc.GetBaseService(interfaces.ModelIdTask).DeleteList(bson.M{
+			if err := service.NewModelService[models.Task]().DeleteMany(bson.M{
 				"_id": bson.M{"$in": ids},
 			}); err != nil {
-				trace.PrintError(err)
+				svc.Warnf("failed to remove tasks: %v", err)
 			}
 
 			// remove task stats
-			if err := svc.modelSvc.GetBaseService(interfaces.ModelIdTaskStat).DeleteList(bson.M{
+			if err := service.NewModelService[models.TaskStat]().DeleteMany(bson.M{
 				"_id": bson.M{"$in": ids},
 			}); err != nil {
-				trace.PrintError(err)
+				svc.Warnf("failed to remove task stats: %v", err)
 			}
 		}
 
@@ -219,46 +240,20 @@ func (svc *Service) cleanupTasks() {
 	}
 }
 
-func NewTaskSchedulerService() (svc2 interfaces.TaskSchedulerService, err error) {
-	// base service
-	baseSvc, err := task.NewBaseService()
-	if err != nil {
-		return nil, trace.TraceError(err)
+func newTaskSchedulerService() *Service {
+	return &Service{
+		interval:   5 * time.Second,
+		svr:        server.GetGrpcServer(),
+		handlerSvc: handler.GetTaskHandlerService(),
 	}
-
-	// service
-	svc := &Service{
-		TaskBaseService: baseSvc,
-		interval:        5 * time.Second,
-	}
-
-	// dependency injection
-	if err := container.GetContainer().Invoke(func(
-		nodeCfgSvc interfaces.NodeConfigService,
-		modelSvc service.ModelService,
-		svr interfaces.GrpcServer,
-		handlerSvc interfaces.TaskHandlerService,
-	) {
-		svc.nodeCfgSvc = nodeCfgSvc
-		svc.modelSvc = modelSvc
-		svc.svr = svr
-		svc.handlerSvc = handlerSvc
-	}); err != nil {
-		return nil, err
-	}
-
-	return svc, nil
 }
 
-var svc interfaces.TaskSchedulerService
+var _service *Service
+var _serviceOnce sync.Once
 
-func GetTaskSchedulerService() (svr interfaces.TaskSchedulerService, err error) {
-	if svc != nil {
-		return svc, nil
-	}
-	svc, err = NewTaskSchedulerService()
-	if err != nil {
-		return nil, err
-	}
-	return svc, nil
+func GetTaskSchedulerService() *Service {
+	_serviceOnce.Do(func() {
+		_service = newTaskSchedulerService()
+	})
+	return _service
 }

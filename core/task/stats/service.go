@@ -1,31 +1,41 @@
 package stats
 
 import (
-	"github.com/crawlab-team/crawlab/core/container"
+	"github.com/crawlab-team/crawlab/core/constants"
+	"github.com/crawlab-team/crawlab/core/database"
+	interfaces2 "github.com/crawlab-team/crawlab/core/database/interfaces"
 	"github.com/crawlab-team/crawlab/core/interfaces"
+	"github.com/crawlab-team/crawlab/core/models/models"
 	"github.com/crawlab-team/crawlab/core/models/service"
-	"github.com/crawlab-team/crawlab/core/result"
-	"github.com/crawlab-team/crawlab/core/task"
+	"github.com/crawlab-team/crawlab/core/mongo"
+	nodeconfig "github.com/crawlab-team/crawlab/core/node/config"
 	"github.com/crawlab-team/crawlab/core/task/log"
-	"github.com/crawlab-team/crawlab/db/mongo"
-	"github.com/crawlab-team/crawlab/trace"
+	"github.com/crawlab-team/crawlab/core/utils"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"sync"
 	"time"
 )
 
+type databaseServiceItem struct {
+	taskId    primitive.ObjectID
+	spiderId  primitive.ObjectID
+	dbId      primitive.ObjectID
+	dbSvc     interfaces2.DatabaseService
+	tableName string
+	time      time.Time
+}
+
 type Service struct {
 	// dependencies
-	interfaces.TaskBaseService
 	nodeCfgSvc interfaces.NodeConfigService
-	modelSvc   service.ModelService
 
 	// internals
-	mu             sync.Mutex
-	resultServices sync.Map
-	rsTtl          time.Duration
-	logDriver      log.Driver
+	mu                   sync.Mutex
+	databaseServiceItems map[string]*databaseServiceItem
+	databaseServiceTll   time.Duration
+	logDriver            log.Driver
+	interfaces.Logger
 }
 
 func (svc *Service) Init() (err error) {
@@ -33,15 +43,39 @@ func (svc *Service) Init() (err error) {
 	return nil
 }
 
-func (svc *Service) InsertData(id primitive.ObjectID, records ...interface{}) (err error) {
-	resultSvc, err := svc.getResultService(id)
+func (svc *Service) InsertData(taskId primitive.ObjectID, records ...map[string]interface{}) (err error) {
+	count := 0
+
+	item, err := svc.getDatabaseServiceItem(taskId)
 	if err != nil {
 		return err
 	}
-	if err := resultSvc.Insert(records...); err != nil {
-		return err
+	dbId := item.dbId
+	dbSvc := item.dbSvc
+	tableName := item.tableName
+	if utils.IsPro() && dbSvc != nil {
+		for _, record := range records {
+			if err := dbSvc.CreateRow(dbId, "", tableName, svc.normalizeRecord(item, record)); err != nil {
+				svc.Errorf("failed to insert data: %v", err)
+				continue
+			}
+			count++
+		}
+	} else {
+		var recordsToInsert []interface{}
+		for _, record := range records {
+			recordsToInsert = append(recordsToInsert, svc.normalizeRecord(item, record))
+		}
+		_, err = mongo.GetMongoCol(tableName).InsertMany(recordsToInsert)
+		if err != nil {
+			svc.Errorf("failed to insert data: %v", err)
+			return err
+		}
+		count = len(records)
 	}
-	go svc.updateTaskStats(id, len(records))
+
+	go svc.updateTaskStats(taskId, count)
+
 	return nil
 }
 
@@ -49,46 +83,68 @@ func (svc *Service) InsertLogs(id primitive.ObjectID, logs ...string) (err error
 	return svc.logDriver.WriteLines(id.Hex(), logs)
 }
 
-func (svc *Service) getResultService(id primitive.ObjectID) (resultSvc interfaces.ResultService, err error) {
+func (svc *Service) getDatabaseServiceItem(taskId primitive.ObjectID) (item *databaseServiceItem, err error) {
 	// atomic operation
 	svc.mu.Lock()
 	defer svc.mu.Unlock()
 
 	// attempt to get from cache
-	res, _ := svc.resultServices.Load(id.Hex())
-	if res != nil {
+	item, ok := svc.databaseServiceItems[taskId.Hex()]
+	if ok {
 		// hit in cache
-		resultSvc, ok := res.(interfaces.ResultService)
-		resultSvc.SetTime(time.Now())
-		if ok {
-			return resultSvc, nil
-		}
+		item.time = time.Now()
+		return item, nil
 	}
 
 	// task
-	t, err := svc.modelSvc.GetTaskById(id)
+	t, err := service.NewModelService[models.Task]().GetById(taskId)
 	if err != nil {
 		return nil, err
 	}
 
-	// result service
-	resultSvc, err = result.GetResultService(t.SpiderId)
+	// spider
+	s, err := service.NewModelService[models.Spider]().GetById(t.SpiderId)
 	if err != nil {
 		return nil, err
+	}
+
+	// database service
+	var dbSvc interfaces2.DatabaseService
+	if utils.IsPro() {
+		if dbRegSvc := database.GetDatabaseRegistryService(); dbRegSvc != nil {
+			dbSvc, err = dbRegSvc.GetDatabaseService(s.DataSourceId)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	// item
+	item = &databaseServiceItem{
+		taskId:    taskId,
+		spiderId:  s.Id,
+		dbId:      s.DataSourceId,
+		dbSvc:     dbSvc,
+		tableName: s.ColName,
+		time:      time.Now(),
 	}
 
 	// store in cache
-	svc.resultServices.Store(id.Hex(), resultSvc)
+	svc.databaseServiceItems[taskId.Hex()] = item
 
-	return resultSvc, nil
+	return item, nil
 }
 
 func (svc *Service) updateTaskStats(id primitive.ObjectID, resultCount int) {
-	_ = mongo.GetMongoCol(interfaces.ModelColNameTaskStat).UpdateId(id, bson.M{
+	err := service.NewModelService[models.TaskStat]().UpdateById(id, bson.M{
 		"$inc": bson.M{
 			"result_count": resultCount,
 		},
 	})
+	if err != nil {
+		svc.Errorf("failed to update task stats: %v", err)
+		return
+	}
 }
 
 func (svc *Service) cleanup() {
@@ -96,13 +152,11 @@ func (svc *Service) cleanup() {
 		// atomic operation
 		svc.mu.Lock()
 
-		svc.resultServices.Range(func(key, value interface{}) bool {
-			rs := value.(interfaces.ResultService)
-			if time.Now().After(rs.GetTime().Add(svc.rsTtl)) {
-				svc.resultServices.Delete(key)
+		for k, v := range svc.databaseServiceItems {
+			if time.Now().After(v.time.Add(svc.databaseServiceTll)) {
+				delete(svc.databaseServiceItems, k)
 			}
-			return true
-		})
+		}
 
 		svc.mu.Unlock()
 
@@ -110,46 +164,41 @@ func (svc *Service) cleanup() {
 	}
 }
 
-func NewTaskStatsService() (svc2 interfaces.TaskStatsService, err error) {
-	// base service
-	baseSvc, err := task.NewBaseService()
-	if err != nil {
-		return nil, trace.TraceError(err)
-	}
+func (svc *Service) normalizeRecord(item *databaseServiceItem, record map[string]interface{}) (res map[string]interface{}) {
+	res = record
 
-	// service
-	svc := &Service{
-		mu:              sync.Mutex{},
-		TaskBaseService: baseSvc,
-		resultServices:  sync.Map{},
-	}
+	// set task id
+	res[constants.TaskKey] = item.taskId
 
-	// dependency injection
-	if err := container.GetContainer().Invoke(func(nodeCfgSvc interfaces.NodeConfigService, modelSvc service.ModelService) {
-		svc.nodeCfgSvc = nodeCfgSvc
-		svc.modelSvc = modelSvc
-	}); err != nil {
-		return nil, trace.TraceError(err)
-	}
+	// set spider id
+	res[constants.SpiderKey] = item.spiderId
 
-	// log driver
-	svc.logDriver, err = log.GetLogDriver(log.DriverTypeFile)
-	if err != nil {
-		return nil, err
-	}
-
-	return svc, nil
+	return res
 }
 
-var _service interfaces.TaskStatsService
+func NewTaskStatsService() *Service {
+	// service
+	svc := &Service{
+		mu:                   sync.Mutex{},
+		databaseServiceItems: map[string]*databaseServiceItem{},
+		databaseServiceTll:   10 * time.Minute,
+		Logger:               utils.NewLogger("TaskStatsService"),
+	}
 
-func GetTaskStatsService() (svr interfaces.TaskStatsService, err error) {
-	if _service != nil {
-		return _service, nil
-	}
-	_service, err = NewTaskStatsService()
-	if err != nil {
-		return nil, err
-	}
-	return _service, nil
+	svc.nodeCfgSvc = nodeconfig.GetNodeConfigService()
+
+	// log driver
+	svc.logDriver = log.GetLogDriver(log.DriverTypeFile)
+
+	return svc
+}
+
+var _service *Service
+var _serviceOnce sync.Once
+
+func GetTaskStatsService() *Service {
+	_serviceOnce.Do(func() {
+		_service = NewTaskStatsService()
+	})
+	return _service
 }

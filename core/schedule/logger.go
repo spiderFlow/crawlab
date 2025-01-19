@@ -1,28 +1,27 @@
 package schedule
 
 import (
-	"fmt"
-	"github.com/apex/log"
-	"github.com/crawlab-team/crawlab/trace"
+	"github.com/crawlab-team/crawlab/core/interfaces"
+	"github.com/crawlab-team/crawlab/core/utils"
 	"github.com/robfig/cron/v3"
 	"strings"
 )
 
-type Logger struct {
+type CronLogger struct {
+	interfaces.Logger
 }
 
-func (l *Logger) Info(msg string, keysAndValues ...interface{}) {
+func (l *CronLogger) Info(msg string, keysAndValues ...interface{}) {
 	p := l.getPlaceholder(len(keysAndValues))
-	log.Infof(fmt.Sprintf("cron: %s %s", msg, p), keysAndValues...)
+	l.Infof("cron: %s %s", msg, p)
 }
 
-func (l *Logger) Error(err error, msg string, keysAndValues ...interface{}) {
+func (l *CronLogger) Error(err error, msg string, keysAndValues ...interface{}) {
 	p := l.getPlaceholder(len(keysAndValues))
-	log.Errorf(fmt.Sprintf("cron: %s %s", msg, p), keysAndValues...)
-	trace.PrintError(err)
+	l.Errorf("cron: %s %v %s", msg, err, p)
 }
 
-func (l *Logger) getPlaceholder(n int) (s string) {
+func (l *CronLogger) getPlaceholder(n int) (s string) {
 	var arr []string
 	for i := 0; i < n; i++ {
 		arr = append(arr, "%v")
@@ -30,6 +29,8 @@ func (l *Logger) getPlaceholder(n int) (s string) {
 	return strings.Join(arr, " ")
 }
 
-func NewLogger() cron.Logger {
-	return &Logger{}
+func NewCronLogger() cron.Logger {
+	return &CronLogger{
+		Logger: utils.NewLogger("Cron"),
+	}
 }

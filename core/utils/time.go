@@ -2,7 +2,6 @@ package utils
 
 import (
 	"errors"
-	"github.com/apex/log"
 	"github.com/crawlab-team/crawlab/trace"
 	"regexp"
 	"strconv"
@@ -27,13 +26,13 @@ func GetTimeUnitParts(timeUnit string) (num int, unit string, err error) {
 	groups := re.FindStringSubmatch(timeUnit)
 	if len(groups) < 3 {
 		err = errors.New("failed to parse duration text")
-		log.Errorf("failed to parse duration text: %v", err)
+		logger.Errorf("failed to parse duration text: %v", err)
 		trace.PrintError(err)
 		return 0, "", err
 	}
 	num, err = strconv.Atoi(groups[1])
 	if err != nil {
-		log.Errorf("failed to convert string to int: %v", err)
+		logger.Errorf("failed to convert string to int: %v", err)
 		trace.PrintError(err)
 		return 0, "", err
 	}
@@ -44,7 +43,7 @@ func GetTimeUnitParts(timeUnit string) (num int, unit string, err error) {
 func GetTimeDuration(num string, unit string) (d time.Duration, err error) {
 	numInt, err := strconv.Atoi(num)
 	if err != nil {
-		log.Errorf("failed to convert string to int: %v", err)
+		logger.Errorf("failed to convert string to int: %v", err)
 		trace.PrintError(err)
 		return d, err
 	}
@@ -65,7 +64,7 @@ func GetTimeDuration(num string, unit string) (d time.Duration, err error) {
 		d = time.Duration(numInt) * 365 * 24 * time.Hour
 	default:
 		err = errors.New("invalid time unit")
-		log.Errorf("invalid time unit: %v", unit)
+		logger.Errorf("invalid time unit: %v", unit)
 		trace.PrintError(err)
 		return d, err
 	}

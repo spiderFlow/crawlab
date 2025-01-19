@@ -1,420 +1,353 @@
 package service
 
 import (
-	"encoding/json"
-	"github.com/apex/log"
-	"github.com/crawlab-team/crawlab/core/constants"
-	"github.com/crawlab-team/crawlab/core/errors"
+	"context"
+	"fmt"
+	"github.com/crawlab-team/crawlab/core/mongo"
+	"reflect"
+	"sync"
+
+	"go.mongodb.org/mongo-driver/mongo/options"
+
 	"github.com/crawlab-team/crawlab/core/interfaces"
-	"github.com/crawlab-team/crawlab/core/models/delegate"
-	models2 "github.com/crawlab-team/crawlab/core/models/models"
-	"github.com/crawlab-team/crawlab/core/utils"
-	"github.com/crawlab-team/crawlab/db/mongo"
-	"github.com/crawlab-team/crawlab/trace"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"reflect"
-	"strings"
-	"sync"
-	"time"
 )
 
-type BaseService struct {
-	id  interfaces.ModelId
+var (
+	instanceMap    = make(map[string]any)
+	onceMap        = make(map[string]*sync.Once)
+	onceColNameMap = make(map[string]*sync.Once)
+	mu             sync.Mutex
+)
+
+type ModelService[T any] struct {
 	col *mongo.Col
 }
 
-func (svc *BaseService) GetModelId() (id interfaces.ModelId) {
-	return svc.id
-}
-
-func (svc *BaseService) SetModelId(id interfaces.ModelId) {
-	svc.id = id
-}
-
-func (svc *BaseService) GetCol() (col *mongo.Col) {
-	return svc.col
-}
-
-func (svc *BaseService) SetCol(col *mongo.Col) {
-	svc.col = col
-}
-
-func (svc *BaseService) GetById(id primitive.ObjectID) (res interfaces.Model, err error) {
-	// find result
-	fr := svc.findId(id)
-
-	// bind
-	return NewBasicBinder(svc.id, fr).Bind()
-}
-
-func (svc *BaseService) Get(query bson.M, opts *mongo.FindOptions) (res interfaces.Model, err error) {
-	// find result
-	fr := svc.find(query, opts)
-
-	// bind
-	return NewBasicBinder(svc.id, fr).Bind()
-}
-
-func (svc *BaseService) GetList(query bson.M, opts *mongo.FindOptions) (l interfaces.List, err error) {
-	// find result
-	tic := time.Now()
-	log.Debugf("baseService.GetMany -> svc.find:start")
-	log.Debugf("baseService.GetMany -> svc.id: %v", svc.id)
-	log.Debugf("baseService.GetMany -> svc.col.GetName(): %v", svc.col.GetName())
-	log.Debugf("baseService.GetMany -> query: %v", query)
-	log.Debugf("baseService.GetMany -> opts: %v", opts)
-	fr := svc.find(query, opts)
-	log.Debugf("baseService.GetMany -> svc.find:end. elapsed: %d ms", time.Now().Sub(tic).Milliseconds())
-
-	// bind
-	return NewListBinder(svc.id, fr).Bind()
-}
-
-func (svc *BaseService) DeleteById(id primitive.ObjectID, args ...interface{}) (err error) {
-	return svc.deleteId(id, args...)
-}
-
-func (svc *BaseService) Delete(query bson.M, args ...interface{}) (err error) {
-	return svc.delete(query)
-}
-
-func (svc *BaseService) DeleteList(query bson.M, args ...interface{}) (err error) {
-	return svc.deleteList(query)
-}
-
-func (svc *BaseService) ForceDeleteList(query bson.M, args ...interface{}) (err error) {
-	return svc.forceDeleteList(query)
-}
-
-func (svc *BaseService) UpdateById(id primitive.ObjectID, update bson.M, args ...interface{}) (err error) {
-	return svc.updateId(id, update)
-}
-
-func (svc *BaseService) Update(query bson.M, update bson.M, fields []string, args ...interface{}) (err error) {
-	return svc.update(query, update, fields)
-}
-
-func (svc *BaseService) UpdateDoc(query bson.M, doc interfaces.Model, fields []string, args ...interface{}) (err error) {
-	return svc.update(query, doc, fields)
-}
-
-func (svc *BaseService) Insert(u interfaces.User, docs ...interface{}) (err error) {
-	log.Debugf("baseService.Insert -> svc.col.GetName(): %v", svc.col.GetName())
-	log.Debugf("baseService.Insert -> docs: %v", docs)
-	return svc.insert(u, docs...)
-}
-
-func (svc *BaseService) Count(query bson.M) (total int, err error) {
-	return svc.count(query)
-}
-
-func (svc *BaseService) findId(id primitive.ObjectID) (fr *mongo.FindResult) {
-	if svc.col == nil {
-		return mongo.NewFindResultWithError(constants.ErrMissingCol)
-	}
-	return svc.col.FindId(id)
-}
-
-func (svc *BaseService) find(query bson.M, opts *mongo.FindOptions) (fr *mongo.FindResult) {
-	if svc.col == nil {
-		return mongo.NewFindResultWithError(constants.ErrMissingCol)
-	}
-	return svc.col.Find(query, opts)
-}
-
-func (svc *BaseService) deleteId(id primitive.ObjectID, args ...interface{}) (err error) {
-	if svc.col == nil {
-		return trace.TraceError(constants.ErrMissingCol)
-	}
-	fr := svc.findId(id)
-	doc, err := NewBasicBinder(svc.id, fr).Bind()
+func (svc *ModelService[T]) GetById(id primitive.ObjectID) (model *T, err error) {
+	var result T
+	err = svc.col.FindId(id).One(&result)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return delegate.NewModelDelegate(doc, svc._getUserFromArgs(args...)).Delete()
+	return &result, nil
 }
 
-func (svc *BaseService) delete(query bson.M, args ...interface{}) (err error) {
-	if svc.col == nil {
-		return trace.TraceError(constants.ErrMissingCol)
-	}
-	var doc models2.BaseModel
-	if err := svc.find(query, nil).One(&doc); err != nil {
-		return err
-	}
-	return svc.deleteId(doc.Id, svc._getUserFromArgs(args...))
-}
-
-func (svc *BaseService) deleteList(query bson.M, args ...interface{}) (err error) {
-	if svc.col == nil {
-		return trace.TraceError(constants.ErrMissingCol)
-	}
-	fr := svc.find(query, nil)
-	list, err := NewListBinder(svc.id, fr).Bind()
+func (svc *ModelService[T]) GetByIdContext(ctx context.Context, id primitive.ObjectID) (model *T, err error) {
+	var result T
+	err = svc.col.GetCollection().FindOne(ctx, bson.M{"_id": id}).Decode(&result)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	for _, doc := range list.GetModels() {
-		if err := delegate.NewModelDelegate(doc, svc._getUserFromArgs(args...)).Delete(); err != nil {
-			return err
+	return &result, nil
+}
+
+func (svc *ModelService[T]) GetOne(query bson.M, options *mongo.FindOptions) (model *T, err error) {
+	var result T
+	err = svc.col.Find(query, options).One(&result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+func (svc *ModelService[T]) GetOneContext(ctx context.Context, query bson.M, opts *mongo.FindOptions) (model *T, err error) {
+	var result T
+	_opts := &options.FindOneOptions{}
+	if opts != nil {
+		if opts.Skip != 0 {
+			skipInt64 := int64(opts.Skip)
+			_opts.Skip = &skipInt64
+		}
+		if opts.Sort != nil {
+			_opts.Sort = opts.Sort
 		}
 	}
-	return nil
-}
-
-func (svc *BaseService) forceDeleteList(query bson.M, args ...interface{}) (err error) {
-	return svc.col.Delete(query)
-}
-
-func (svc *BaseService) count(query bson.M) (total int, err error) {
-	if svc.col == nil {
-		return total, trace.TraceError(constants.ErrMissingCol)
+	err = svc.col.GetCollection().FindOne(ctx, query, _opts).Decode(&result)
+	if err != nil {
+		return nil, err
 	}
+	return &result, nil
+}
+
+func (svc *ModelService[T]) GetMany(query bson.M, options *mongo.FindOptions) (models []T, err error) {
+	var result []T
+	err = svc.col.Find(query, options).All(&result)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func (svc *ModelService[T]) GetManyContext(ctx context.Context, query bson.M, opts *mongo.FindOptions) (models []T, err error) {
+	var result []T
+	_opts := &options.FindOptions{}
+	if opts != nil {
+		if opts.Skip != 0 {
+			skipInt64 := int64(opts.Skip)
+			_opts.Skip = &skipInt64
+		}
+		if opts.Limit != 0 {
+			limitInt64 := int64(opts.Limit)
+			_opts.Limit = &limitInt64
+		}
+		if opts.Sort != nil {
+			_opts.Sort = opts.Sort
+		}
+	}
+	cur, err := svc.col.GetCollection().Find(ctx, query, _opts)
+	if err != nil {
+		return nil, err
+	}
+	defer cur.Close(ctx)
+	for cur.Next(ctx) {
+		var model T
+		if err := cur.Decode(&model); err != nil {
+			return nil, err
+		}
+		result = append(result, model)
+	}
+	return result, nil
+}
+
+func (svc *ModelService[T]) DeleteById(id primitive.ObjectID) (err error) {
+	return svc.col.DeleteId(id)
+}
+
+func (svc *ModelService[T]) DeleteByIdContext(ctx context.Context, id primitive.ObjectID) (err error) {
+	_, err = svc.col.GetCollection().DeleteOne(ctx, bson.M{"_id": id})
+	return err
+}
+
+func (svc *ModelService[T]) DeleteOne(query bson.M) (err error) {
+	_, err = svc.col.GetCollection().DeleteOne(svc.col.GetContext(), query)
+	return err
+}
+
+func (svc *ModelService[T]) DeleteOneContext(ctx context.Context, query bson.M) (err error) {
+	_, err = svc.col.GetCollection().DeleteOne(ctx, query)
+	return err
+}
+
+func (svc *ModelService[T]) DeleteMany(query bson.M) (err error) {
+	_, err = svc.col.GetCollection().DeleteMany(svc.col.GetContext(), query, nil)
+	return err
+}
+
+func (svc *ModelService[T]) DeleteManyContext(ctx context.Context, query bson.M) (err error) {
+	_, err = svc.col.GetCollection().DeleteMany(ctx, query, nil)
+	return err
+}
+
+func (svc *ModelService[T]) UpdateById(id primitive.ObjectID, update bson.M) (err error) {
+	return svc.col.UpdateId(id, update)
+}
+
+func (svc *ModelService[T]) UpdateByIdContext(ctx context.Context, id primitive.ObjectID, update bson.M) (err error) {
+	_, err = svc.col.GetCollection().UpdateOne(ctx, bson.M{"_id": id}, update)
+	return err
+}
+
+func (svc *ModelService[T]) UpdateOne(query bson.M, update bson.M) (err error) {
+	_, err = svc.col.GetCollection().UpdateOne(svc.col.GetContext(), query, update)
+	return err
+}
+
+func (svc *ModelService[T]) UpdateOneContext(ctx context.Context, query bson.M, update bson.M) (err error) {
+	_, err = svc.col.GetCollection().UpdateOne(ctx, query, update)
+	return err
+}
+
+func (svc *ModelService[T]) UpdateMany(query bson.M, update bson.M) (err error) {
+	_, err = svc.col.GetCollection().UpdateMany(svc.col.GetContext(), query, update)
+	return err
+}
+
+func (svc *ModelService[T]) UpdateManyContext(ctx context.Context, query bson.M, update bson.M) (err error) {
+	_, err = svc.col.GetCollection().UpdateMany(ctx, query, update)
+	return err
+}
+
+func (svc *ModelService[T]) ReplaceById(id primitive.ObjectID, model T) (err error) {
+	_, err = svc.col.GetCollection().ReplaceOne(svc.col.GetContext(), bson.M{"_id": id}, model)
+	return err
+}
+
+func (svc *ModelService[T]) ReplaceByIdContext(ctx context.Context, id primitive.ObjectID, model T) (err error) {
+	_, err = svc.col.GetCollection().ReplaceOne(ctx, bson.M{"_id": id}, model)
+	return err
+}
+
+func (svc *ModelService[T]) ReplaceOne(query bson.M, model T) (err error) {
+	_, err = svc.col.GetCollection().ReplaceOne(svc.col.GetContext(), query, model)
+	return err
+}
+
+func (svc *ModelService[T]) ReplaceOneContext(ctx context.Context, query bson.M, model T) (err error) {
+	_, err = svc.col.GetCollection().ReplaceOne(ctx, query, model)
+	return err
+}
+
+func (svc *ModelService[T]) InsertOne(model T) (id primitive.ObjectID, err error) {
+	m := any(&model).(interfaces.Model)
+	if m.GetId().IsZero() {
+		m.SetId(primitive.NewObjectID())
+	}
+	res, err := svc.col.GetCollection().InsertOne(svc.col.GetContext(), m)
+	if err != nil {
+		return primitive.NilObjectID, err
+	}
+	return res.InsertedID.(primitive.ObjectID), nil
+}
+
+func (svc *ModelService[T]) InsertOneContext(ctx context.Context, model T) (id primitive.ObjectID, err error) {
+	m := any(&model).(interfaces.Model)
+	if m.GetId().IsZero() {
+		m.SetId(primitive.NewObjectID())
+	}
+	res, err := svc.col.GetCollection().InsertOne(ctx, m)
+	if err != nil {
+		return primitive.NilObjectID, err
+	}
+	return res.InsertedID.(primitive.ObjectID), nil
+}
+
+func (svc *ModelService[T]) InsertMany(models []T) (ids []primitive.ObjectID, err error) {
+	var _models []any
+	for _, model := range models {
+		m := any(&model).(interfaces.Model)
+		if m.GetId().IsZero() {
+			m.SetId(primitive.NewObjectID())
+		}
+		_models = append(_models, m)
+	}
+	res, err := svc.col.GetCollection().InsertMany(svc.col.GetContext(), _models)
+	if err != nil {
+		return nil, err
+	}
+	for _, v := range res.InsertedIDs {
+		ids = append(ids, v.(primitive.ObjectID))
+	}
+	return ids, nil
+}
+
+func (svc *ModelService[T]) InsertManyContext(ctx context.Context, models []T) (ids []primitive.ObjectID, err error) {
+	var _models []any
+	for _, model := range models {
+		m := any(&model).(interfaces.Model)
+		if m.GetId().IsZero() {
+			m.SetId(primitive.NewObjectID())
+		}
+		_models = append(_models, m)
+	}
+	res, err := svc.col.GetCollection().InsertMany(ctx, _models)
+	if err != nil {
+		return nil, err
+	}
+	for _, v := range res.InsertedIDs {
+		ids = append(ids, v.(primitive.ObjectID))
+	}
+	return ids, nil
+}
+func (svc *ModelService[T]) UpsertOne(query bson.M, model T) (id primitive.ObjectID, err error) {
+	opts := options.ReplaceOptions{}
+	opts.SetUpsert(true)
+	result, err := svc.col.GetCollection().ReplaceOne(svc.col.GetContext(), query, model, &opts)
+	if err != nil {
+		return primitive.NilObjectID, err
+	}
+
+	if result.UpsertedID != nil {
+		// If document was inserted
+		return result.UpsertedID.(primitive.ObjectID), nil
+	}
+
+	// If document was updated, get its ID from the model
+	m := any(&model).(interfaces.Model)
+	return m.GetId(), nil
+}
+
+func (svc *ModelService[T]) UpsertOneContext(ctx context.Context, query bson.M, model T) (id primitive.ObjectID, err error) {
+	opts := options.ReplaceOptions{}
+	opts.SetUpsert(true)
+	result, err := svc.col.GetCollection().ReplaceOne(ctx, query, model, &opts)
+	if err != nil {
+		return primitive.NilObjectID, err
+	}
+
+	if result.UpsertedID != nil {
+		// If document was inserted
+		return result.UpsertedID.(primitive.ObjectID), nil
+	}
+
+	// If document was updated, get its ID from the query or model
+	if id, ok := query["_id"].(primitive.ObjectID); ok {
+		return id, nil
+	}
+	m := any(&model).(interfaces.Model)
+	return m.GetId(), nil
+}
+
+func (svc *ModelService[T]) Count(query bson.M) (total int, err error) {
 	return svc.col.Count(query)
 }
 
-func (svc *BaseService) update(query bson.M, update interface{}, fields []string, args ...interface{}) (err error) {
-	update, err = svc._getUpdateBsonM(update, fields)
-	if err != nil {
-		return err
-	}
-	return svc._update(query, update, svc._getUserFromArgs(args...))
+func (svc *ModelService[T]) GetCol() (col *mongo.Col) {
+	return svc.col
 }
 
-func (svc *BaseService) updateId(id primitive.ObjectID, update interface{}, args ...interface{}) (err error) {
-	update, err = svc._getUpdateBsonM(update, nil)
-	if err != nil {
-		return err
-	}
-	return svc._updateById(id, update, svc._getUserFromArgs(args...))
+func GetCollectionNameByInstance(v any) string {
+	t := reflect.TypeOf(v)
+	field := t.Field(0)
+	return field.Tag.Get("collection")
 }
 
-func (svc *BaseService) insert(u interfaces.User, docs ...interface{}) (err error) {
-	// validate col
-	if svc.col == nil {
-		return trace.TraceError(constants.ErrMissingCol)
-	}
-
-	// iterate docs
-	for i, doc := range docs {
-		switch doc.(type) {
-		case map[string]interface{}:
-			// doc type: map[string]interface{}, need to handle _id
-			d := doc.(map[string]interface{})
-			vId, ok := d["_id"]
-			if !ok {
-				// _id not exists
-				d["_id"] = primitive.NewObjectID()
-			} else {
-				// _id exists
-				switch vId.(type) {
-				case string:
-					// _id type: string
-					sId, ok := vId.(string)
-					if ok {
-						d["_id"], err = primitive.ObjectIDFromHex(sId)
-						if err != nil {
-							return trace.TraceError(err)
-						}
-					}
-				case primitive.ObjectID:
-					// _id type: primitive.ObjectID
-					// do nothing
-				default:
-					return trace.TraceError(errors.ErrorModelInvalidType)
-				}
-			}
-		}
-		docs[i] = doc
-	}
-
-	// perform insert
-	ids, err := svc.col.InsertMany(docs)
-	if err != nil {
-		return err
-	}
-
-	// upsert artifacts
-	query := bson.M{
-		"_id": bson.M{
-			"$in": ids,
-		},
-	}
-	fr := svc.col.Find(query, nil)
-	list, err := NewListBinder(svc.id, fr).Bind()
-	for _, doc := range list.GetModels() {
-		// upsert artifact when performing model delegate save
-		if err := delegate.NewModelDelegate(doc, u).Save(); err != nil {
-			return err
-		}
-	}
-
-	return nil
+func getCollectionName[T any]() string {
+	var instance T
+	t := reflect.TypeOf(instance)
+	field := t.Field(0)
+	return field.Tag.Get("collection")
 }
 
-func (svc *BaseService) _update(query bson.M, update interface{}, args ...interface{}) (err error) {
-	// ids of query
-	var ids []primitive.ObjectID
-	list, err := NewListBinder(svc.id, svc.find(query, nil)).Bind()
-	if err != nil {
-		return err
-	}
-	for _, doc := range list.GetModels() {
-		ids = append(ids, doc.GetId())
+// NewModelService return singleton instance of ModelService
+func NewModelService[T any]() *ModelService[T] {
+	typeName := fmt.Sprintf("%T", *new(T))
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	if _, exists := onceMap[typeName]; !exists {
+		onceMap[typeName] = &sync.Once{}
 	}
 
-	// update model objects
-	if err := svc.col.Update(query, update); err != nil {
-		return err
-	}
+	var instance *ModelService[T]
 
-	// update artifacts
-	u := svc._getUserFromArgs(args...)
-	return mongo.GetMongoCol(interfaces.ModelColNameArtifact).Update(query, svc._getUpdateArtifactUpdate(u))
+	onceMap[typeName].Do(func() {
+		collectionName := getCollectionName[T]()
+		collection := mongo.GetMongoCol(collectionName)
+		instance = &ModelService[T]{col: collection}
+		instanceMap[typeName] = instance
+	})
+
+	return instanceMap[typeName].(*ModelService[T])
 }
 
-func (svc *BaseService) _updateById(id primitive.ObjectID, update interface{}, args ...interface{}) (err error) {
-	// update model object
-	if err := svc.col.UpdateId(id, update); err != nil {
-		return err
+func NewModelServiceWithColName[T any](colName string) *ModelService[T] {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if _, exists := onceColNameMap[colName]; !exists {
+		onceColNameMap[colName] = new(sync.Once)
 	}
 
-	// update artifact
-	u := svc._getUserFromArgs(args...)
-	return mongo.GetMongoCol(interfaces.ModelColNameArtifact).UpdateId(id, svc._getUpdateArtifactUpdate(u))
-}
+	var instance *ModelService[T]
 
-func (svc *BaseService) _getUpdateBsonM(update interface{}, fields []string) (res bson.M, err error) {
-	switch update.(type) {
-	case interfaces.Model:
-		// convert to bson.M
-		var updateBsonM bson.M
-		bytes, err := json.Marshal(&update)
-		if err != nil {
-			return nil, err
-		}
-		if err := json.Unmarshal(bytes, &updateBsonM); err != nil {
-			return nil, err
-		}
-		return svc._getUpdateBsonM(updateBsonM, fields)
+	onceColNameMap[colName].Do(func() {
+		collection := mongo.GetMongoCol(colName)
+		instance = &ModelService[T]{col: collection}
+		instanceMap[colName] = instance
+	})
 
-	case bson.M:
-		// convert to bson.M
-		updateBsonM := update.(bson.M)
-
-		// filter fields if not nil
-		if fields != nil {
-			// fields map
-			fieldsMap := map[string]bool{}
-			for _, f := range fields {
-				fieldsMap[f] = true
-			}
-
-			// remove unselected fields
-			for k := range updateBsonM {
-				if _, ok := fieldsMap[k]; !ok {
-					delete(updateBsonM, k)
-				}
-			}
-		}
-
-		// normalize update bson.M
-		if !svc._containsDollar(updateBsonM) {
-			if _, ok := updateBsonM["$set"]; !ok {
-				updateBsonM = bson.M{
-					"$set": updateBsonM,
-				}
-			}
-		}
-
-		return updateBsonM, nil
-	}
-
-	v := reflect.ValueOf(update)
-	switch v.Kind() {
-	case reflect.Struct:
-		if v.CanAddr() {
-			update = v.Addr().Interface()
-			return svc._getUpdateBsonM(update, fields)
-		}
-		return nil, errors.ErrorModelInvalidType
-	default:
-		return nil, errors.ErrorModelInvalidType
-	}
-}
-
-func (svc *BaseService) _getUpdateArtifactUpdate(u interfaces.User) (res bson.M) {
-	var uid primitive.ObjectID
-	if u != nil {
-		uid = u.GetId()
-	}
-	return bson.M{
-		"$set": bson.M{
-			"_sys.update_ts":  time.Now(),
-			"_sys.update_uid": uid,
-		},
-	}
-}
-
-func (svc *BaseService) _getUserFromArgs(args ...interface{}) (u interfaces.User) {
-	return utils.GetUserFromArgs(args...)
-}
-
-func (svc *BaseService) _containsDollar(updateBsonM bson.M) (ok bool) {
-	for k := range updateBsonM {
-		if strings.HasPrefix(k, "$") {
-			return true
-		}
-	}
-	return false
-}
-
-func NewBaseService(id interfaces.ModelId, opts ...BaseServiceOption) (svc2 interfaces.ModelBaseService) {
-	// service
-	svc := &BaseService{
-		id: id,
-	}
-
-	// apply options
-	for _, opt := range opts {
-		opt(svc)
-	}
-
-	// get collection name if not set
-	if svc.GetCol() == nil {
-		colName := models2.GetModelColName(id)
-		svc.SetCol(mongo.GetMongoCol(colName))
-	}
-
-	return svc
-}
-
-var store = sync.Map{}
-
-func GetBaseService(id interfaces.ModelId) (svc interfaces.ModelBaseService) {
-	res, ok := store.Load(id)
-	if ok {
-		svc, ok = res.(interfaces.ModelBaseService)
-		if ok {
-			return svc
-		}
-	}
-	svc = NewBaseService(id)
-	store.Store(id, svc)
-	return svc
-}
-
-func GetBaseServiceByColName(id interfaces.ModelId, colName string) (svc interfaces.ModelBaseService) {
-	res, ok := store.Load(colName)
-	if ok {
-		svc, ok = res.(interfaces.ModelBaseService)
-		if ok {
-			return svc
-		}
-	}
-	col := mongo.GetMongoCol(colName)
-	svc = NewBaseService(id, WithBaseServiceCol(col))
-	store.Store(colName, svc)
-	return svc
+	return instanceMap[colName].(*ModelService[T])
 }

@@ -2,237 +2,149 @@ package handler
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"github.com/apex/log"
+	"fmt"
 	"github.com/crawlab-team/crawlab/core/constants"
-	"github.com/crawlab-team/crawlab/core/container"
-	errors2 "github.com/crawlab-team/crawlab/core/errors"
+	grpcclient "github.com/crawlab-team/crawlab/core/grpc/client"
 	"github.com/crawlab-team/crawlab/core/interfaces"
 	"github.com/crawlab-team/crawlab/core/models/client"
-	"github.com/crawlab-team/crawlab/core/models/delegate"
+	"github.com/crawlab-team/crawlab/core/models/models"
 	"github.com/crawlab-team/crawlab/core/models/service"
-	"github.com/crawlab-team/crawlab/core/task"
-	"github.com/crawlab-team/crawlab/trace"
+	nodeconfig "github.com/crawlab-team/crawlab/core/node/config"
+	"github.com/crawlab-team/crawlab/core/utils"
+	"github.com/crawlab-team/crawlab/grpc"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
+	"io"
 	"sync"
 	"time"
 )
 
 type Service struct {
 	// dependencies
-	interfaces.TaskBaseService
-	cfgSvc                    interfaces.NodeConfigService
-	modelSvc                  service.ModelService
-	clientModelSvc            interfaces.GrpcClientModelService
-	clientModelNodeSvc        interfaces.GrpcClientModelNodeService
-	clientModelSpiderSvc      interfaces.GrpcClientModelSpiderService
-	clientModelTaskSvc        interfaces.GrpcClientModelTaskService
-	clientModelTaskStatSvc    interfaces.GrpcClientModelTaskStatService
-	clientModelEnvironmentSvc interfaces.GrpcClientModelEnvironmentService
-	c                         interfaces.GrpcClient // grpc client
+	cfgSvc interfaces.NodeConfigService
+	c      *grpcclient.GrpcClient // grpc client
 
 	// settings
-	//maxRunners        int
-	exitWatchDuration time.Duration
-	reportInterval    time.Duration
-	fetchInterval     time.Duration
-	fetchTimeout      time.Duration
-	cancelTimeout     time.Duration
+	reportInterval time.Duration
+	fetchInterval  time.Duration
+	fetchTimeout   time.Duration
+	cancelTimeout  time.Duration
 
 	// internals variables
 	stopped   bool
 	mu        sync.Mutex
 	runners   sync.Map // pool of task runners started
 	syncLocks sync.Map // files sync locks map of task runners
+	interfaces.Logger
 }
 
 func (svc *Service) Start() {
-	// Initialize gRPC if not started
-	if !svc.c.IsStarted() {
-		svc.c.Start()
-	}
+	// wait for grpc client ready
+	grpcclient.GetGrpcClient().WaitForReady()
 
-	go svc.ReportStatus()
-	go svc.Fetch()
+	go svc.reportStatus()
+	go svc.fetchAndRunTasks()
+}
+
+func (svc *Service) Stop() {
+	svc.stopped = true
 }
 
 func (svc *Service) Run(taskId primitive.ObjectID) (err error) {
-	return svc.run(taskId)
+	return svc.runTask(taskId)
 }
 
-func (svc *Service) Reset() {
-	svc.mu.Lock()
-	defer svc.mu.Unlock()
+func (svc *Service) Cancel(taskId primitive.ObjectID, force bool) (err error) {
+	return svc.cancelTask(taskId, force)
 }
 
-func (svc *Service) Cancel(taskId primitive.ObjectID) (err error) {
-	r, err := svc.getRunner(taskId)
-	if err != nil {
-		return err
-	}
-	if err := r.Cancel(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (svc *Service) Fetch() {
+func (svc *Service) fetchAndRunTasks() {
+	ticker := time.NewTicker(svc.fetchInterval)
 	for {
-		// wait
-		time.Sleep(svc.fetchInterval)
-
-		// current node
-		n, err := svc.GetCurrentNode()
-		if err != nil {
-			continue
-		}
-
-		// skip if node is not active or enabled
-		if !n.GetActive() || !n.GetEnabled() {
-			continue
-		}
-
-		// validate if there are available runners
-		if svc.getRunnerCount() >= n.GetMaxRunners() {
-			continue
-		}
-
-		// stop
 		if svc.stopped {
 			return
 		}
 
-		// fetch task
-		tid, err := svc.fetch()
-		if err != nil {
-			trace.PrintError(err)
-			continue
-		}
-
-		// skip if no task id
-		if tid.IsZero() {
-			continue
-		}
-
-		// run task
-		if err := svc.run(tid); err != nil {
-			trace.PrintError(err)
-			t, err := svc.GetTaskById(tid)
-			if err == nil && t.GetStatus() != constants.TaskStatusCancelled {
-				t.SetError(err.Error())
-				_ = svc.SaveTask(t, constants.TaskStatusError)
+		select {
+		case <-ticker.C:
+			// current node
+			n, err := svc.GetCurrentNode()
+			if err != nil {
 				continue
 			}
-			continue
+
+			// skip if node is not active or enabled
+			if !n.Active || !n.Enabled {
+				continue
+			}
+
+			// validate if max runners is reached (max runners = 0 means no limit)
+			if n.MaxRunners > 0 && svc.getRunnerCount() >= n.MaxRunners {
+				continue
+			}
+
+			// fetch task id
+			tid, err := svc.fetchTask()
+			if err != nil {
+				continue
+			}
+
+			// skip if no task id
+			if tid.IsZero() {
+				continue
+			}
+
+			// run task
+			if err := svc.runTask(tid); err != nil {
+				t, err := svc.GetTaskById(tid)
+				if err != nil && t.Status != constants.TaskStatusCancelled {
+					t.Error = err.Error()
+					t.Status = constants.TaskStatusError
+					t.SetUpdated(t.CreatedBy)
+					_ = client.NewModelService[models.Task]().ReplaceById(t.Id, *t)
+					continue
+				}
+				continue
+			}
 		}
 	}
 }
 
-func (svc *Service) ReportStatus() {
+func (svc *Service) reportStatus() {
+	ticker := time.NewTicker(svc.reportInterval)
 	for {
 		if svc.stopped {
 			return
 		}
 
-		// report handler status
-		if err := svc.reportStatus(); err != nil {
-			trace.PrintError(err)
+		select {
+		case <-ticker.C:
+			// update node status
+			if err := svc.updateNodeStatus(); err != nil {
+				svc.Errorf("failed to report status: %v", err)
+			}
 		}
-
-		// wait
-		time.Sleep(svc.reportInterval)
 	}
-}
-
-func (svc *Service) IsSyncLocked(path string) (ok bool) {
-	_, ok = svc.syncLocks.Load(path)
-	return ok
-}
-
-func (svc *Service) LockSync(path string) {
-	svc.syncLocks.Store(path, true)
-}
-
-func (svc *Service) UnlockSync(path string) {
-	svc.syncLocks.Delete(path)
-}
-
-//func (svc *Service) GetMaxRunners() (maxRunners int) {
-//	return svc.maxRunners
-//}
-//
-//func (svc *Service) SetMaxRunners(maxRunners int) {
-//	svc.maxRunners = maxRunners
-//}
-
-func (svc *Service) GetExitWatchDuration() (duration time.Duration) {
-	return svc.exitWatchDuration
-}
-
-func (svc *Service) SetExitWatchDuration(duration time.Duration) {
-	svc.exitWatchDuration = duration
-}
-
-func (svc *Service) GetFetchInterval() (interval time.Duration) {
-	return svc.fetchInterval
-}
-
-func (svc *Service) SetFetchInterval(interval time.Duration) {
-	svc.fetchInterval = interval
-}
-
-func (svc *Service) GetReportInterval() (interval time.Duration) {
-	return svc.reportInterval
-}
-
-func (svc *Service) SetReportInterval(interval time.Duration) {
-	svc.reportInterval = interval
 }
 
 func (svc *Service) GetCancelTimeout() (timeout time.Duration) {
 	return svc.cancelTimeout
 }
 
-func (svc *Service) SetCancelTimeout(timeout time.Duration) {
-	svc.cancelTimeout = timeout
-}
-
-func (svc *Service) GetModelService() (modelSvc interfaces.GrpcClientModelService) {
-	return svc.clientModelSvc
-}
-
-func (svc *Service) GetModelSpiderService() (modelSpiderSvc interfaces.GrpcClientModelSpiderService) {
-	return svc.clientModelSpiderSvc
-}
-
-func (svc *Service) GetModelTaskService() (modelTaskSvc interfaces.GrpcClientModelTaskService) {
-	return svc.clientModelTaskSvc
-}
-
-func (svc *Service) GetModelTaskStatService() (modelTaskSvc interfaces.GrpcClientModelTaskStatService) {
-	return svc.clientModelTaskStatSvc
-}
-
-func (svc *Service) GetModelEnvironmentService() (modelTaskSvc interfaces.GrpcClientModelEnvironmentService) {
-	return svc.clientModelEnvironmentSvc
-}
-
 func (svc *Service) GetNodeConfigService() (cfgSvc interfaces.NodeConfigService) {
 	return svc.cfgSvc
 }
 
-func (svc *Service) GetCurrentNode() (n interfaces.Node, err error) {
+func (svc *Service) GetCurrentNode() (n *models.Node, err error) {
 	// node key
 	nodeKey := svc.cfgSvc.GetNodeKey()
 
 	// current node
 	if svc.cfgSvc.IsMaster() {
-		n, err = svc.modelSvc.GetNodeByKey(nodeKey, nil)
+		n, err = service.NewModelService[models.Node]().GetOne(bson.M{"key": nodeKey}, nil)
 	} else {
-		n, err = svc.clientModelNodeSvc.GetNodeByKey(nodeKey)
+		n, err = client.NewModelService[models.Node]().GetOne(bson.M{"key": nodeKey}, nil)
 	}
 	if err != nil {
 		return nil, err
@@ -241,63 +153,69 @@ func (svc *Service) GetCurrentNode() (n interfaces.Node, err error) {
 	return n, nil
 }
 
-func (svc *Service) GetTaskById(id primitive.ObjectID) (t interfaces.Task, err error) {
+func (svc *Service) GetTaskById(id primitive.ObjectID) (t *models.Task, err error) {
 	if svc.cfgSvc.IsMaster() {
-		t, err = svc.modelSvc.GetTaskById(id)
+		t, err = service.NewModelService[models.Task]().GetById(id)
 	} else {
-		t, err = svc.clientModelTaskSvc.GetTaskById(id)
+		t, err = client.NewModelService[models.Task]().GetById(id)
 	}
 	if err != nil {
+		svc.Errorf("failed to get task by id: %v", err)
 		return nil, err
 	}
 
 	return t, nil
 }
 
-func (svc *Service) GetSpiderById(id primitive.ObjectID) (s interfaces.Spider, err error) {
+func (svc *Service) UpdateTask(t *models.Task) (err error) {
+	t.SetUpdated(t.CreatedBy)
 	if svc.cfgSvc.IsMaster() {
-		s, err = svc.modelSvc.GetSpiderById(id)
+		err = service.NewModelService[models.Task]().ReplaceById(t.Id, *t)
 	} else {
-		s, err = svc.clientModelSpiderSvc.GetSpiderById(id)
+		err = client.NewModelService[models.Task]().ReplaceById(t.Id, *t)
 	}
 	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (svc *Service) GetSpiderById(id primitive.ObjectID) (s *models.Spider, err error) {
+	if svc.cfgSvc.IsMaster() {
+		s, err = service.NewModelService[models.Spider]().GetById(id)
+	} else {
+		s, err = client.NewModelService[models.Spider]().GetById(id)
+	}
+	if err != nil {
+		svc.Errorf("failed to get spider by id: %v", err)
 		return nil, err
 	}
 
 	return s, nil
 }
 
-func (svc *Service) getRunners() (runners []*Runner) {
-	svc.mu.Lock()
-	defer svc.mu.Unlock()
-	svc.runners.Range(func(key, value interface{}) bool {
-		r := value.(Runner)
-		runners = append(runners, &r)
-		return true
-	})
-	return runners
-}
-
 func (svc *Service) getRunnerCount() (count int) {
 	n, err := svc.GetCurrentNode()
 	if err != nil {
-		trace.PrintError(err)
+		svc.Errorf("failed to get current node: %v", err)
 		return
 	}
 	query := bson.M{
-		"node_id": n.GetId(),
-		"status":  constants.TaskStatusRunning,
+		"node_id": n.Id,
+		"status": bson.M{
+			"$in": []string{constants.TaskStatusAssigned, constants.TaskStatusRunning},
+		},
 	}
 	if svc.cfgSvc.IsMaster() {
-		count, err = svc.modelSvc.GetBaseService(interfaces.ModelIdTask).Count(query)
+		count, err = service.NewModelService[models.Task]().Count(query)
 		if err != nil {
-			trace.PrintError(err)
+			svc.Errorf("failed to count tasks: %v", err)
 			return
 		}
 	} else {
-		count, err = svc.clientModelTaskSvc.Count(query)
+		count, err = client.NewModelService[models.Task]().Count(query)
 		if err != nil {
-			trace.PrintError(err)
+			svc.Errorf("failed to count tasks: %v", err)
 			return
 		}
 	}
@@ -305,78 +223,50 @@ func (svc *Service) getRunnerCount() (count int) {
 }
 
 func (svc *Service) getRunner(taskId primitive.ObjectID) (r interfaces.TaskRunner, err error) {
-	log.Debugf("[TaskHandlerService] getRunner: taskId[%v]", taskId)
+	svc.Debugf("get runner: taskId[%v]", taskId)
 	v, ok := svc.runners.Load(taskId)
 	if !ok {
-		return nil, trace.TraceError(errors2.ErrorTaskNotExists)
+		err = fmt.Errorf("task[%s] not exists", taskId.Hex())
+		svc.Errorf("get runner error: %v", err)
+		return nil, err
 	}
 	switch v.(type) {
 	case interfaces.TaskRunner:
 		r = v.(interfaces.TaskRunner)
 	default:
-		return nil, trace.TraceError(errors2.ErrorModelInvalidType)
+		err = fmt.Errorf("invalid type: %T", v)
+		svc.Errorf("get runner error: %v", err)
+		return nil, err
 	}
 	return r, nil
 }
 
 func (svc *Service) addRunner(taskId primitive.ObjectID, r interfaces.TaskRunner) {
-	log.Debugf("[TaskHandlerService] addRunner: taskId[%v]", taskId)
+	svc.Debugf("add runner: taskId[%s]", taskId.Hex())
 	svc.runners.Store(taskId, r)
 }
 
 func (svc *Service) deleteRunner(taskId primitive.ObjectID) {
-	log.Debugf("[TaskHandlerService] deleteRunner: taskId[%v]", taskId)
+	svc.Debugf("delete runner: taskId[%v]", taskId)
 	svc.runners.Delete(taskId)
 }
 
-func (svc *Service) saveTask(t interfaces.Task, status string) (err error) {
-	// normalize status
-	if status == "" {
-		status = constants.TaskStatusPending
-	}
-
-	// set task status
-	t.SetStatus(status)
-
-	// attempt to get task from database
-	_, err = svc.clientModelTaskSvc.GetTaskById(t.GetId())
-	if err != nil {
-		// if task does not exist, add to database
-		if err == mongo.ErrNoDocuments {
-			if err := client.NewModelDelegate(t, client.WithDelegateConfigPath(svc.GetConfigPath())).Add(); err != nil {
-				return err
-			}
-			return nil
-		} else {
-			return err
-		}
-	} else {
-		// otherwise, update
-		if err := client.NewModelDelegate(t, client.WithDelegateConfigPath(svc.GetConfigPath())).Save(); err != nil {
-			return err
-		}
-		return nil
-	}
-}
-
-func (svc *Service) reportStatus() (err error) {
+func (svc *Service) updateNodeStatus() (err error) {
 	// current node
 	n, err := svc.GetCurrentNode()
 	if err != nil {
 		return err
 	}
 
-	// available runners of handler
-	ar := n.GetMaxRunners() - svc.getRunnerCount()
-
 	// set available runners
-	n.SetAvailableRunners(ar)
+	n.CurrentRunners = svc.getRunnerCount()
 
 	// save node
+	n.SetUpdated(n.CreatedBy)
 	if svc.cfgSvc.IsMaster() {
-		err = delegate.NewModelDelegate(n).Save()
+		err = service.NewModelService[models.Node]().ReplaceById(n.Id, *n)
 	} else {
-		err = client.NewModelDelegate(n, client.WithDelegateConfigPath(svc.GetConfigPath())).Save()
+		err = client.NewModelService[models.Node]().ReplaceById(n.Id, *n)
 	}
 	if err != nil {
 		return err
@@ -385,30 +275,38 @@ func (svc *Service) reportStatus() (err error) {
 	return nil
 }
 
-func (svc *Service) fetch() (tid primitive.ObjectID, err error) {
+func (svc *Service) fetchTask() (tid primitive.ObjectID, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), svc.fetchTimeout)
 	defer cancel()
-	res, err := svc.c.GetTaskClient().Fetch(ctx, svc.c.NewRequest(nil))
+	res, err := svc.c.TaskClient.FetchTask(ctx, &grpc.TaskServiceFetchTaskRequest{
+		NodeKey: svc.cfgSvc.GetNodeKey(),
+	})
 	if err != nil {
-		return tid, trace.TraceError(err)
+		return primitive.NilObjectID, fmt.Errorf("fetchTask task error: %v", err)
 	}
-	if err := json.Unmarshal(res.Data, &tid); err != nil {
-		return tid, trace.TraceError(err)
+	// validate task id
+	tid, err = primitive.ObjectIDFromHex(res.GetTaskId())
+	if err != nil {
+		return primitive.NilObjectID, fmt.Errorf("invalid task id: %s", res.GetTaskId())
 	}
 	return tid, nil
 }
 
-func (svc *Service) run(taskId primitive.ObjectID) (err error) {
+func (svc *Service) runTask(taskId primitive.ObjectID) (err error) {
 	// attempt to get runner from pool
 	_, ok := svc.runners.Load(taskId)
 	if ok {
-		return trace.TraceError(errors2.ErrorTaskAlreadyExists)
+		err = fmt.Errorf("task[%s] already exists", taskId.Hex())
+		svc.Errorf("run task error: %v", err)
+		return err
 	}
 
 	// create a new task runner
-	r, err := NewTaskRunner(taskId, svc)
+	r, err := newTaskRunner(taskId, svc)
 	if err != nil {
-		return trace.TraceError(err)
+		err = fmt.Errorf("failed to create task runner: %v", err)
+		svc.Errorf("run task error: %v", err)
+		return err
 	}
 
 	// add runner to pool
@@ -416,91 +314,149 @@ func (svc *Service) run(taskId primitive.ObjectID) (err error) {
 
 	// create a goroutine to run task
 	go func() {
-		// delete runner from pool
-		defer svc.deleteRunner(r.GetTaskId())
-		defer func(r interfaces.TaskRunner) {
-			err := r.CleanUp()
-			if err != nil {
-				log.Errorf("task[%s] clean up error: %v", r.GetTaskId().Hex(), err)
-			}
-		}(r)
-		// run task process (blocking)
-		// error or finish after task runner ends
+		// get subscription stream
+		stopCh := make(chan struct{})
+		stream, err := svc.subscribeTask(r.GetTaskId())
+		if err == nil {
+			// create a goroutine to handle stream messages
+			go svc.handleStreamMessages(r.GetTaskId(), stream, stopCh)
+		} else {
+			svc.Errorf("failed to subscribe task[%s]: %v", r.GetTaskId().Hex(), err)
+			svc.Warnf("task[%s] will not be able to receive stream messages", r.GetTaskId().Hex())
+		}
+
+		// run task process (blocking) error or finish after task runner ends
 		if err := r.Run(); err != nil {
 			switch {
 			case errors.Is(err, constants.ErrTaskError):
-				log.Errorf("task[%s] finished with error: %v", r.GetTaskId().Hex(), err)
+				svc.Errorf("task[%s] finished with error: %v", r.GetTaskId().Hex(), err)
 			case errors.Is(err, constants.ErrTaskCancelled):
-				log.Errorf("task[%s] cancelled", r.GetTaskId().Hex())
+				svc.Errorf("task[%s] cancelled", r.GetTaskId().Hex())
 			default:
-				log.Errorf("task[%s] finished with unknown error: %v", r.GetTaskId().Hex(), err)
+				svc.Errorf("task[%s] finished with unknown error: %v", r.GetTaskId().Hex(), err)
 			}
 		}
-		log.Infof("task[%s] finished", r.GetTaskId().Hex())
+		svc.Infof("task[%s] finished", r.GetTaskId().Hex())
+
+		// send stopCh signal to stream message handler
+		stopCh <- struct{}{}
+
+		// delete runner from pool
+		svc.deleteRunner(r.GetTaskId())
 	}()
 
 	return nil
 }
 
-func NewTaskHandlerService() (svc2 interfaces.TaskHandlerService, err error) {
-	// base service
-	baseSvc, err := task.NewBaseService()
+func (svc *Service) subscribeTask(taskId primitive.ObjectID) (stream grpc.TaskService_SubscribeClient, err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	req := &grpc.TaskServiceSubscribeRequest{
+		TaskId: taskId.Hex(),
+	}
+	stream, err = svc.c.TaskClient.Subscribe(ctx, req)
 	if err != nil {
-		return nil, trace.TraceError(err)
+		svc.Errorf("failed to subscribe task[%s]: %v", taskId.Hex(), err)
+		return nil, err
+	}
+	return stream, nil
+}
+
+func (svc *Service) handleStreamMessages(taskId primitive.ObjectID, stream grpc.TaskService_SubscribeClient, stopCh chan struct{}) {
+	for {
+		select {
+		case <-stopCh:
+			err := stream.CloseSend()
+			if err != nil {
+				svc.Errorf("task[%s] failed to close stream: %v", taskId.Hex(), err)
+				return
+			}
+			return
+		default:
+			msg, err := stream.Recv()
+			if err != nil {
+				if errors.Is(err, io.EOF) {
+					svc.Infof("task[%s] received EOF, stream closed", taskId.Hex())
+					return
+				}
+				svc.Errorf("task[%s] stream error: %v", taskId.Hex(), err)
+				continue
+			}
+			switch msg.Code {
+			case grpc.TaskServiceSubscribeCode_CANCEL:
+				svc.Infof("task[%s] received cancel signal", taskId.Hex())
+				go svc.handleCancel(msg, taskId)
+			}
+		}
+	}
+}
+
+func (svc *Service) handleCancel(msg *grpc.TaskServiceSubscribeResponse, taskId primitive.ObjectID) {
+	// validate task id
+	if msg.TaskId != taskId.Hex() {
+		svc.Errorf("task[%s] received cancel signal for another task[%s]", taskId.Hex(), msg.TaskId)
+		return
 	}
 
+	// cancel task
+	err := svc.cancelTask(taskId, msg.Force)
+	if err != nil {
+		svc.Errorf("task[%s] failed to cancel: %v", taskId.Hex(), err)
+		return
+	}
+	svc.Infof("task[%s] cancelled", taskId.Hex())
+
+	// set task status as "cancelled"
+	t, err := svc.GetTaskById(taskId)
+	if err != nil {
+		svc.Errorf("task[%s] failed to get task: %v", taskId.Hex(), err)
+		return
+	}
+	t.Status = constants.TaskStatusCancelled
+	err = svc.UpdateTask(t)
+	if err != nil {
+		svc.Errorf("task[%s] failed to update task: %v", taskId.Hex(), err)
+	}
+}
+
+func (svc *Service) cancelTask(taskId primitive.ObjectID, force bool) (err error) {
+	r, err := svc.getRunner(taskId)
+	if err != nil {
+		return err
+	}
+	if err := r.Cancel(force); err != nil {
+		return err
+	}
+	return nil
+}
+
+func newTaskHandlerService() *Service {
 	// service
 	svc := &Service{
-		TaskBaseService:   baseSvc,
-		exitWatchDuration: 60 * time.Second,
-		fetchInterval:     1 * time.Second,
-		fetchTimeout:      15 * time.Second,
-		reportInterval:    5 * time.Second,
-		cancelTimeout:     5 * time.Second,
-		mu:                sync.Mutex{},
-		runners:           sync.Map{},
-		syncLocks:         sync.Map{},
+		fetchInterval:  1 * time.Second,
+		fetchTimeout:   15 * time.Second,
+		reportInterval: 5 * time.Second,
+		cancelTimeout:  60 * time.Second,
+		mu:             sync.Mutex{},
+		runners:        sync.Map{},
+		Logger:         utils.NewLogger("TaskHandlerService"),
 	}
 
 	// dependency injection
-	if err := container.GetContainer().Invoke(func(
-		cfgSvc interfaces.NodeConfigService,
-		modelSvc service.ModelService,
-		clientModelSvc interfaces.GrpcClientModelService,
-		clientModelNodeSvc interfaces.GrpcClientModelNodeService,
-		clientModelSpiderSvc interfaces.GrpcClientModelSpiderService,
-		clientModelTaskSvc interfaces.GrpcClientModelTaskService,
-		clientModelTaskStatSvc interfaces.GrpcClientModelTaskStatService,
-		clientModelEnvironmentSvc interfaces.GrpcClientModelEnvironmentService,
-		c interfaces.GrpcClient,
-	) {
-		svc.cfgSvc = cfgSvc
-		svc.modelSvc = modelSvc
-		svc.clientModelSvc = clientModelSvc
-		svc.clientModelNodeSvc = clientModelNodeSvc
-		svc.clientModelSpiderSvc = clientModelSpiderSvc
-		svc.clientModelTaskSvc = clientModelTaskSvc
-		svc.clientModelTaskStatSvc = clientModelTaskStatSvc
-		svc.clientModelEnvironmentSvc = clientModelEnvironmentSvc
-		svc.c = c
-	}); err != nil {
-		return nil, trace.TraceError(err)
-	}
+	svc.cfgSvc = nodeconfig.GetNodeConfigService()
 
-	log.Debugf("[NewTaskHandlerService] svc[cfgPath: %s]", svc.cfgSvc.GetConfigPath())
+	// grpc client
+	svc.c = grpcclient.GetGrpcClient()
 
-	return svc, nil
+	return svc
 }
 
-var _service interfaces.TaskHandlerService
+var _service *Service
+var _serviceOnce sync.Once
 
-func GetTaskHandlerService() (svr interfaces.TaskHandlerService, err error) {
-	if _service != nil {
-		return _service, nil
-	}
-	_service, err = NewTaskHandlerService()
-	if err != nil {
-		return nil, err
-	}
-	return _service, nil
+func GetTaskHandlerService() *Service {
+	_serviceOnce.Do(func() {
+		_service = newTaskHandlerService()
+	})
+	return _service
 }

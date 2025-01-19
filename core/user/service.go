@@ -1,111 +1,153 @@
 package user
 
 import (
+	errors2 "errors"
 	"github.com/crawlab-team/crawlab/core/constants"
-	"github.com/crawlab-team/crawlab/core/container"
 	"github.com/crawlab-team/crawlab/core/errors"
 	"github.com/crawlab-team/crawlab/core/interfaces"
-	"github.com/crawlab-team/crawlab/core/models/delegate"
 	"github.com/crawlab-team/crawlab/core/models/models"
 	"github.com/crawlab-team/crawlab/core/models/service"
 	"github.com/crawlab-team/crawlab/core/utils"
-	mongo2 "github.com/crawlab-team/crawlab/db/mongo"
-	"github.com/crawlab-team/crawlab/trace"
-	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"sync"
 	"time"
 )
 
 type Service struct {
-	// settings variables
 	jwtSecret        string
 	jwtSigningMethod jwt.SigningMethod
-
-	// dependencies
-	modelSvc service.ModelService
+	interfaces.Logger
 }
 
 func (svc *Service) Init() (err error) {
-	_, err = svc.modelSvc.GetUserByUsername(constants.DefaultAdminUsername, nil)
-	if err == nil {
-		return nil
+	if utils.IsPro() {
+		return svc.initPro()
 	}
-	if err.Error() != mongo.ErrNoDocuments.Error() {
-		return err
+	return svc.init()
+}
+
+func (svc *Service) init() (err error) {
+	u, err := service.NewModelService[models.User]().GetOne(bson.M{"username": constants.DefaultAdminUsername}, nil)
+	if err != nil {
+		if !errors2.Is(err, mongo.ErrNoDocuments) {
+			return err
+		}
+	} else {
+		// exists
+		return
 	}
-	return svc.Create(&interfaces.UserCreateOptions{
-		Username: constants.DefaultAdminUsername,
-		Password: constants.DefaultAdminPassword,
-		Role:     constants.RoleAdmin,
-	})
+
+	// add user
+	u = &models.User{
+		Username:  constants.DefaultAdminUsername,
+		Password:  utils.EncryptMd5(constants.DefaultAdminPassword),
+		Role:      constants.RoleAdmin,
+		RootAdmin: true,
+	}
+	u.SetCreatedAt(time.Now())
+	u.SetUpdatedAt(time.Now())
+	_, err = service.NewModelService[models.User]().InsertOne(*u)
+	return err
 }
 
-func (svc *Service) SetJwtSecret(secret string) {
-	svc.jwtSecret = secret
+func (svc *Service) initPro() (err error) {
+	u, err := service.NewModelService[models.User]().GetOne(bson.M{
+		"$or": []bson.M{
+			{"username": constants.DefaultAdminUsername},
+			{"root_admin": true},
+		},
+	}, nil)
+	if err != nil {
+		if !errors2.Is(err, mongo.ErrNoDocuments) {
+			return err
+		}
+	} else {
+		// exists, compatible with old versions
+		u.RootAdmin = true
+		u.SetUpdatedAt(time.Now())
+		err = service.NewModelService[models.User]().ReplaceById(u.Id, *u)
+		if err != nil {
+			svc.Errorf("failed to update user: %v", err)
+		}
+		return
+	}
+
+	// add user
+	u = &models.User{
+		Username:  constants.DefaultAdminUsername,
+		Password:  utils.EncryptMd5(constants.DefaultAdminPassword),
+		RootAdmin: true,
+	}
+	u.SetCreatedAt(time.Now())
+	u.SetUpdatedAt(time.Now())
+	_, err = service.NewModelService[models.User]().InsertOne(*u)
+	return err
 }
 
-func (svc *Service) SetJwtSigningMethod(method jwt.SigningMethod) {
-	svc.jwtSigningMethod = method
-}
-
-func (svc *Service) Create(opts *interfaces.UserCreateOptions, args ...interface{}) (err error) {
-	actor := utils.GetUserFromArgs(args...)
-
+func (svc *Service) Create(username, password, role, email string, by primitive.ObjectID) (err error) {
 	// validate options
-	if opts.Username == "" || opts.Password == "" {
-		return trace.TraceError(errors.ErrorUserMissingRequiredFields)
+	if username == "" || password == "" {
+		return errors.ErrorUserMissingRequiredFields
 	}
-	if len(opts.Password) < 5 {
-		return trace.TraceError(errors.ErrorUserInvalidPassword)
+	if len(password) < 5 {
+		return errors.ErrorUserInvalidPassword
 	}
 
 	// normalize options
-	if opts.Role == "" {
-		opts.Role = constants.RoleNormal
+	if role == "" {
+		role = constants.RoleNormal
 	}
 
 	// check if user exists
-	if u, err := svc.modelSvc.GetUserByUsername(opts.Username, nil); err == nil && u != nil && !u.Id.IsZero() {
-		return trace.TraceError(errors.ErrorUserAlreadyExists)
+	if u, err := service.NewModelService[models.User]().GetOne(bson.M{"username": username}, nil); err == nil && u != nil && !u.Id.IsZero() {
+		return errors.ErrorUserAlreadyExists
 	}
 
-	// transaction
-	return mongo2.RunTransaction(func(ctx mongo.SessionContext) error {
-		// add user
-		u := &models.User{
-			Username: opts.Username,
-			Role:     opts.Role,
-			Email:    opts.Email,
-		}
-		if err := delegate.NewModelDelegate(u, actor).Add(); err != nil {
-			return err
-		}
+	// add user
+	u := models.User{
+		Username: username,
+		Role:     role,
+		Password: utils.EncryptMd5(password),
+		Email:    email,
+	}
+	u.SetCreated(by)
+	u.SetUpdated(by)
+	_, err = service.NewModelService[models.User]().InsertOne(u)
 
-		// add password
-		p := &models.Password{
-			Id:       u.Id,
-			Password: utils.EncryptMd5(opts.Password),
-		}
-		if err := delegate.NewModelDelegate(p, actor).Add(); err != nil {
-			return err
-		}
-
-		return nil
-	})
+	return err
 }
 
-func (svc *Service) Login(opts *interfaces.UserLoginOptions) (token string, u interfaces.User, err error) {
-	u, err = svc.modelSvc.GetUserByUsername(opts.Username, nil)
+func (svc *Service) CreateUser(u *models.User, by primitive.ObjectID) (err error) {
+	// validate options
+	if u.Username == "" || u.Password == "" {
+		return errors.ErrorUserMissingRequiredFields
+	}
+	if len(u.Password) < 5 {
+		return errors.ErrorUserInvalidPassword
+	}
+
+	// check if user exists
+	if u, err := service.NewModelService[models.User]().GetOne(bson.M{"username": u.Username}, nil); err == nil && u != nil && !u.Id.IsZero() {
+		return errors.ErrorUserAlreadyExists
+	}
+
+	// add user
+	u.SetCreated(by)
+	u.SetUpdated(by)
+	_, err = service.NewModelService[models.User]().InsertOne(*u)
+
+	return err
+}
+
+func (svc *Service) Login(username, password string) (token string, u *models.User, err error) {
+	u, err = service.NewModelService[models.User]().GetOne(bson.M{"username": username}, nil)
 	if err != nil {
 		return "", nil, err
 	}
-	p, err := svc.modelSvc.GetPasswordById(u.GetId())
-	if err != nil {
-		return "", nil, err
-	}
-	if p.Password != utils.EncryptMd5(opts.Password) {
+	if u.Password != utils.EncryptMd5(password) {
 		return "", nil, errors.ErrorUserMismatch
 	}
 	token, err = svc.makeToken(u)
@@ -115,84 +157,63 @@ func (svc *Service) Login(opts *interfaces.UserLoginOptions) (token string, u in
 	return token, u, nil
 }
 
-func (svc *Service) CheckToken(tokenStr string) (u interfaces.User, err error) {
+func (svc *Service) CheckToken(tokenStr string) (u *models.User, err error) {
 	return svc.checkToken(tokenStr)
 }
 
-func (svc *Service) ChangePassword(id primitive.ObjectID, password string, args ...interface{}) (err error) {
-	actor := utils.GetUserFromArgs(args...)
-
-	p, err := svc.modelSvc.GetPasswordById(id)
+func (svc *Service) ChangePassword(id primitive.ObjectID, password string, by primitive.ObjectID) (err error) {
+	u, err := service.NewModelService[models.User]().GetById(id)
 	if err != nil {
 		return err
 	}
-	p.Password = utils.EncryptMd5(password)
-	if err := delegate.NewModelDelegate(p, actor).Save(); err != nil {
-		return err
-	}
-	return nil
+	u.Password = utils.EncryptMd5(password)
+	u.SetCreatedBy(by)
+	return service.NewModelService[models.User]().ReplaceById(id, *u)
 }
 
-func (svc *Service) MakeToken(user interfaces.User) (tokenStr string, err error) {
+func (svc *Service) MakeToken(user *models.User) (tokenStr string, err error) {
 	return svc.makeToken(user)
 }
 
-func (svc *Service) GetCurrentUser(c *gin.Context) (user interfaces.User, err error) {
-	// token string
-	tokenStr := c.GetHeader("Authorization")
-
-	// user
-	u, err := userSvc.CheckToken(tokenStr)
-	if err != nil {
-		return nil, err
-	}
-
-	return u, nil
-}
-
-func (svc *Service) makeToken(user interfaces.User) (tokenStr string, err error) {
+func (svc *Service) makeToken(user *models.User) (tokenStr string, err error) {
 	token := jwt.NewWithClaims(svc.jwtSigningMethod, jwt.MapClaims{
-		"id":       user.GetId(),
-		"username": user.GetUsername(),
+		"id":       user.Id,
+		"username": user.Username,
 		"nbf":      time.Now().Unix(),
 	})
 	return token.SignedString([]byte(svc.jwtSecret))
 }
 
-func (svc *Service) checkToken(tokenStr string) (user interfaces.User, err error) {
+func (svc *Service) checkToken(tokenStr string) (user *models.User, err error) {
 	token, err := jwt.Parse(tokenStr, svc.getSecretFunc())
 	if err != nil {
-		return
+		return nil, errors2.New("invalid token")
 	}
 
 	claim, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		err = errors.ErrorUserInvalidType
-		return
+		return nil, errors2.New("invalid type")
 	}
 
 	if !token.Valid {
-		err = errors.ErrorUserInvalidToken
-		return
+		return nil, errors2.New("invalid token")
 	}
 
 	id, err := primitive.ObjectIDFromHex(claim["id"].(string))
 	if err != nil {
-		return user, err
+		return nil, errors2.New("invalid token")
 	}
 	username := claim["username"].(string)
-	user, err = svc.modelSvc.GetUserById(id)
+	u, err := service.NewModelService[models.User]().GetById(id)
 	if err != nil {
-		err = errors.ErrorUserNotExists
-		return
+		return nil, errors2.New("user not exists")
 	}
 
-	if username != user.GetUsername() {
-		err = errors.ErrorUserMismatch
-		return
+	if username != u.Username {
+		return nil, errors2.New("username mismatch")
 	}
 
-	return
+	return u, nil
 }
 
 func (svc *Service) getSecretFunc() jwt.Keyfunc {
@@ -201,38 +222,32 @@ func (svc *Service) getSecretFunc() jwt.Keyfunc {
 	}
 }
 
-func NewUserService() (svc2 interfaces.UserService, err error) {
+func newUserService() (svc *Service, err error) {
 	// service
-	svc := &Service{
+	svc = &Service{
 		jwtSecret:        "crawlab",
 		jwtSigningMethod: jwt.SigningMethodHS256,
-	}
-
-	// dependency injection
-	if err := container.GetContainer().Invoke(func(modelSvc service.ModelService) {
-		svc.modelSvc = modelSvc
-	}); err != nil {
-		return nil, trace.TraceError(err)
+		Logger:           utils.NewLogger("UserService"),
 	}
 
 	// initialize
 	if err := svc.Init(); err != nil {
-		return nil, trace.TraceError(err)
+		svc.Errorf("failed to initialize user service: %v", err)
+		return nil, err
 	}
 
 	return svc, nil
 }
 
-var userSvc interfaces.UserService
+var userSvc *Service
+var userSvcOnce sync.Once
 
-func GetUserService() (svc interfaces.UserService, err error) {
-	if userSvc != nil {
-		return userSvc, nil
-	}
-	svc, err = NewUserService()
-	if err != nil {
-		return nil, err
-	}
-	userSvc = svc
-	return svc, nil
+func GetUserService() (svc *Service, err error) {
+	userSvcOnce.Do(func() {
+		userSvc, err = newUserService()
+		if err != nil {
+			return
+		}
+	})
+	return userSvc, nil
 }

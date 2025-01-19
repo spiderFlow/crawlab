@@ -1,15 +1,27 @@
-FROM node:14 AS build
+# Build stage
+FROM node:20-alpine AS build
 
-ADD . /app
+# Arguments and environment variables for building packages
+ARG VITE_APP_API_BASE_URL=/api
+ENV VITE_APP_API_BASE_URL ${VITE_APP_API_BASE_URL}
+
+# Set the working directory in the container
 WORKDIR /app
-RUN rm /app/.npmrc
 
-# install frontend
-RUN npm i -g pnpm@7
+# Install pnpm
+RUN npm install -g pnpm
+
+# Copy application code
+ADD . .
+
+# Install project dependencies
 RUN pnpm install
+
+# Build the application
 RUN pnpm run build
 
+# Production stage
 FROM alpine:3.14
 
-# copy files
-COPY --from=build /app/dist /app/dist
+# Copy only the built artifacts from the build stage
+COPY --from=build /app/apps/crawlab/dist /app/dist

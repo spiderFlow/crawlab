@@ -1,14 +1,11 @@
 package schedule
 
 import (
-	"github.com/crawlab-team/crawlab/core/config"
-	"github.com/crawlab-team/crawlab/core/container"
 	"github.com/crawlab-team/crawlab/core/interfaces"
-	"github.com/crawlab-team/crawlab/core/models/delegate"
 	"github.com/crawlab-team/crawlab/core/models/models"
 	"github.com/crawlab-team/crawlab/core/models/service"
+	"github.com/crawlab-team/crawlab/core/spider/admin"
 	"github.com/crawlab-team/crawlab/core/utils"
-	"github.com/crawlab-team/crawlab/trace"
 	"github.com/robfig/cron/v3"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -18,9 +15,8 @@ import (
 
 type Service struct {
 	// dependencies
-	interfaces.WithConfigPath
-	modelSvc service.ModelService
-	adminSvc interfaces.SpiderAdminService
+	modelSvc *service.ModelService[models.Schedule]
+	adminSvc *admin.Service
 
 	// settings variables
 	loc            *time.Location
@@ -34,6 +30,7 @@ type Service struct {
 	schedules []models.Schedule
 	stopped   bool
 	mu        sync.Mutex
+	interfaces.Logger
 }
 
 func (svc *Service) GetLocation() (loc *time.Location) {
@@ -69,7 +66,12 @@ func (svc *Service) SetUpdateInterval(interval time.Duration) {
 }
 
 func (svc *Service) Init() (err error) {
-	return svc.fetch()
+	err = svc.fetch()
+	if err != nil {
+		svc.Fatalf("failed to initialize schedule service: %v", err)
+		return err
+	}
+	return nil
 }
 
 func (svc *Service) Start() {
@@ -87,29 +89,30 @@ func (svc *Service) Stop() {
 	svc.cron.Stop()
 }
 
-func (svc *Service) Enable(s interfaces.Schedule, args ...interface{}) (err error) {
+func (svc *Service) Enable(s models.Schedule, by primitive.ObjectID) (err error) {
 	svc.mu.Lock()
 	defer svc.mu.Unlock()
 
-	id, err := svc.cron.AddFunc(s.GetCron(), svc.schedule(s.GetId()))
+	id, err := svc.cron.AddFunc(s.Cron, svc.schedule(s.Id))
 	if err != nil {
-		return trace.TraceError(err)
+		svc.Errorf("failed to add cron job: %v", err)
+		return err
 	}
-	s.SetEnabled(true)
-	s.SetEntryId(id)
-	u := utils.GetUserFromArgs(args...)
-	return delegate.NewModelDelegate(s, u).Save()
+	s.Enabled = true
+	s.EntryId = id
+	s.SetUpdated(by)
+	return svc.modelSvc.ReplaceById(s.Id, s)
 }
 
-func (svc *Service) Disable(s interfaces.Schedule, args ...interface{}) (err error) {
+func (svc *Service) Disable(s models.Schedule, by primitive.ObjectID) (err error) {
 	svc.mu.Lock()
 	defer svc.mu.Unlock()
 
-	svc.cron.Remove(s.GetEntryId())
-	s.SetEnabled(false)
-	s.SetEntryId(-1)
-	u := utils.GetUserFromArgs(args...)
-	return delegate.NewModelDelegate(s, u).Save()
+	svc.cron.Remove(s.EntryId)
+	s.Enabled = false
+	s.EntryId = -1
+	s.SetUpdated(by)
+	return svc.modelSvc.ReplaceById(s.Id, s)
 }
 
 func (svc *Service) Update() {
@@ -131,7 +134,7 @@ func (svc *Service) GetCron() (c *cron.Cron) {
 func (svc *Service) update() {
 	// fetch enabled schedules
 	if err := svc.fetch(); err != nil {
-		trace.PrintError(err)
+		svc.Errorf("failed to fetch schedules: %v", err)
 		return
 	}
 
@@ -144,9 +147,12 @@ func (svc *Service) update() {
 		if ok {
 			entryIdsMap[s.EntryId] = true
 		} else {
-			if err := svc.Enable(&s); err != nil {
-				trace.PrintError(err)
-				continue
+			if !s.Enabled {
+				err := svc.Enable(s, s.GetCreatedBy())
+				if err != nil {
+					svc.Errorf("failed to enable schedule: %v", err)
+					continue
+				}
 			}
 		}
 	}
@@ -171,7 +177,7 @@ func (svc *Service) fetch() (err error) {
 	query := bson.M{
 		"enabled": true,
 	}
-	svc.schedules, err = svc.modelSvc.GetScheduleList(query, nil)
+	svc.schedules, err = svc.modelSvc.GetMany(query, nil)
 	if err != nil {
 		return err
 	}
@@ -181,28 +187,28 @@ func (svc *Service) fetch() (err error) {
 func (svc *Service) schedule(id primitive.ObjectID) (fn func()) {
 	return func() {
 		// schedule
-		s, err := svc.modelSvc.GetScheduleById(id)
+		s, err := svc.modelSvc.GetById(id)
 		if err != nil {
-			trace.PrintError(err)
+			svc.Errorf("failed to get schedule: %v", err)
 			return
 		}
 
 		// spider
-		spider, err := svc.modelSvc.GetSpiderById(s.GetSpiderId())
+		spider, err := service.NewModelService[models.Spider]().GetById(s.SpiderId)
 		if err != nil {
-			trace.PrintError(err)
+			svc.Errorf("failed to get spider: %v", err)
 			return
 		}
 
 		// options
 		opts := &interfaces.SpiderRunOptions{
-			Mode:       s.GetMode(),
-			NodeIds:    s.GetNodeIds(),
-			Cmd:        s.GetCmd(),
-			Param:      s.GetParam(),
-			Priority:   s.GetPriority(),
-			ScheduleId: s.GetId(),
-			UserId:     s.UserId,
+			Mode:       s.Mode,
+			NodeIds:    s.NodeIds,
+			Cmd:        s.Cmd,
+			Param:      s.Param,
+			Priority:   s.Priority,
+			ScheduleId: s.Id,
+			UserId:     s.GetCreatedBy(),
 		}
 
 		// normalize options
@@ -227,36 +233,28 @@ func (svc *Service) schedule(id primitive.ObjectID) (fn func()) {
 		}
 
 		// schedule or assign a task in the task queue
-		if _, err := svc.adminSvc.Schedule(s.GetSpiderId(), opts); err != nil {
-			trace.PrintError(err)
+		if _, err := svc.adminSvc.Schedule(s.SpiderId, opts); err != nil {
+			svc.Errorf("failed to schedule spider: %v", err)
+			return
 		}
 	}
 }
 
-func NewScheduleService() (svc2 interfaces.ScheduleService, err error) {
+func newScheduleService() *Service {
 	// service
 	svc := &Service{
-		WithConfigPath: config.NewConfigPathService(),
-		loc:            time.Local,
+		loc: time.Local,
 		// TODO: implement delay and skip
 		delay:          false,
 		skip:           false,
 		updateInterval: 1 * time.Minute,
-	}
-
-	// dependency injection
-	if err := container.GetContainer().Invoke(func(
-		modelSvc service.ModelService,
-		adminSvc interfaces.SpiderAdminService,
-	) {
-		svc.modelSvc = modelSvc
-		svc.adminSvc = adminSvc
-	}); err != nil {
-		return nil, trace.TraceError(err)
+		adminSvc:       admin.GetSpiderAdminService(),
+		modelSvc:       service.NewModelService[models.Schedule](),
+		Logger:         utils.NewLogger("ScheduleService"),
 	}
 
 	// logger
-	svc.logger = NewLogger()
+	svc.logger = NewCronLogger()
 
 	// cron
 	svc.cron = cron.New(
@@ -267,21 +265,18 @@ func NewScheduleService() (svc2 interfaces.ScheduleService, err error) {
 
 	// initialize
 	if err := svc.Init(); err != nil {
-		return nil, err
+		panic(err)
 	}
 
-	return svc, nil
+	return svc
 }
 
-var svc interfaces.ScheduleService
+var _service *Service
+var _serviceOnce sync.Once
 
-func GetScheduleService() (res interfaces.ScheduleService, err error) {
-	if svc != nil {
-		return svc, nil
-	}
-	svc, err = NewScheduleService()
-	if err != nil {
-		return nil, err
-	}
-	return svc, nil
+func GetScheduleService() *Service {
+	_serviceOnce.Do(func() {
+		_service = newScheduleService()
+	})
+	return _service
 }

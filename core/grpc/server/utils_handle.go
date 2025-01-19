@@ -2,12 +2,15 @@ package server
 
 import (
 	"encoding/json"
+	"github.com/crawlab-team/crawlab/core/utils"
 	"github.com/crawlab-team/crawlab/grpc"
 	"github.com/crawlab-team/crawlab/trace"
 )
 
 func HandleError(err error) (res *grpc.Response, err2 error) {
-	trace.PrintError(err)
+	if utils.IsDev() {
+		trace.PrintError(err)
+	}
 	return &grpc.Response{
 		Code:  grpc.ResponseCode_ERROR,
 		Error: err.Error(),
@@ -36,18 +39,5 @@ func HandleSuccessWithData(data interface{}) (res *grpc.Response, err error) {
 		Code:    grpc.ResponseCode_OK,
 		Message: "success",
 		Data:    bytes,
-	}, nil
-}
-
-func HandleSuccessWithListData(data interface{}, total int) (res *grpc.Response, err error) {
-	bytes, err := json.Marshal(data)
-	if err != nil {
-		return HandleError(err)
-	}
-	return &grpc.Response{
-		Code:    grpc.ResponseCode_OK,
-		Message: "success",
-		Data:    bytes,
-		Total:   int64(total),
 	}, nil
 }

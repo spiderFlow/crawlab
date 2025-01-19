@@ -13,7 +13,7 @@ type FsFileInfo struct {
 	Extension string                  `json:"extension"` // file extension
 	IsDir     bool                    `json:"is_dir"`    // whether it is directory
 	FileSize  int64                   `json:"file_size"` // file size (bytes)
-	Children  []interfaces.FsFileInfo `json:"children"`  // children for sub-directory
+	Children  []interfaces.FsFileInfo `json:"children"`  // children for subdirectory
 	ModTime   time.Time               `json:"mod_time"`  // modification time
 	Mode      os.FileMode             `json:"mode"`      // file mode
 	Hash      string                  `json:"hash"`      // file hash

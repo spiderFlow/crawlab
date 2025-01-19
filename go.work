@@ -1,12 +1,9 @@
-go 1.22
+go 1.22.9
 
 use (
 	backend
 	core
-	db
-	fs
 	grpc
-	template-parser
 	trace
 	vcs
 )

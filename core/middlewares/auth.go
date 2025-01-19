@@ -1,26 +1,23 @@
 package middlewares
 
 import (
+	"errors"
 	"github.com/crawlab-team/crawlab/core/constants"
-	"github.com/crawlab-team/crawlab/core/errors"
+	"github.com/crawlab-team/crawlab/core/models/models"
 	"github.com/crawlab-team/crawlab/core/models/service"
 	"github.com/crawlab-team/crawlab/core/user"
 	"github.com/crawlab-team/crawlab/core/utils"
 	"github.com/gin-gonic/gin"
-	"github.com/spf13/viper"
+	"go.mongodb.org/mongo-driver/bson"
+	"strings"
 )
 
 func AuthorizationMiddleware() gin.HandlerFunc {
 	userSvc, _ := user.GetUserService()
 	return func(c *gin.Context) {
 		// disable auth for test
-		if viper.GetBool("auth.disabled") {
-			modelSvc, err := service.GetService()
-			if err != nil {
-				utils.HandleErrorInternalServerError(c, err)
-				return
-			}
-			u, err := modelSvc.GetUserByUsername(constants.DefaultAdminUsername, nil)
+		if utils.IsAuthDisabled() {
+			u, err := service.NewModelService[models.User]().GetOne(bson.M{"username": constants.DefaultAdminUsername}, nil)
 			if err != nil {
 				utils.HandleErrorInternalServerError(c, err)
 				return
@@ -32,12 +29,15 @@ func AuthorizationMiddleware() gin.HandlerFunc {
 
 		// token string
 		tokenStr := c.GetHeader("Authorization")
+		if strings.HasPrefix(tokenStr, "Bearer ") {
+			tokenStr = strings.Replace(tokenStr, "Bearer ", "", 1)
+		}
 
 		// validate token
 		u, err := userSvc.CheckToken(tokenStr)
 		if err != nil {
 			// validation failed, return error response
-			utils.HandleErrorUnauthorized(c, errors.ErrorHttpUnauthorized)
+			utils.HandleErrorUnauthorized(c, errors.New("invalid token"))
 			return
 		}
 
@@ -45,6 +45,24 @@ func AuthorizationMiddleware() gin.HandlerFunc {
 		c.Set(constants.UserContextKey, u)
 
 		// validation success
+		c.Next()
+	}
+}
+
+func SyncAuthorizationMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if utils.IsAuthDisabled() {
+			c.Next()
+			return
+		}
+
+		authKey := c.GetHeader("Authorization")
+
+		if authKey != utils.GetAuthKey() {
+			utils.HandleErrorUnauthorized(c, errors.New("invalid auth key"))
+			return
+		}
+
 		c.Next()
 	}
 }

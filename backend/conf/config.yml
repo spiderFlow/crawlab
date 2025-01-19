@@ -1,3 +1,2 @@
-info:
-  edition: global.edition.community
-  version: v0.6.3
+edition: global.edition.community
+version: v0.7.0

@@ -2,49 +2,53 @@ package config
 
 import (
 	"encoding/json"
-	"github.com/crawlab-team/crawlab/core/config"
 	"github.com/crawlab-team/crawlab/core/entity"
 	"github.com/crawlab-team/crawlab/core/interfaces"
 	"github.com/crawlab-team/crawlab/core/utils"
-	"github.com/crawlab-team/crawlab/trace"
 	"os"
 	"path/filepath"
 	"sync"
 )
 
 type Service struct {
-	cfg  *Config
-	path string
+	cfg *entity.NodeInfo
+	interfaces.Logger
 }
 
 func (svc *Service) Init() (err error) {
+	metadataConfigPath := utils.GetMetadataConfigPath()
+
 	// check config directory path
-	configDirPath := filepath.Dir(svc.path)
+	configDirPath := filepath.Dir(metadataConfigPath)
 	if !utils.Exists(configDirPath) {
 		if err := os.MkdirAll(configDirPath, os.FileMode(0766)); err != nil {
-			return trace.TraceError(err)
+			svc.Errorf("create config directory error: %v", err)
+			return err
 		}
 	}
 
-	if !utils.Exists(svc.path) {
-		// not exists, set to default config
-		// and create a config file for persistence
-		svc.cfg = NewConfig(nil)
+	if !utils.Exists(metadataConfigPath) {
+		// not exists, set to default config, and create a config file for persistence
+		svc.cfg = newConfig()
 		data, err := json.Marshal(svc.cfg)
 		if err != nil {
-			return trace.TraceError(err)
+			svc.Errorf("marshal config error: %v", err)
+			return err
 		}
-		if err := os.WriteFile(svc.path, data, os.FileMode(0766)); err != nil {
-			return trace.TraceError(err)
+		if err := os.WriteFile(metadataConfigPath, data, os.FileMode(0766)); err != nil {
+			svc.Errorf("write config file error: %v", err)
+			return err
 		}
 	} else {
 		// exists, read and set to config
-		data, err := os.ReadFile(svc.path)
+		data, err := os.ReadFile(metadataConfigPath)
 		if err != nil {
-			return trace.TraceError(err)
+			svc.Errorf("read config file error: %v", err)
+			return err
 		}
 		if err := json.Unmarshal(data, svc.cfg); err != nil {
-			return trace.TraceError(err)
+			svc.Errorf("unmarshal config error: %v", err)
+			return err
 		}
 	}
 
@@ -86,26 +90,12 @@ func (svc *Service) GetMaxRunners() (res int) {
 	return svc.cfg.MaxRunners
 }
 
-func (svc *Service) GetConfigPath() (path string) {
-	return svc.path
-}
-
-func (svc *Service) SetConfigPath(path string) {
-	svc.path = path
-}
-
 func newNodeConfigService() (svc2 interfaces.NodeConfigService, err error) {
-	// cfg
-	cfg := NewConfig(nil)
-
 	// config service
 	svc := &Service{
-		cfg: cfg,
+		cfg:    newConfig(),
+		Logger: utils.NewLogger("NodeConfigService"),
 	}
-
-	// normalize config path
-	cfgPath := config.GetConfigPath()
-	svc.SetConfigPath(cfgPath)
 
 	// init
 	if err := svc.Init(); err != nil {
@@ -116,7 +106,7 @@ func newNodeConfigService() (svc2 interfaces.NodeConfigService, err error) {
 }
 
 var _service interfaces.NodeConfigService
-var _serviceOnce = new(sync.Once)
+var _serviceOnce sync.Once
 
 func GetNodeConfigService() interfaces.NodeConfigService {
 	_serviceOnce.Do(func() {

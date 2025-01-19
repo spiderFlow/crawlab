@@ -18,6 +18,12 @@ func GetPagination(c *gin.Context) (p *entity.Pagination, err error) {
 	if err := c.ShouldBindQuery(&_p); err != nil {
 		return GetDefaultPagination(), err
 	}
+	if _p.Page == 0 {
+		_p.Page = constants.PaginationDefaultPage
+	}
+	if _p.Size == 0 {
+		_p.Size = constants.PaginationDefaultSize
+	}
 	return &_p, nil
 }
 

@@ -1,57 +1,15 @@
 package controllers
 
-import "github.com/gin-gonic/gin"
-
-const (
-	ControllerIdNode = iota << 1
-	ControllerIdProject
-	ControllerIdSpider
-	ControllerIdTask
-	ControllerIdJob
-	ControllerIdSchedule
-	ControllerIdUser
-	ControllerIdSetting
-	ControllerIdToken
-	ControllerIdVariable
-	ControllerIdTag
-	ControllerIdLogin
-	ControllerIdColor
-	ControllerIdDataSource
-	ControllerIdDataCollection
-	ControllerIdResult
-	ControllerIdStats
-	ControllerIdFiler
-	ControllerIdGit
-	ControllerIdRole
-	ControllerIdPermission
-	ControllerIdExport
-	ControllerIdNotification
-	ControllerIdFilter
-	ControllerIdEnvironment
-	ControllerIdSync
-
-	ControllerIdVersion
-	ControllerIdI18n
-	ControllerIdSystemInfo
-	ControllerIdDemo
+import (
+	"errors"
+	"github.com/crawlab-team/crawlab/core/interfaces"
+	"github.com/crawlab-team/crawlab/core/models/service"
+	"github.com/crawlab-team/crawlab/core/mongo"
+	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	mongo2 "go.mongodb.org/mongo-driver/mongo"
 )
-
-type ControllerId int
-
-type BasicController interface {
-	Get(c *gin.Context)
-	Post(c *gin.Context)
-	Put(c *gin.Context)
-	Delete(c *gin.Context)
-}
-
-type ListController interface {
-	BasicController
-	GetList(c *gin.Context)
-	PutList(c *gin.Context)
-	PostList(c *gin.Context)
-	DeleteList(c *gin.Context)
-}
 
 type Action struct {
 	Method      string
@@ -59,11 +17,230 @@ type Action struct {
 	HandlerFunc gin.HandlerFunc
 }
 
-type ActionController interface {
-	Actions() (actions []Action)
+type BaseController[T any] struct {
+	modelSvc *service.ModelService[T]
+	actions  []Action
 }
 
-type ListActionController interface {
-	ListController
-	ActionController
+func (ctr *BaseController[T]) GetById(c *gin.Context) {
+	id, err := primitive.ObjectIDFromHex(c.Param("id"))
+	if err != nil {
+		HandleErrorBadRequest(c, err)
+		return
+	}
+
+	model, err := ctr.modelSvc.GetById(id)
+	if err != nil {
+		HandleErrorInternalServerError(c, err)
+		return
+	}
+
+	HandleSuccessWithData(c, model)
+}
+
+func (ctr *BaseController[T]) GetList(c *gin.Context) {
+	// get all if query field "all" is set true
+	all := MustGetFilterAll(c)
+	if all {
+		ctr.getAll(c)
+		return
+	}
+
+	// get list
+	ctr.getList(c)
+}
+
+func (ctr *BaseController[T]) Post(c *gin.Context) {
+	var model T
+	if err := c.ShouldBindJSON(&model); err != nil {
+		HandleErrorBadRequest(c, err)
+		return
+	}
+	u := GetUserFromContext(c)
+	m := any(&model).(interfaces.Model)
+	m.SetId(primitive.NewObjectID())
+	m.SetCreated(u.Id)
+	m.SetUpdated(u.Id)
+	col := ctr.modelSvc.GetCol()
+	res, err := col.GetCollection().InsertOne(col.GetContext(), m)
+	if err != nil {
+		HandleErrorInternalServerError(c, err)
+		return
+	}
+
+	result, err := ctr.modelSvc.GetById(res.InsertedID.(primitive.ObjectID))
+	if err != nil {
+		HandleErrorInternalServerError(c, err)
+		return
+	}
+
+	HandleSuccessWithData(c, result)
+}
+
+func (ctr *BaseController[T]) PutById(c *gin.Context) {
+	id, err := primitive.ObjectIDFromHex(c.Param("id"))
+	if err != nil {
+		HandleErrorBadRequest(c, err)
+		return
+	}
+
+	var model T
+	if err := c.ShouldBindJSON(&model); err != nil {
+		HandleErrorBadRequest(c, err)
+		return
+	}
+
+	u := GetUserFromContext(c)
+	m := any(&model).(interfaces.Model)
+	m.SetUpdated(u.Id)
+
+	if err := ctr.modelSvc.ReplaceById(id, model); err != nil {
+		HandleErrorInternalServerError(c, err)
+		return
+	}
+
+	result, err := ctr.modelSvc.GetById(id)
+	if err != nil {
+		HandleErrorInternalServerError(c, err)
+		return
+	}
+
+	HandleSuccessWithData(c, result)
+}
+
+func (ctr *BaseController[T]) PatchList(c *gin.Context) {
+	type Payload struct {
+		Ids    []primitive.ObjectID `json:"ids"`
+		Update bson.M               `json:"update"`
+	}
+
+	var payload Payload
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		HandleErrorBadRequest(c, err)
+		return
+	}
+
+	// query
+	query := bson.M{
+		"_id": bson.M{
+			"$in": payload.Ids,
+		},
+	}
+
+	// update
+	if err := ctr.modelSvc.UpdateMany(query, bson.M{"$set": payload.Update}); err != nil {
+		HandleErrorInternalServerError(c, err)
+		return
+	}
+
+	HandleSuccess(c)
+}
+
+func (ctr *BaseController[T]) DeleteById(c *gin.Context) {
+	id, err := primitive.ObjectIDFromHex(c.Param("id"))
+	if err != nil {
+		HandleErrorBadRequest(c, err)
+		return
+	}
+
+	if err := ctr.modelSvc.DeleteById(id); err != nil {
+		HandleErrorInternalServerError(c, err)
+		return
+	}
+
+	HandleSuccess(c)
+}
+
+func (ctr *BaseController[T]) DeleteList(c *gin.Context) {
+	type Payload struct {
+		Ids []string `json:"ids"`
+	}
+
+	var payload Payload
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		HandleErrorBadRequest(c, err)
+		return
+	}
+
+	var ids []primitive.ObjectID
+	for _, id := range payload.Ids {
+		objectId, err := primitive.ObjectIDFromHex(id)
+		if err != nil {
+			HandleErrorBadRequest(c, err)
+			return
+		}
+		ids = append(ids, objectId)
+	}
+
+	if err := ctr.modelSvc.DeleteMany(bson.M{
+		"_id": bson.M{
+			"$in": ids,
+		},
+	}); err != nil {
+		HandleErrorInternalServerError(c, err)
+		return
+	}
+
+	HandleSuccess(c)
+}
+
+func (ctr *BaseController[T]) getAll(c *gin.Context) {
+	query := MustGetFilterQuery(c)
+	sort := MustGetSortOption(c)
+	if sort == nil {
+		sort = bson.D{{"_id", -1}}
+	}
+	models, err := ctr.modelSvc.GetMany(query, &mongo.FindOptions{
+		Sort: sort,
+	})
+	if err != nil {
+		HandleErrorInternalServerError(c, err)
+		return
+	}
+	total, err := ctr.modelSvc.Count(query)
+	if err != nil {
+		HandleErrorInternalServerError(c, err)
+		return
+	}
+	HandleSuccessWithListData(c, models, total)
+}
+
+func (ctr *BaseController[T]) getList(c *gin.Context) {
+	// params
+	pagination := MustGetPagination(c)
+	query := MustGetFilterQuery(c)
+	sort := MustGetSortOption(c)
+
+	// get list
+	models, err := ctr.modelSvc.GetMany(query, &mongo.FindOptions{
+		Sort:  sort,
+		Skip:  pagination.Size * (pagination.Page - 1),
+		Limit: pagination.Size,
+	})
+	if err != nil {
+		if errors.Is(err, mongo2.ErrNoDocuments) {
+			HandleSuccessWithListData(c, nil, 0)
+		} else {
+			HandleErrorInternalServerError(c, err)
+		}
+		return
+	}
+
+	// total count
+	total, err := ctr.modelSvc.Count(query)
+	if err != nil {
+		HandleErrorInternalServerError(c, err)
+		return
+	}
+
+	// response
+	HandleSuccessWithListData(c, models, total)
+}
+
+func NewController[T any](actions ...Action) *BaseController[T] {
+	ctr := &BaseController[T]{
+		modelSvc: service.NewModelService[T](),
+		actions:  actions,
+	}
+	return ctr
 }

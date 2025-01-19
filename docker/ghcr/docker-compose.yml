@@ -1,0 +1,24 @@
+version: '3.3'
+services:
+  master:
+    image: ghcr.io/crawlab-team/crawlab:${CRAWLAB_TAG:-develop}
+    container_name: crawlab_ghcr_master
+    environment:
+      CRAWLAB_NODE_MASTER: "Y"
+      CRAWLAB_MONGO_HOST: "mongo"
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mongo
+    
+  worker:
+    image: ghcr.io/crawlab-team/crawlab:${CRAWLAB_TAG:-develop}
+    container_name: crawlab_ghcr_worker
+    environment:
+      CRAWLAB_NODE_MASTER: "N"
+      CRAWLAB_MASTER_HOST: "master"
+    depends_on:
+      - master
+    
+  mongo:
+    image: mongo:5

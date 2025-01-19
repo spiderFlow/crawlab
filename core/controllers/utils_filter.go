@@ -2,9 +2,10 @@ package controllers
 
 import (
 	"encoding/json"
+	errors2 "errors"
 	"github.com/crawlab-team/crawlab/core/constants"
 	"github.com/crawlab-team/crawlab/core/entity"
-	"github.com/crawlab-team/crawlab/core/errors"
+	"github.com/crawlab-team/crawlab/core/mongo"
 	"github.com/crawlab-team/crawlab/core/utils"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
@@ -56,6 +57,8 @@ func GetFilter(c *gin.Context) (f *entity.Filter, err error) {
 				items = append(items, item)
 			}
 			conditions[i].Value = items
+		default:
+			return nil, errors2.New("invalid type")
 		}
 	}
 
@@ -110,7 +113,7 @@ func GetFilterAll(c *gin.Context) (res bool, err error) {
 	case "FALSE":
 		return false, nil
 	default:
-		return false, errors.ErrorFilterInvalidOperation
+		return false, errors2.New("invalid value")
 	}
 }
 
@@ -120,4 +123,19 @@ func MustGetFilterAll(c *gin.Context) (res bool) {
 		return false
 	}
 	return res
+}
+
+func getResultListQuery(c *gin.Context) (q mongo.ListQuery) {
+	f, err := GetFilter(c)
+	if err != nil {
+		return q
+	}
+	for _, cond := range f.Conditions {
+		q = append(q, mongo.ListQueryCondition{
+			Key:   cond.Key,
+			Op:    cond.Op,
+			Value: utils.NormalizeObjectId(cond.Value),
+		})
+	}
+	return q
 }

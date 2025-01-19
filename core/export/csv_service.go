@@ -6,13 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ReneKroon/ttlcache"
-	"github.com/apex/log"
 	"github.com/crawlab-team/crawlab/core/constants"
 	"github.com/crawlab-team/crawlab/core/entity"
 	"github.com/crawlab-team/crawlab/core/interfaces"
+	"github.com/crawlab-team/crawlab/core/mongo"
 	"github.com/crawlab-team/crawlab/core/utils"
-	"github.com/crawlab-team/crawlab/db/mongo"
-	"github.com/crawlab-team/crawlab/trace"
 	"github.com/hashicorp/go-uuid"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -26,12 +24,14 @@ import (
 
 type CsvService struct {
 	cache *ttlcache.Cache
+	interfaces.Logger
 }
 
 func (svc *CsvService) GenerateId() (exportId string, err error) {
 	exportId, err = uuid.GenerateUUID()
 	if err != nil {
-		return "", trace.TraceError(err)
+		svc.Errorf("failed to generate export id: %v", err)
+		return "", err
 	}
 	return exportId, nil
 }
@@ -69,7 +69,8 @@ func (svc *CsvService) GetExport(exportId string) (export interfaces.Export, err
 	// get export from cache
 	res, ok := svc.cache.Get(exportId)
 	if !ok {
-		return nil, trace.TraceError(errors.New("export not found"))
+		svc.Errorf("export not found: %s", exportId)
+		return nil, err
 	}
 	export = res.(interfaces.Export)
 	return export, nil
@@ -81,8 +82,7 @@ func (svc *CsvService) export(export *entity.Export) {
 		err := errors.New("empty target")
 		export.Status = constants.TaskStatusError
 		export.EndTs = time.Now()
-		log.Errorf("export error (id: %s): %v", export.Id, err)
-		trace.PrintError(err)
+		svc.Errorf("export error (id: %s): %v", export.Id, err)
 		svc.cache.Set(export.Id, export)
 		return
 	}
@@ -95,8 +95,7 @@ func (svc *CsvService) export(export *entity.Export) {
 	if err != nil {
 		export.Status = constants.TaskStatusError
 		export.EndTs = time.Now()
-		log.Errorf("export error (id: %s): %v", export.Id, err)
-		trace.PrintError(err)
+		svc.Errorf("export error (id: %s): %v", export.Id, err)
 		svc.cache.Set(export.Id, export)
 		return
 	}
@@ -113,8 +112,7 @@ func (svc *CsvService) export(export *entity.Export) {
 	if err != nil {
 		export.Status = constants.TaskStatusError
 		export.EndTs = time.Now()
-		log.Errorf("export error (id: %s): %v", export.Id, err)
-		trace.PrintError(err)
+		svc.Errorf("export error (id: %s): %v", export.Id, err)
 		svc.cache.Set(export.Id, export)
 		return
 	}
@@ -123,7 +121,7 @@ func (svc *CsvService) export(export *entity.Export) {
 	bom := []byte{0xEF, 0xBB, 0xBF}
 	_, err = csvFile.Write(bom)
 	if err != nil {
-		trace.PrintError(err)
+		svc.Errorf("export error (id: %s): %v", export.Id, err)
 		return
 	}
 
@@ -133,8 +131,7 @@ func (svc *CsvService) export(export *entity.Export) {
 	if err != nil {
 		export.Status = constants.TaskStatusError
 		export.EndTs = time.Now()
-		log.Errorf("export error (id: %s): %v", export.Id, err)
-		trace.PrintError(err)
+		svc.Errorf("export error (id: %s): %v", export.Id, err)
 		svc.cache.Set(export.Id, export)
 		return
 	}
@@ -149,17 +146,16 @@ func (svc *CsvService) export(export *entity.Export) {
 		// check error
 		err := cur.Err()
 		if err != nil {
-			if err != mongo2.ErrNoDocuments {
+			if !errors.Is(err, mongo2.ErrNoDocuments) {
 				// error
 				export.Status = constants.TaskStatusError
 				export.EndTs = time.Now()
-				log.Errorf("export error (id: %s): %v", export.Id, err)
-				trace.PrintError(err)
+				svc.Errorf("export error (id: %s): %v", export.Id, err)
 			} else {
 				// no more data
 				export.Status = constants.TaskStatusFinished
 				export.EndTs = time.Now()
-				log.Infof("export finished (id: %s)", export.Id)
+				svc.Infof("export finished (id: %s)", export.Id)
 			}
 			svc.cache.Set(export.Id, export)
 			return
@@ -170,7 +166,7 @@ func (svc *CsvService) export(export *entity.Export) {
 			// no more data
 			export.Status = constants.TaskStatusFinished
 			export.EndTs = time.Now()
-			log.Infof("export finished (id: %s)", export.Id)
+			svc.Infof("export finished (id: %s)", export.Id)
 			svc.cache.Set(export.Id, export)
 			return
 		}
@@ -182,8 +178,7 @@ func (svc *CsvService) export(export *entity.Export) {
 			// error
 			export.Status = constants.TaskStatusError
 			export.EndTs = time.Now()
-			log.Errorf("export error (id: %s): %v", export.Id, err)
-			trace.PrintError(err)
+			svc.Errorf("export error (id: %s): %v", export.Id, err)
 			svc.cache.Set(export.Id, export)
 			return
 		}
@@ -195,8 +190,7 @@ func (svc *CsvService) export(export *entity.Export) {
 			// error
 			export.Status = constants.TaskStatusError
 			export.EndTs = time.Now()
-			log.Errorf("export error (id: %s): %v", export.Id, err)
-			trace.PrintError(err)
+			svc.Errorf("export error (id: %s): %v", export.Id, err)
 			svc.cache.Set(export.Id, export)
 			return
 		}
@@ -240,7 +234,8 @@ func (svc *CsvService) getCsvWriter(export *entity.Export) (csvWriter *csv.Write
 	// open file
 	csvFile, err = os.Create(export.DownloadPath)
 	if err != nil {
-		return nil, nil, trace.TraceError(err)
+		svc.Errorf("failed to create csv file: %v", err)
+		return nil, nil, err
 	}
 
 	// create csv writer
@@ -256,7 +251,8 @@ func (svc *CsvService) getColumns(query bson.M, export interfaces.Export) (colum
 	// get 10 records
 	var data []bson.M
 	if err := col.Find(query, &mongo.FindOptions{Limit: 10}).All(&data); err != nil {
-		return nil, trace.TraceError(err)
+		svc.Errorf("failed to get columns: %v", err)
+		return nil, err
 	}
 
 	// columns set
@@ -329,7 +325,8 @@ func NewCsvService() (svc2 interfaces.ExportService) {
 	cache := ttlcache.NewCache()
 	cache.SetTTL(time.Minute * 5)
 	svc := &CsvService{
-		cache: cache,
+		cache:  cache,
+		Logger: utils.NewLogger("CsvService"),
 	}
 	return svc
 }
