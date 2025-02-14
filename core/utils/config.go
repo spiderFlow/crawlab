@@ -28,7 +28,7 @@ const (
 	DefaultApiPath             = "/api"
 	DefaultNodeMaxRunners      = 0 // 0 means no limit
 	DefaultInstallRoot         = "/app/install"
-	DefaultInstallEnvs         = "node,browser"
+	DefaultInstallEnvs         = ""
 	MetadataConfigDirName      = ".crawlab"
 	MetadataConfigName         = "config.json"
 	DefaultPyenvPath           = "/root/.pyenv"
