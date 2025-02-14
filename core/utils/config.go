@@ -28,6 +28,7 @@ const (
 	DefaultApiPath             = "/api"
 	DefaultNodeMaxRunners      = 0 // 0 means no limit
 	DefaultInstallRoot         = "/app/install"
+	DefaultInstallEnvs         = ""
 	MetadataConfigDirName      = ".crawlab"
 	MetadataConfigName         = "config.json"
 	DefaultPyenvPath           = "/root/.pyenv"
@@ -248,6 +249,13 @@ func GetInstallRoot() string {
 		return res
 	}
 	return DefaultInstallRoot
+}
+
+func GetInstallEnvs() []string {
+	if res := viper.GetStringSlice("install.envs"); res != nil {
+		return res
+	}
+	return strings.Split(DefaultInstallEnvs, ",")
 }
 
 func GetPyenvPath() string {
