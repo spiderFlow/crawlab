@@ -5,6 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -92,6 +93,12 @@ func GetWorkspace() string {
 	}
 	if res := viper.GetString("workspace"); res != "" {
 		return res
+	}
+	if !Exists(filepath.Join(homedirPath, DefaultWorkspace)) {
+		err := os.MkdirAll(filepath.Join(homedirPath, DefaultWorkspace), os.ModePerm)
+		if err != nil {
+			logger.Warnf("cannot create workspace directory: %v", err)
+		}
 	}
 	return filepath.Join(homedirPath, DefaultWorkspace)
 }
