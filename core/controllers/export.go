@@ -68,6 +68,7 @@ func GetExportDownload(c *gin.Context) {
 		exp, err = export.GetJsonService().GetExport(exportId)
 	default:
 		HandleErrorBadRequest(c, errors.New(fmt.Sprintf("invalid export type: %s", exportType)))
+		return
 	}
 	if err != nil {
 		HandleErrorInternalServerError(c, err)
