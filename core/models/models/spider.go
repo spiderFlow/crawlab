@@ -27,10 +27,9 @@ type Spider struct {
 	Stat *SpiderStat `json:"stat,omitempty" bson:"-"`
 
 	// execution
-	Cmd         string `json:"cmd" bson:"cmd"`     // execute command
-	Param       string `json:"param" bson:"param"` // default task param
-	Priority    int    `json:"priority" bson:"priority"`
-	AutoInstall bool   `json:"auto_install" bson:"auto_install"`
+	Cmd      string `json:"cmd" bson:"cmd"`     // execute command
+	Param    string `json:"param" bson:"param"` // default task param
+	Priority int    `json:"priority" bson:"priority"`
 }
 
 type SpiderTemplateParams struct {
