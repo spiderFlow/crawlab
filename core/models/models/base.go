@@ -86,7 +86,6 @@ func GetModelInstances() []any {
 		*new(NotificationSetting),
 		*new(Permission),
 		*new(Project),
-		*new(RolePermission),
 		*new(Role),
 		*new(Schedule),
 		*new(Setting),

@@ -240,7 +240,7 @@ func DeleteUserList(c *gin.Context) {
 
 func GetUserMe(c *gin.Context) {
 	u := GetUserFromContext(c)
-	getUserById(u.Id, c)
+	getUserByIdWithRoutes(u.Id, c)
 }
 
 func PutUserMe(c *gin.Context) {
@@ -272,6 +272,34 @@ func getUserById(userId primitive.ObjectID, c *gin.Context) {
 			user.Role = role.Name
 			user.RootAdminRole = role.RootAdmin
 		}
+	}
+
+	HandleSuccessWithData(c, user)
+}
+
+func getUserByIdWithRoutes(userId primitive.ObjectID, c *gin.Context) {
+	if !utils.IsPro() {
+		getUserById(userId, c)
+		return
+	}
+
+	// get user
+	user, err := service.NewModelService[models.User]().GetById(userId)
+	if err != nil {
+		HandleErrorInternalServerError(c, err)
+		return
+	}
+
+	// get role
+	if !user.RoleId.IsZero() {
+		role, err := service.NewModelService[models.Role]().GetById(user.RoleId)
+		if err != nil {
+			HandleErrorInternalServerError(c, err)
+			return
+		}
+		user.Role = role.Name
+		user.RootAdminRole = role.RootAdmin
+		user.Routes = role.Routes
 	}
 
 	HandleSuccessWithData(c, user)
