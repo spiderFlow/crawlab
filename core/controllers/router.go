@@ -247,6 +247,11 @@ func InitRoutes(app *gin.Engine) (err error) {
 			Path:        "",
 			HandlerFunc: PostToken,
 		},
+		{
+			Method:      http.MethodGet,
+			Path:        "",
+			HandlerFunc: GetTokenList,
+		},
 	}...))
 	RegisterController(groups.AuthGroup, "/users", NewController[models.User]([]Action{
 		{
