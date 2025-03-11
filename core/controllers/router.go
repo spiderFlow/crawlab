@@ -2,25 +2,40 @@ package controllers
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/crawlab-team/crawlab/core/middlewares"
 	"github.com/crawlab-team/crawlab/core/models/models"
+	"github.com/crawlab-team/crawlab/core/openapi"
 	"github.com/gin-gonic/gin"
 )
 
 // RouterGroups defines the different authentication levels for API routes
 type RouterGroups struct {
-	AuthGroup      *gin.RouterGroup // Routes requiring full authentication
-	SyncAuthGroup  *gin.RouterGroup // Routes for sync operations with special auth
-	AnonymousGroup *gin.RouterGroup // Public routes that don't require auth
+	AuthGroup      *gin.RouterGroup     // Routes requiring full authentication
+	SyncAuthGroup  *gin.RouterGroup     // Routes for sync operations with special auth
+	AnonymousGroup *gin.RouterGroup     // Public routes that don't require auth
+	Wrapper        *openapi.FizzWrapper // OpenAPI wrapper for documentation
+}
+
+// Global variable to store the OpenAPI wrapper
+// This is a workaround since we can't easily pass it through the Gin context
+var globalWrapper *openapi.FizzWrapper
+
+func GetGlobalFizzWrapper() *openapi.FizzWrapper {
+	return globalWrapper
 }
 
 // NewRouterGroups initializes the router groups with their respective middleware
 func NewRouterGroups(app *gin.Engine) (groups *RouterGroups) {
+	// Create OpenAPI wrapper
+	wrapper := openapi.NewFizzWrapper(app)
+
 	return &RouterGroups{
 		AuthGroup:      app.Group("/", middlewares.AuthorizationMiddleware()),
 		SyncAuthGroup:  app.Group("/", middlewares.SyncAuthorizationMiddleware()),
 		AnonymousGroup: app.Group("/"),
+		Wrapper:        wrapper,
 	}
 }
 
@@ -30,42 +45,179 @@ func RegisterController[T any](group *gin.RouterGroup, basePath string, ctr *Bas
 	// Track registered paths to avoid duplicates
 	actionPaths := make(map[string]bool)
 	for _, action := range ctr.actions {
-		group.Handle(action.Method, basePath+action.Path, action.HandlerFunc)
 		path := basePath + action.Path
 		key := action.Method + " - " + path
 		actionPaths[key] = true
+
+		// Create appropriate model response based on the action
+		responses := globalWrapper.BuildModelResponse()
+
+		id := getIDForAction(action.Method, path)
+		summary := getSummaryForAction(action.Method, basePath, action.Path)
+		description := getDescriptionForAction(action.Method, basePath, action.Path)
+
+		globalWrapper.RegisterRoute(action.Method, path, action.HandlerFunc, id, summary, description, responses)
 	}
-	registerBuiltinHandler(group, http.MethodGet, basePath+"", ctr.GetList, actionPaths)
-	registerBuiltinHandler(group, http.MethodGet, basePath+"/:id", ctr.GetById, actionPaths)
-	registerBuiltinHandler(group, http.MethodPost, basePath+"", ctr.Post, actionPaths)
-	registerBuiltinHandler(group, http.MethodPut, basePath+"/:id", ctr.PutById, actionPaths)
-	registerBuiltinHandler(group, http.MethodPatch, basePath+"", ctr.PatchList, actionPaths)
-	registerBuiltinHandler(group, http.MethodDelete, basePath+"/:id", ctr.DeleteById, actionPaths)
-	registerBuiltinHandler(group, http.MethodDelete, basePath+"", ctr.DeleteList, actionPaths)
+
+	// Register built-in handlers if they haven't been overridden
+	// Create a zero value of T to use as the model
+	var model T
+	registerBuiltinHandler(group, globalWrapper, basePath, http.MethodGet, "", ctr.GetList, actionPaths, "Get list", "Get a list of items", model)
+	registerBuiltinHandler(group, globalWrapper, basePath, http.MethodGet, "/:id", ctr.GetById, actionPaths, "Get by ID", "Get a single item by ID", model)
+	registerBuiltinHandler(group, globalWrapper, basePath, http.MethodPost, "", ctr.Post, actionPaths, "Create", "Create a new item", model)
+	registerBuiltinHandler(group, globalWrapper, basePath, http.MethodPut, "/:id", ctr.PutById, actionPaths, "Update by ID", "Update an item by ID", model)
+	registerBuiltinHandler(group, globalWrapper, basePath, http.MethodPatch, "", ctr.PatchList, actionPaths, "Patch list", "Patch multiple items", model)
+	registerBuiltinHandler(group, globalWrapper, basePath, http.MethodDelete, "/:id", ctr.DeleteById, actionPaths, "Delete by ID", "Delete an item by ID", model)
+	registerBuiltinHandler(group, globalWrapper, basePath, http.MethodDelete, "", ctr.DeleteList, actionPaths, "Delete list", "Delete multiple items", model)
 }
 
 // RegisterActions registers a list of custom action handlers to a route group
 func RegisterActions(group *gin.RouterGroup, basePath string, actions []Action) {
 	for _, action := range actions {
-		group.Handle(action.Method, basePath+action.Path, action.HandlerFunc)
+		path := basePath + action.Path
+
+		// Create generic response
+		responses := globalWrapper.BuildModelResponse()
+
+		id := getIDForAction(action.Method, path)
+		summary := getSummaryForAction(action.Method, basePath, action.Path)
+		description := getDescriptionForAction(action.Method, basePath, action.Path)
+
+		globalWrapper.RegisterRoute(action.Method, path, action.HandlerFunc, id, summary, description, responses)
 	}
 }
 
 // registerBuiltinHandler registers a standard handler if it hasn't been overridden
 // by a custom action
-func registerBuiltinHandler(group *gin.RouterGroup, method, path string, handlerFunc gin.HandlerFunc, existingActionPaths map[string]bool) {
+func registerBuiltinHandler[T any](group *gin.RouterGroup, wrapper *openapi.FizzWrapper, basePath, method, pathSuffix string, handlerFunc interface{}, existingActionPaths map[string]bool, summary, description string, model T) {
+	path := basePath + pathSuffix
 	key := method + " - " + path
 	_, ok := existingActionPaths[key]
 	if ok {
 		return
 	}
-	group.Handle(method, path, handlerFunc)
+
+	id := getIDForAction(method, path)
+
+	// Create appropriate response based on the method
+	responses := wrapper.BuildModelResponse()
+
+	wrapper.RegisterRoute(method, path, handlerFunc, id, summary, description, responses)
+}
+
+// Helper functions to generate OpenAPI documentation
+func getIDForAction(method, path string) string {
+	// Remove leading slash and convert remaining slashes to underscores
+	cleanPath := strings.TrimPrefix(path, "/")
+	cleanPath = strings.ReplaceAll(cleanPath, "/", "_")
+	cleanPath = strings.ReplaceAll(cleanPath, ":", "_")
+	cleanPath = strings.ReplaceAll(cleanPath, "__", "_")
+
+	return method + "_" + cleanPath
+}
+
+func getSummaryForAction(method, basePath, path string) string {
+	resource := getResourceName(basePath)
+
+	switch method {
+	case http.MethodGet:
+		if path == "" {
+			return "List " + resource
+		} else if path == "/:id" {
+			return "Get " + resource + " by ID"
+		}
+	case http.MethodPost:
+		if path == "" {
+			return "Create " + resource
+		}
+	case http.MethodPut:
+		if path == "/:id" {
+			return "Update " + resource + " by ID"
+		}
+	case http.MethodPatch:
+		if path == "" {
+			return "Patch " + resource + " list"
+		}
+	case http.MethodDelete:
+		if path == "/:id" {
+			return "Delete " + resource + " by ID"
+		} else if path == "" {
+			return "Delete " + resource + " list"
+		}
+	}
+
+	// For custom actions, use a more descriptive summary
+	if path != "" && path != "/:id" {
+		return method + " " + resource + path
+	}
+
+	return method + " " + resource
+}
+
+func getDescriptionForAction(method, basePath, path string) string {
+	resource := getResourceName(basePath)
+
+	switch method {
+	case http.MethodGet:
+		if path == "" {
+			return "Get a list of " + resource + " items"
+		} else if path == "/:id" {
+			return "Get a single " + resource + " by ID"
+		}
+	case http.MethodPost:
+		if path == "" {
+			return "Create a new " + resource
+		}
+	case http.MethodPut:
+		if path == "/:id" {
+			return "Update a " + resource + " by ID"
+		}
+	case http.MethodPatch:
+		if path == "" {
+			return "Patch multiple " + resource + " items"
+		}
+	case http.MethodDelete:
+		if path == "/:id" {
+			return "Delete a " + resource + " by ID"
+		} else if path == "" {
+			return "Delete multiple " + resource + " items"
+		}
+	}
+
+	// For custom actions, use a more descriptive description
+	if path != "" && path != "/:id" {
+		return "Perform " + method + " operation on " + resource + " with path " + path
+	}
+
+	return "Perform " + method + " operation on " + resource
+}
+
+func getResourceName(basePath string) string {
+	// Remove leading slash and get the last part of the path
+	if len(basePath) > 0 && basePath[0] == '/' {
+		basePath = basePath[1:]
+	}
+
+	// Remove trailing slash if present
+	if len(basePath) > 0 && basePath[len(basePath)-1] == '/' {
+		basePath = basePath[:len(basePath)-1]
+	}
+
+	// If path is empty, return "resource"
+	if basePath == "" {
+		return "resource"
+	}
+
+	return basePath
 }
 
 // InitRoutes configures all API routes for the application
 func InitRoutes(app *gin.Engine) (err error) {
 	// Initialize route groups with different auth levels
 	groups := NewRouterGroups(app)
+
+	// Store the wrapper in the global variable for later use
+	globalWrapper = groups.Wrapper
 
 	// Register resource controllers with their respective endpoints
 	// Each RegisterController call sets up standard CRUD operations
@@ -417,6 +569,9 @@ func InitRoutes(app *gin.Engine) (err error) {
 			HandlerFunc: PostLogout,
 		},
 	})
+
+	// Register OpenAPI documentation route
+	groups.AnonymousGroup.GET("/openapi.json", GetOpenAPI)
 
 	return nil
 }

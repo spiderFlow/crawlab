@@ -74,7 +74,7 @@ func GetSpiderById(c *gin.Context) {
 	HandleSuccessWithData(c, s)
 }
 
-func GetSpiderList(c *gin.Context) {
+func GetSpiderList(c *gin.Context, params *GetListParams) {
 	// get all list
 	all := MustGetFilterAll(c)
 	if all {
@@ -85,7 +85,7 @@ func GetSpiderList(c *gin.Context) {
 	// get list
 	withStats := c.Query("stats")
 	if withStats == "" {
-		NewController[models.Spider]().GetList(c)
+		NewController[models.Spider]().GetList(c, params)
 		return
 	}
 

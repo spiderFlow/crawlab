@@ -1,13 +1,54 @@
 package controllers
 
 import (
+	"net/http"
+
 	"github.com/crawlab-team/crawlab/core/constants"
 	"github.com/crawlab-team/crawlab/core/entity"
 	"github.com/crawlab-team/crawlab/core/utils"
 	"github.com/crawlab-team/crawlab/trace"
 	"github.com/gin-gonic/gin"
-	"net/http"
 )
+
+type Response[T any] struct {
+	Status  string `json:"status"`
+	Message string `json:"message"`
+	Data    T      `json:"data"`
+	Error   string `json:"error"`
+}
+
+type ListResponse[T any] struct {
+	Status  string `json:"status"`
+	Message string `json:"message"`
+	Total   int    `json:"total"`
+	Data    []T    `json:"data"`
+	Error   string `json:"error"`
+}
+
+func GetSuccessDataResponse[T any](model T) (res *Response[T], err error) {
+	return &Response[T]{
+		Status:  constants.HttpResponseStatusOk,
+		Message: constants.HttpResponseMessageSuccess,
+		Data:    model,
+	}, nil
+}
+
+func GetSuccessListResponse[T any](models []T, total int) (res *ListResponse[T], err error) {
+	return &ListResponse[T]{
+		Status:  constants.HttpResponseStatusOk,
+		Message: constants.HttpResponseMessageSuccess,
+		Data:    models,
+		Total:   total,
+	}, nil
+}
+
+func GetErrorDataResponse[T any](err error) (res *Response[T], err2 error) {
+	return &Response[T]{
+		Status:  constants.HttpResponseStatusOk,
+		Message: constants.HttpResponseMessageError,
+		Error:   err.Error(),
+	}, err
+}
 
 func handleError(statusCode int, c *gin.Context, err error) {
 	if utils.IsDev() {

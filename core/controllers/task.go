@@ -67,10 +67,10 @@ func GetTaskById(c *gin.Context) {
 	HandleSuccessWithData(c, t)
 }
 
-func GetTaskList(c *gin.Context) {
+func GetTaskList(c *gin.Context, params *GetListParams) {
 	withStats := c.Query("stats")
 	if withStats == "" {
-		NewController[models.Task]().GetList(c)
+		NewController[models.Task]().GetList(c, params)
 		return
 	}
 
