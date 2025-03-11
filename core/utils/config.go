@@ -35,6 +35,7 @@ const (
 	DefaultPyenvPath           = "/root/.pyenv"
 	DefaultNodeModulesPath     = "/usr/lib/node_modules"
 	DefaultGoPath              = "/root/go"
+	DefaultMcpServerBaseUrl    = "http://localhost:9000/sse"
 )
 
 func IsDev() bool {
@@ -284,4 +285,11 @@ func GetGoPath() string {
 		return res
 	}
 	return DefaultGoPath
+}
+
+func GetMcpServerBaseUrl() string {
+	if res := viper.GetString("mcp.server.base_url"); res != "" {
+		return res
+	}
+	return DefaultMcpServerBaseUrl
 }
