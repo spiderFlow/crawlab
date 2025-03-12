@@ -2,7 +2,8 @@ package openapi
 
 import (
 	"fmt"
-
+	"github.com/crawlab-team/crawlab/core/interfaces"
+	"github.com/crawlab-team/crawlab/core/utils"
 	"github.com/loopfz/gadgeto/tonic"
 
 	"github.com/gin-gonic/gin"
@@ -11,8 +12,9 @@ import (
 
 // FizzWrapper wraps an existing Gin Engine to add OpenAPI functionality
 type FizzWrapper struct {
-	fizz *fizz.Fizz
-	gin  *gin.Engine
+	fizz   *fizz.Fizz
+	gin    *gin.Engine
+	logger interfaces.Logger
 }
 
 // NewFizzWrapper creates a new wrapper around an existing Gin Engine
@@ -20,10 +22,10 @@ type FizzWrapper struct {
 func NewFizzWrapper(engine *gin.Engine) *FizzWrapper {
 	// Create a new Fizz instance using the existing Gin engine
 	f := fizz.NewFromEngine(engine)
-
 	return &FizzWrapper{
-		fizz: f,
-		gin:  engine,
+		fizz:   f,
+		gin:    engine,
+		logger: utils.NewLogger("FizzWrapper"),
 	}
 }
 

@@ -6,7 +6,7 @@ import (
 
 type SpiderStat struct {
 	any                    `collection:"spider_stats"`
-	BaseModel[SpiderStat]  `bson:",inline"`
+	BaseModel              `bson:",inline"`
 	LastTaskId             primitive.ObjectID `json:"last_task_id" bson:"last_task_id,omitempty"`
 	LastTask               *Task              `json:"last_task,omitempty" bson:"-"`
 	Tasks                  int                `json:"tasks" bson:"tasks"`

@@ -29,13 +29,13 @@ func GetGlobalFizzWrapper() *openapi.FizzWrapper {
 // NewRouterGroups initializes the router groups with their respective middleware
 func NewRouterGroups(app *gin.Engine) (groups *RouterGroups) {
 	// Create OpenAPI wrapper
-	wrapper := openapi.NewFizzWrapper(app)
+	globalWrapper = openapi.NewFizzWrapper(app)
 
 	return &RouterGroups{
 		AuthGroup:      app.Group("/", middlewares.AuthorizationMiddleware()),
 		SyncAuthGroup:  app.Group("/", middlewares.SyncAuthorizationMiddleware()),
 		AnonymousGroup: app.Group("/"),
-		Wrapper:        wrapper,
+		Wrapper:        globalWrapper,
 	}
 }
 
@@ -232,33 +232,6 @@ func InitRoutes(app *gin.Engine) (err error) {
 			HandlerFunc: GetProjectList,
 		},
 	}...))
-	RegisterController(groups.AuthGroup, "/schedules", NewController[models.Schedule]([]Action{
-		{
-			Method:      http.MethodPost,
-			Path:        "",
-			HandlerFunc: PostSchedule,
-		},
-		{
-			Method:      http.MethodPut,
-			Path:        "/:id",
-			HandlerFunc: PutScheduleById,
-		},
-		{
-			Method:      http.MethodPost,
-			Path:        "/:id/enable",
-			HandlerFunc: PostScheduleEnable,
-		},
-		{
-			Method:      http.MethodPost,
-			Path:        "/:id/disable",
-			HandlerFunc: PostScheduleDisable,
-		},
-		{
-			Method:      http.MethodPost,
-			Path:        "/:id/run",
-			HandlerFunc: PostScheduleRun,
-		},
-	}...))
 	RegisterController(groups.AuthGroup, "/spiders", NewController[models.Spider]([]Action{
 		{
 			Method:      http.MethodGet,
@@ -349,6 +322,35 @@ func InitRoutes(app *gin.Engine) (err error) {
 			Method:      http.MethodGet,
 			Path:        "/:id/results",
 			HandlerFunc: GetSpiderResults,
+		},
+	}...))
+	groups.AnonymousGroup.GET("/openapi.json", GetOpenAPI)
+	return
+	RegisterController(groups.AuthGroup, "/schedules", NewController[models.Schedule]([]Action{
+		{
+			Method:      http.MethodPost,
+			Path:        "",
+			HandlerFunc: PostSchedule,
+		},
+		{
+			Method:      http.MethodPut,
+			Path:        "/:id",
+			HandlerFunc: PutScheduleById,
+		},
+		{
+			Method:      http.MethodPost,
+			Path:        "/:id/enable",
+			HandlerFunc: PostScheduleEnable,
+		},
+		{
+			Method:      http.MethodPost,
+			Path:        "/:id/disable",
+			HandlerFunc: PostScheduleDisable,
+		},
+		{
+			Method:      http.MethodPost,
+			Path:        "/:id/run",
+			HandlerFunc: PostScheduleRun,
 		},
 	}...))
 	RegisterController(groups.AuthGroup, "/tasks", NewController[models.Task]([]Action{

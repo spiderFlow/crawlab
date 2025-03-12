@@ -6,7 +6,7 @@ import (
 
 type Metric struct {
 	any                  `collection:"metrics"`
-	BaseModel[Metric]    `bson:",inline"`
+	BaseModel            `bson:",inline"`
 	Type                 string             `json:"type" bson:"type"`
 	NodeId               primitive.ObjectID `json:"node_id" bson:"node_id"`
 	CpuUsagePercent      float32            `json:"cpu_usage_percent" bson:"cpu_usage_percent"`

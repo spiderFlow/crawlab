@@ -5,23 +5,23 @@ import (
 )
 
 type Database struct {
-	any                 `collection:"databases"`
-	BaseModel[Database] `bson:",inline"`
-	Name                string    `json:"name" bson:"name"`
-	Description         string    `json:"description" bson:"description"`
-	DataSource          string    `json:"data_source" bson:"data_source"`
-	Host                string    `json:"host" bson:"host"`
-	Port                int       `json:"port" bson:"port"`
-	URI                 string    `json:"uri,omitempty" bson:"uri,omitempty"`
-	Database            string    `json:"database,omitempty" bson:"database,omitempty"`
-	Username            string    `json:"username,omitempty" bson:"username,omitempty"`
-	Password            string    `json:"password,omitempty" bson:"-"`
-	EncryptedPassword   string    `json:"-,omitempty" bson:"encrypted_password,omitempty"`
-	Status              string    `json:"status" bson:"status"`
-	Error               string    `json:"error" bson:"error"`
-	Active              bool      `json:"active" bson:"active"`
-	ActiveAt            time.Time `json:"active_ts" bson:"active_ts"`
-	IsDefault           bool      `json:"is_default" bson:"-"`
+	any               `collection:"databases"`
+	BaseModel         `bson:",inline"`
+	Name              string    `json:"name" bson:"name"`
+	Description       string    `json:"description" bson:"description"`
+	DataSource        string    `json:"data_source" bson:"data_source"`
+	Host              string    `json:"host" bson:"host"`
+	Port              int       `json:"port" bson:"port"`
+	URI               string    `json:"uri,omitempty" bson:"uri,omitempty"`
+	Database          string    `json:"database,omitempty" bson:"database,omitempty"`
+	Username          string    `json:"username,omitempty" bson:"username,omitempty"`
+	Password          string    `json:"password,omitempty" bson:"-"`
+	EncryptedPassword string    `json:"-,omitempty" bson:"encrypted_password,omitempty"`
+	Status            string    `json:"status" bson:"status"`
+	Error             string    `json:"error" bson:"error"`
+	Active            bool      `json:"active" bson:"active"`
+	ActiveAt          time.Time `json:"active_ts" bson:"active_ts"`
+	IsDefault         bool      `json:"is_default" bson:"-"`
 
 	MongoParams *struct {
 		AuthSource    string `json:"auth_source,omitempty" bson:"auth_source,omitempty"`

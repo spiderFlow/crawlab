@@ -60,7 +60,7 @@ func TestRegisterController_Routes(t *testing.T) {
 func TestInitRoutes_ProjectsRoute(t *testing.T) {
 	router := gin.Default()
 
-	controllers.InitRoutes(router)
+	_ = controllers.InitRoutes(router)
 
 	// Check if the projects route is registered
 	routes := router.Routes()

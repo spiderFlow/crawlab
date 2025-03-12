@@ -17,9 +17,9 @@ import (
 )
 
 type TestModel struct {
-	Id                          primitive.ObjectID `bson:"_id,omitempty" collection:"testmodels"`
-	models.BaseModel[TestModel] `bson:",inline"`
-	Name                        string `bson:"name"`
+	Id               primitive.ObjectID `bson:"_id,omitempty" collection:"testmodels"`
+	models.BaseModel `bson:",inline"`
+	Name             string `bson:"name"`
 }
 
 func setupTestDB() {

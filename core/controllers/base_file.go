@@ -4,48 +4,54 @@ import (
 	"errors"
 	"fmt"
 	"github.com/crawlab-team/crawlab/core/fs"
+	"github.com/crawlab-team/crawlab/core/interfaces"
 	"github.com/gin-gonic/gin"
 	"io"
 	"os"
 	"sync"
 )
 
-func GetBaseFileListDir(rootPath string, c *gin.Context) {
-	path := c.Query("path")
+type GetBaseFileListDirParams struct {
+	Path string `path:"path"`
+}
+
+func GetBaseFileListDir(rootPath string, params *GetBaseFileListDirParams) (response *Response[[]interfaces.FsFileInfo], err error) {
+	path := params.Path
 
 	fsSvc, err := fs.GetBaseFileFsSvc(rootPath)
 	if err != nil {
-		HandleErrorBadRequest(c, err)
-		return
+		return GetErrorResponse[[]interfaces.FsFileInfo](err)
 	}
 
 	files, err := fsSvc.List(path)
 	if err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
-			HandleErrorInternalServerError(c, err)
-			return
+			return GetErrorResponse[[]interfaces.FsFileInfo](err)
 		}
 	}
 
-	HandleSuccessWithData(c, files)
+	//HandleSuccessWithData(c, files)
+	return GetDataResponse[[]interfaces.FsFileInfo](files)
 }
 
-func GetBaseFileFile(rootPath string, c *gin.Context) {
-	path := c.Query("path")
+type GetBaseFileFileParams struct {
+	Path string `path:"path"`
+}
+
+func GetBaseFileFile(rootPath string, params *GetBaseFileFileParams) (response *Response[string], err error) {
+	path := params.Path
 
 	fsSvc, err := fs.GetBaseFileFsSvc(rootPath)
 	if err != nil {
-		HandleErrorBadRequest(c, err)
-		return
+		return GetErrorResponse[string](err)
 	}
 
 	data, err := fsSvc.GetFile(path)
 	if err != nil {
-		HandleErrorInternalServerError(c, err)
-		return
+		return GetErrorResponse[string](err)
 	}
 
-	HandleSuccessWithData(c, string(data))
+	return GetDataResponse[string](string(data))
 }
 
 func GetBaseFileFileInfo(rootPath string, c *gin.Context) {
