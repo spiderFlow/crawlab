@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"math"
+	"mime/multipart"
 	"os"
 	"path/filepath"
 	"sync"
@@ -528,105 +529,189 @@ func DeleteSpiderList(_ *gin.Context, params *DeleteSpiderListParams) (response 
 	return GetDataResponse(models.Spider{})
 }
 
-func GetSpiderListDir(c *gin.Context, params *GetBaseFileListDirParams) (response *Response[[]interfaces.FsFileInfo], err error) {
-	rootPath, err := getSpiderRootPathByContext(c)
-	if err != nil {
-		HandleErrorForbidden(c, err)
-		return
-	}
-	return GetBaseFileListDir(rootPath, params)
+type GetSpiderListDirParams struct {
+	Id   string `path:"id"`
+	Path string `query:"path"`
 }
 
-func GetSpiderFile(c *gin.Context, params *GetBaseFileFileParams) (response *Response[string], err error) {
+func GetSpiderListDir(c *gin.Context, params *GetSpiderListDirParams) (response *Response[[]interfaces.FsFileInfo], err error) {
 	rootPath, err := getSpiderRootPathByContext(c)
 	if err != nil {
-		HandleErrorForbidden(c, err)
-		return
+		return GetErrorResponse[[]interfaces.FsFileInfo](err)
 	}
-	return GetBaseFileFile(rootPath, params)
+	return GetBaseFileListDir(rootPath, params.Path)
 }
 
-func GetSpiderFileInfo(c *gin.Context) {
+type GetSpiderFileContentParams struct {
+	Id   string `path:"id"`
+	Path string `query:"path"`
+}
+
+func GetSpiderFileContent(c *gin.Context, params *GetSpiderFileContentParams) (response *Response[string], err error) {
 	rootPath, err := getSpiderRootPathByContext(c)
 	if err != nil {
-		HandleErrorForbidden(c, err)
-		return
+		return GetErrorResponse[string](err)
 	}
-	GetBaseFileFileInfo(rootPath, c)
+	return GetBaseFileContent(rootPath, params.Path)
 }
 
-func PostSpiderSaveFile(c *gin.Context) {
+type GetSpiderFileInfoParams struct {
+	Id   string `path:"id"`
+	Path string `query:"path"`
+}
+
+func GetSpiderFileInfo(c *gin.Context, params *GetSpiderFileInfoParams) (response *Response[interfaces.FsFileInfo], err error) {
 	rootPath, err := getSpiderRootPathByContext(c)
 	if err != nil {
-		HandleErrorForbidden(c, err)
-		return
+		return GetErrorResponse[interfaces.FsFileInfo](err)
 	}
-	PostBaseFileSaveFile(rootPath, c)
+	return GetBaseFileInfo(rootPath, params.Path)
 }
 
-func PostSpiderSaveFiles(c *gin.Context) {
+type PostSpiderSaveFileParams struct {
+	Id   string                `path:"id"`
+	Path string                `json:"path"`
+	Data string                `json:"data"`
+	File *multipart.FileHeader `form:"file"`
+}
+
+func PostSpiderSaveFile(c *gin.Context, params *PostSpiderSaveFileParams) (response *Response[any], err error) {
 	rootPath, err := getSpiderRootPathByContext(c)
 	if err != nil {
-		HandleErrorForbidden(c, err)
-		return
+		return GetErrorResponse[any](err)
 	}
-	targetDirectory := c.PostForm("targetDirectory")
-	PostBaseFileSaveFiles(filepath.Join(rootPath, targetDirectory), c)
+	if c.GetHeader("Content-Type") == "application/json" {
+		return PostBaseFileSaveOne(rootPath, params.Path, params.Data)
+	} else {
+		return PostBaseFileSaveOneForm(rootPath, params.Path, params.File)
+	}
 }
 
-func PostSpiderSaveDir(c *gin.Context) {
+type PostSpiderSaveFilesParams struct {
+	Id              string `path:"id"`
+	TargetDirectory string `form:"targetDirectory"`
+}
+
+func PostSpiderSaveFiles(c *gin.Context, params *PostSpiderSaveFilesParams) (response *Response[any], err error) {
 	rootPath, err := getSpiderRootPathByContext(c)
 	if err != nil {
-		HandleErrorForbidden(c, err)
-		return
+		return GetErrorResponse[any](err)
 	}
-	PostBaseFileSaveDir(rootPath, c)
+	form, err := c.MultipartForm()
+	if err != nil {
+		return GetErrorResponse[any](err)
+	}
+	return PostBaseFileSaveMany(filepath.Join(rootPath, params.TargetDirectory), form)
 }
 
-func PostSpiderRenameFile(c *gin.Context) {
+type PostSpiderSaveDirParams struct {
+	Id   string `path:"id"`
+	Path string `json:"path"`
+}
+
+func PostSpiderSaveDir(c *gin.Context, params *PostSpiderSaveDirParams) (response *Response[any], err error) {
 	rootPath, err := getSpiderRootPathByContext(c)
 	if err != nil {
-		HandleErrorForbidden(c, err)
-		return
+		return GetErrorResponse[any](err)
 	}
-	PostBaseFileRenameFile(rootPath, c)
+	return PostBaseFileSaveDir(rootPath, params.Path)
 }
 
-func DeleteSpiderFile(c *gin.Context) {
+type PostSpiderRenameFileParams struct {
+	Id      string `path:"id"`
+	Path    string `json:"path"`
+	NewPath string `json:"newPath"`
+}
+
+func PostSpiderRenameFile(c *gin.Context, params *PostSpiderRenameFileParams) (response *Response[any], err error) {
 	rootPath, err := getSpiderRootPathByContext(c)
 	if err != nil {
-		HandleErrorForbidden(c, err)
-		return
+		return GetErrorResponse[any](err)
 	}
-	DeleteBaseFileFile(rootPath, c)
+	return PostBaseFileRename(rootPath, params.Path, params.NewPath)
 }
 
-func PostSpiderCopyFile(c *gin.Context) {
+type DeleteSpiderFileParams struct {
+	Id   string `path:"id"`
+	Path string `json:"path"`
+}
+
+func DeleteSpiderFile(c *gin.Context, params *DeleteSpiderFileParams) (response *Response[any], err error) {
 	rootPath, err := getSpiderRootPathByContext(c)
 	if err != nil {
-		HandleErrorForbidden(c, err)
-		return
+		return GetErrorResponse[any](err)
 	}
-	PostBaseFileCopyFile(rootPath, c)
+	return DeleteBaseFile(rootPath, params.Path)
 }
 
-func PostSpiderExport(c *gin.Context) {
+type PostSpiderCopyFileParams struct {
+	Id      string `path:"id"`
+	Path    string `json:"path"`
+	NewPath string `json:"new_path"`
+}
+
+func PostSpiderCopyFile(c *gin.Context, params *PostSpiderCopyFileParams) (response *Response[any], err error) {
 	rootPath, err := getSpiderRootPathByContext(c)
 	if err != nil {
-		HandleErrorForbidden(c, err)
-		return
+		return GetErrorResponse[any](err)
 	}
-	PostBaseFileExport(rootPath, c)
+	return PostBaseFileCopy(rootPath, params.Path, params.NewPath)
 }
 
-func PostSpiderRun(c *gin.Context) (response *Response[[]primitive.ObjectID], err error) {
-	id, err := primitive.ObjectIDFromHex(c.Param("id"))
+type PostSpiderExportParams struct {
+	Id string `path:"id"`
+}
+
+func PostSpiderExport(c *gin.Context, params *PostSpiderExportParams) (err error) {
+	rootPath, err := getSpiderRootPathByContext(c)
+	if err != nil {
+		return err
+	}
+	return PostBaseFileExport(rootPath, c)
+}
+
+type PostSpiderRunParams struct {
+	Id         string   `path:"id"`
+	Mode       string   `json:"mode"`
+	NodeIds    []string `json:"node_ids"`
+	Cmd        string   `json:"cmd"`
+	Param      string   `json:"param"`
+	ScheduleId string   `json:"schedule_id"`
+	Priority   int      `json:"priority"`
+}
+
+func PostSpiderRun(c *gin.Context, params *PostSpiderRunParams) (response *Response[[]primitive.ObjectID], err error) {
+	id, err := primitive.ObjectIDFromHex(params.Id)
 	if err != nil {
 		return GetErrorResponse[[]primitive.ObjectID](errors.BadRequestf("invalid id format"))
 	}
 
 	// options
-	var opts interfaces.SpiderRunOptions
+	var nodeIds []primitive.ObjectID
+	if len(params.NodeIds) > 0 {
+		for _, id := range params.NodeIds {
+			nodeId, err := primitive.ObjectIDFromHex(id)
+			if err != nil {
+				return GetErrorResponse[[]primitive.ObjectID](errors.BadRequestf("invalid node id format"))
+			}
+			nodeIds = append(nodeIds, nodeId)
+		}
+	}
+	var scheduleId primitive.ObjectID
+	if params.ScheduleId != "" {
+		scheduleId, err = primitive.ObjectIDFromHex(params.ScheduleId)
+		if err != nil {
+			return GetErrorResponse[[]primitive.ObjectID](errors.BadRequestf("invalid schedule id format"))
+		}
+	}
+	opts := interfaces.SpiderRunOptions{
+		Mode:       params.Mode,
+		NodeIds:    nodeIds,
+		Cmd:        params.Cmd,
+		Param:      params.Param,
+		ScheduleId: scheduleId,
+		Priority:   params.Priority,
+	}
 	if err := c.ShouldBindJSON(&opts); err != nil {
 		return GetErrorResponse[[]primitive.ObjectID](err)
 	}
@@ -642,21 +727,22 @@ func PostSpiderRun(c *gin.Context) (response *Response[[]primitive.ObjectID], er
 		return GetErrorResponse[[]primitive.ObjectID](err)
 	}
 
-	HandleSuccessWithData(c, taskIds)
 	return GetDataResponse(taskIds)
 }
 
-func GetSpiderResults(c *gin.Context) {
-	id, err := primitive.ObjectIDFromHex(c.Param("id"))
+type GetSpiderResultsParams struct {
+	Id string `path:"id"`
+}
+
+func GetSpiderResults(c *gin.Context, params *GetSpiderResultsParams) (response *ListResponse[bson.M], err error) {
+	id, err := primitive.ObjectIDFromHex(params.Id)
 	if err != nil {
-		HandleErrorBadRequest(c, err)
-		return
+		return GetErrorListResponse[bson.M](errors.BadRequestf("invalid id format"))
 	}
 
 	s, err := service.NewModelService[models.Spider]().GetById(id)
 	if err != nil {
-		HandleErrorInternalServerError(c, err)
-		return
+		return GetErrorListResponse[bson.M](err)
 	}
 
 	// params
@@ -672,17 +758,15 @@ func GetSpiderResults(c *gin.Context) {
 		Limit: pagination.Size,
 	})).All(&results)
 	if err != nil {
-		HandleErrorInternalServerError(c, err)
-		return
+		return GetErrorListResponse[bson.M](err)
 	}
 
 	total, err := mongo2.GetMongoCol(s.ColName).Count(mongo2.GetMongoQuery(query))
 	if err != nil {
-		HandleErrorInternalServerError(c, err)
-		return
+		return GetErrorListResponse[bson.M](err)
 	}
 
-	HandleSuccessWithListData(c, results, total)
+	return GetListResponse(results, total)
 }
 
 func getSpiderFsSvc(s *models.Spider) (svc interfaces.FsService, err error) {

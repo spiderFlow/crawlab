@@ -1,55 +1,51 @@
 package controllers
 
 import (
-	"errors"
-
 	"github.com/crawlab-team/crawlab/core/models/models"
 	"github.com/crawlab-team/crawlab/core/models/service"
 	"github.com/crawlab-team/crawlab/core/mongo"
 	"github.com/crawlab-team/crawlab/core/user"
 	"github.com/gin-gonic/gin"
+	"github.com/juju/errors"
 	mongo2 "go.mongodb.org/mongo-driver/mongo"
 )
 
-func PostToken(c *gin.Context) {
-	var t models.Token
-	if err := c.ShouldBindJSON(&t); err != nil {
-		HandleErrorBadRequest(c, err)
-		return
-	}
+type PostTokenParams struct {
+	Data models.Token `json:"data"`
+}
+
+func PostToken(c *gin.Context, params *PostTokenParams) (response *Response[models.Token], err error) {
+	t := params.Data
 	svc, err := user.GetUserService()
 	if err != nil {
-		HandleErrorInternalServerError(c, err)
-		return
+		return GetErrorResponse[models.Token](err)
 	}
+
 	u := GetUserFromContext(c)
 	t.SetCreated(u.Id)
 	t.SetUpdated(u.Id)
 	t.Token, err = svc.MakeToken(u)
 	if err != nil {
-		HandleErrorInternalServerError(c, err)
-		return
+		return GetErrorResponse[models.Token](err)
 	}
-	_, err = service.NewModelService[models.Token]().InsertOne(t)
+
+	id, err := service.NewModelService[models.Token]().InsertOne(t)
 	if err != nil {
-		HandleErrorInternalServerError(c, err)
-		return
+		return GetErrorResponse[models.Token](err)
 	}
-	HandleSuccess(c)
+	t.Id = id
+
+	return GetDataResponse(t)
 }
 
-func GetTokenList(c *gin.Context) {
+func GetTokenList(c *gin.Context, params *GetListParams) (response *ListResponse[models.Token], err error) {
 	// Get current user from context
 	u := GetUserFromContext(c)
 
-	// Get pagination, filter query, and sort options
-	pagination := MustGetPagination(c)
-	query := MustGetFilterQuery(c)
-	sort := MustGetSortOption(c)
-
-	// If query is nil, initialize it
-	if query == nil {
-		query = make(map[string]interface{})
+	// Get filter query
+	query, err := GetFilterQueryFromListParams(params)
+	if err != nil {
+		return GetErrorListResponse[models.Token](errors.BadRequestf("invalid request parameters: %v", err))
 	}
 
 	// Add filter for tokens created by the current user
@@ -57,26 +53,22 @@ func GetTokenList(c *gin.Context) {
 
 	// Get tokens with pagination
 	tokens, err := service.NewModelService[models.Token]().GetMany(query, &mongo.FindOptions{
-		Sort:  sort,
-		Skip:  pagination.Size * (pagination.Page - 1),
-		Limit: pagination.Size,
+		Sort:  params.Sort,
+		Skip:  params.Size * (params.Page - 1),
+		Limit: params.Size,
 	})
 	if err != nil {
-		if errors.Is(err, mongo2.ErrNoDocuments) {
-			HandleSuccessWithListData(c, nil, 0)
-		} else {
-			HandleErrorInternalServerError(c, err)
+		if err == mongo2.ErrNoDocuments {
+			return GetListResponse([]models.Token{}, 0)
 		}
-		return
+		return GetErrorListResponse[models.Token](err)
 	}
 
 	// Count total tokens for pagination
 	total, err := service.NewModelService[models.Token]().Count(query)
 	if err != nil {
-		HandleErrorInternalServerError(c, err)
-		return
+		return GetErrorListResponse[models.Token](err)
 	}
 
-	// Return tokens with total count
-	HandleSuccessWithListData(c, tokens, total)
+	return GetListResponse(tokens, total)
 }

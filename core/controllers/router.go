@@ -271,7 +271,7 @@ func InitRoutes(app *gin.Engine) (err error) {
 		{
 			Method:      http.MethodGet,
 			Path:        "/:id/files/get",
-			HandlerFunc: GetSpiderFile,
+			HandlerFunc: GetSpiderFileContent,
 		},
 		{
 			Method:      http.MethodGet,
@@ -324,8 +324,6 @@ func InitRoutes(app *gin.Engine) (err error) {
 			HandlerFunc: GetSpiderResults,
 		},
 	}...))
-	groups.AnonymousGroup.GET("/openapi.json", GetOpenAPI)
-	return
 	RegisterController(groups.AuthGroup, "/schedules", NewController[models.Schedule]([]Action{
 		{
 			Method:      http.MethodPost,

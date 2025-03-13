@@ -15,11 +15,10 @@ import (
 	mongo2 "go.mongodb.org/mongo-driver/mongo"
 )
 
-func GetUserById(c *gin.Context, params *GetByIdParams) (response *Response[models.User], err error) {
+func GetUserById(_ *gin.Context, params *GetByIdParams) (response *Response[models.User], err error) {
 	id, err := primitive.ObjectIDFromHex(params.Id)
 	if err != nil {
-		HandleErrorBadRequest(c, err)
-		return
+		return GetErrorResponse[models.User](errors.BadRequestf("invalid user id: %v", err))
 	}
 	return getUserById(id)
 }
@@ -80,7 +79,7 @@ func GetUserList(_ *gin.Context, params *GetListParams) (response *ListResponse[
 	}
 
 	// response
-	return GetListResponse[models.User](users, total)
+	return GetListResponse(users, total)
 }
 
 type PostUserParams struct {
@@ -126,7 +125,7 @@ func PostUser(c *gin.Context, params *PostUserParams) (response *Response[models
 		return GetErrorResponse[models.User](err)
 	}
 
-	return GetDataResponse[models.User](*result)
+	return GetDataResponse(*result)
 }
 
 func PutUserById(c *gin.Context, params *PutByIdParams[models.User]) (response *Response[models.User], err error) {
@@ -168,7 +167,7 @@ func DeleteUserById(_ *gin.Context, params *DeleteByIdParams) (response *Respons
 		return GetErrorResponse[models.User](err)
 	}
 
-	return GetDataResponse[models.User](models.User{})
+	return GetDataResponse(models.User{})
 }
 
 func DeleteUserList(_ *gin.Context, params *DeleteListParams) (response *Response[models.User], err error) {
@@ -205,7 +204,7 @@ func DeleteUserList(_ *gin.Context, params *DeleteListParams) (response *Respons
 		return GetErrorResponse[models.User](err)
 	}
 
-	return GetDataResponse[models.User](models.User{})
+	return GetDataResponse(models.User{})
 }
 
 func GetUserMe(c *gin.Context) (response *Response[models.User], err error) {
@@ -253,7 +252,7 @@ func getUserById(userId primitive.ObjectID) (response *Response[models.User], er
 		}
 	}
 
-	return GetDataResponse[models.User](*user)
+	return GetDataResponse(*user)
 }
 
 func getUserByIdWithRoutes(userId primitive.ObjectID) (response *Response[models.User], err error) {
@@ -284,7 +283,7 @@ func getUserByIdWithRoutes(userId primitive.ObjectID) (response *Response[models
 		user.Routes = role.Routes
 	}
 
-	return GetDataResponse[models.User](*user)
+	return GetDataResponse(*user)
 }
 
 func putUser(userId, by primitive.ObjectID, user models.User) (response *Response[models.User], err error) {
@@ -319,7 +318,7 @@ func putUser(userId, by primitive.ObjectID, user models.User) (response *Respons
 	}
 
 	// handle success
-	return GetDataResponse[models.User](user)
+	return GetDataResponse(user)
 }
 
 func postUserChangePassword(userId, by primitive.ObjectID, password string) (response *Response[models.User], err error) {
@@ -338,5 +337,5 @@ func postUserChangePassword(userId, by primitive.ObjectID, password string) (res
 		return GetErrorResponse[models.User](err)
 	}
 
-	return GetDataResponse[models.User](models.User{})
+	return GetDataResponse(models.User{})
 }

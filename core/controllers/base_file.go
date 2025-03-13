@@ -3,21 +3,17 @@ package controllers
 import (
 	"errors"
 	"fmt"
+	"io"
+	"mime/multipart"
+	"os"
+	"sync"
+
 	"github.com/crawlab-team/crawlab/core/fs"
 	"github.com/crawlab-team/crawlab/core/interfaces"
 	"github.com/gin-gonic/gin"
-	"io"
-	"os"
-	"sync"
 )
 
-type GetBaseFileListDirParams struct {
-	Path string `path:"path"`
-}
-
-func GetBaseFileListDir(rootPath string, params *GetBaseFileListDirParams) (response *Response[[]interfaces.FsFileInfo], err error) {
-	path := params.Path
-
+func GetBaseFileListDir(rootPath, path string) (response *Response[[]interfaces.FsFileInfo], err error) {
 	fsSvc, err := fs.GetBaseFileFsSvc(rootPath)
 	if err != nil {
 		return GetErrorResponse[[]interfaces.FsFileInfo](err)
@@ -30,17 +26,10 @@ func GetBaseFileListDir(rootPath string, params *GetBaseFileListDirParams) (resp
 		}
 	}
 
-	//HandleSuccessWithData(c, files)
-	return GetDataResponse[[]interfaces.FsFileInfo](files)
+	return GetDataResponse(files)
 }
 
-type GetBaseFileFileParams struct {
-	Path string `path:"path"`
-}
-
-func GetBaseFileFile(rootPath string, params *GetBaseFileFileParams) (response *Response[string], err error) {
-	path := params.Path
-
+func GetBaseFileContent(rootPath, path string) (response *Response[string], err error) {
 	fsSvc, err := fs.GetBaseFileFsSvc(rootPath)
 	if err != nil {
 		return GetErrorResponse[string](err)
@@ -51,94 +40,75 @@ func GetBaseFileFile(rootPath string, params *GetBaseFileFileParams) (response *
 		return GetErrorResponse[string](err)
 	}
 
-	return GetDataResponse[string](string(data))
+	return GetDataResponse(string(data))
 }
 
-func GetBaseFileFileInfo(rootPath string, c *gin.Context) {
-	path := c.Query("path")
-
+func GetBaseFileInfo(rootPath, path string) (response *Response[interfaces.FsFileInfo], err error) {
 	fsSvc, err := fs.GetBaseFileFsSvc(rootPath)
 	if err != nil {
-		HandleErrorBadRequest(c, err)
-		return
+		return GetErrorResponse[interfaces.FsFileInfo](err)
 	}
 
 	info, err := fsSvc.GetFileInfo(path)
 	if err != nil {
-		HandleErrorInternalServerError(c, err)
-		return
+		return GetErrorResponse[interfaces.FsFileInfo](err)
 	}
 
-	HandleSuccessWithData(c, info)
+	return GetDataResponse(info)
 }
 
-func PostBaseFileSaveFile(rootPath string, c *gin.Context) {
-	fsSvc, err := fs.GetBaseFileFsSvc(rootPath)
-	if err != nil {
-		HandleErrorInternalServerError(c, err)
-		return
-	}
-
-	if c.GetHeader("Content-Type") == "application/json" {
-		var payload struct {
-			Path string `json:"path"`
-			Data string `json:"data"`
-		}
-		if err := c.ShouldBindJSON(&payload); err != nil {
-			HandleErrorBadRequest(c, err)
-			return
-		}
-		if err := fsSvc.Save(payload.Path, []byte(payload.Data)); err != nil {
-			HandleErrorInternalServerError(c, err)
-			return
-		}
-	} else {
-		path, ok := c.GetPostForm("path")
-		if !ok {
-			HandleErrorBadRequest(c, errors.New("missing required field 'path'"))
-			return
-		}
-		file, err := c.FormFile("file")
-		if err != nil {
-			HandleErrorBadRequest(c, err)
-			return
-		}
-		f, err := file.Open()
-		if err != nil {
-			HandleErrorBadRequest(c, err)
-			return
-		}
-		fileData, err := io.ReadAll(f)
-		if err != nil {
-			HandleErrorBadRequest(c, err)
-			return
-		}
-		if err := fsSvc.Save(path, fileData); err != nil {
-			HandleErrorInternalServerError(c, err)
-			return
-		}
-	}
-
-	HandleSuccess(c)
+type PostBaseFileSaveOneParams struct {
+	Path string `json:"path" form:"path"`
+	Data string `json:"data"`
 }
 
-func PostBaseFileSaveFiles(rootPath string, c *gin.Context) {
+func PostBaseFileSaveOne(rootPath, path, data string) (response *Response[any], err error) {
 	fsSvc, err := fs.GetBaseFileFsSvc(rootPath)
 	if err != nil {
-		HandleErrorInternalServerError(c, err)
-		return
+		return GetErrorResponse[any](err)
 	}
 
-	form, err := c.MultipartForm()
-	if err != nil {
-		HandleErrorBadRequest(c, err)
-		return
+	if err := fsSvc.Save(path, []byte(data)); err != nil {
+		return GetErrorResponse[any](err)
 	}
+
+	return GetDataResponse(any(data))
+}
+
+func PostBaseFileSaveOneForm(rootPath, path string, file *multipart.FileHeader) (response *Response[any], err error) {
+	fsSvc, err := fs.GetBaseFileFsSvc(rootPath)
+	if err != nil {
+		return GetErrorResponse[any](err)
+	}
+
+	f, err := file.Open()
+	if err != nil {
+		return GetErrorResponse[any](err)
+	}
+
+	fileData, err := io.ReadAll(f)
+	if err != nil {
+		return GetErrorResponse[any](err)
+	}
+
+	if err := fsSvc.Save(path, fileData); err != nil {
+		return GetErrorResponse[any](err)
+	}
+
+	return GetDataResponse[any](nil)
+}
+
+func PostBaseFileSaveMany(rootPath string, form *multipart.Form) (response *Response[any], err error) {
+	fsSvc, err := fs.GetBaseFileFsSvc(rootPath)
+	if err != nil {
+		return GetErrorResponse[any](err)
+	}
+
 	wg := sync.WaitGroup{}
 	wg.Add(len(form.File))
 	for path := range form.File {
 		go func(path string) {
-			file, err := c.FormFile(path)
+			file := form.File[path][0]
 			if err != nil {
 				logger.Warnf("invalid file header: %s", path)
 				logger.Error(err.Error())
@@ -170,125 +140,84 @@ func PostBaseFileSaveFiles(rootPath string, c *gin.Context) {
 	}
 	wg.Wait()
 
-	HandleSuccess(c)
+	return GetDataResponse[any](nil)
 }
 
-func PostBaseFileSaveDir(rootPath string, c *gin.Context) {
-	var payload struct {
-		Path    string `json:"path"`
-		NewPath string `json:"new_path"`
-		Data    string `json:"data"`
+func PostBaseFileSaveDir(rootPath, path string) (response *Response[any], err error) {
+	fsSvc, err := fs.GetBaseFileFsSvc(rootPath)
+	if err != nil {
+		return GetErrorResponse[any](err)
 	}
-	if err := c.ShouldBindJSON(&payload); err != nil {
-		HandleErrorBadRequest(c, err)
-		return
+
+	if err := fsSvc.CreateDir(path); err != nil {
+		return GetErrorResponse[any](err)
+	}
+
+	return GetDataResponse[any](nil)
+}
+
+func PostBaseFileRename(rootPath, path, newPath string) (response *Response[any], err error) {
+	fsSvc, err := fs.GetBaseFileFsSvc(rootPath)
+	if err != nil {
+		return GetErrorResponse[any](err)
+	}
+
+	if err := fsSvc.Rename(path, newPath); err != nil {
+		return GetErrorResponse[any](err)
+	}
+
+	return GetDataResponse[any](nil)
+}
+
+func DeleteBaseFile(rootPath, path string) (response *Response[any], err error) {
+	if path == "~" {
+		path = "."
 	}
 
 	fsSvc, err := fs.GetBaseFileFsSvc(rootPath)
 	if err != nil {
-		HandleErrorBadRequest(c, err)
-		return
+		return GetErrorResponse[any](err)
 	}
 
-	if err := fsSvc.CreateDir(payload.Path); err != nil {
-		HandleErrorInternalServerError(c, err)
-		return
-	}
-
-	HandleSuccess(c)
-}
-
-func PostBaseFileRenameFile(rootPath string, c *gin.Context) {
-	var payload struct {
-		Path    string `json:"path"`
-		NewPath string `json:"new_path"`
-	}
-	if err := c.ShouldBindJSON(&payload); err != nil {
-		HandleErrorBadRequest(c, err)
-		return
-	}
-
-	fsSvc, err := fs.GetBaseFileFsSvc(rootPath)
-	if err != nil {
-		HandleErrorBadRequest(c, err)
-		return
-	}
-
-	if err := fsSvc.Rename(payload.Path, payload.NewPath); err != nil {
-		HandleErrorInternalServerError(c, err)
-		return
-	}
-}
-
-func DeleteBaseFileFile(rootPath string, c *gin.Context) {
-	var payload struct {
-		Path string `json:"path"`
-	}
-	if err := c.ShouldBindJSON(&payload); err != nil {
-		HandleErrorBadRequest(c, err)
-		return
-	}
-	if payload.Path == "~" {
-		payload.Path = "."
-	}
-
-	fsSvc, err := fs.GetBaseFileFsSvc(rootPath)
-	if err != nil {
-		HandleErrorBadRequest(c, err)
-		return
-	}
-
-	if err := fsSvc.Delete(payload.Path); err != nil {
-		HandleErrorInternalServerError(c, err)
-		return
+	if err := fsSvc.Delete(path); err != nil {
+		return GetErrorResponse[any](err)
 	}
 	_, err = fsSvc.GetFileInfo(".")
 	if err != nil {
 		_ = fsSvc.CreateDir("/")
 	}
 
-	HandleSuccess(c)
+	return GetDataResponse[any](nil)
 }
 
-func PostBaseFileCopyFile(rootPath string, c *gin.Context) {
-	var payload struct {
-		Path    string `json:"path"`
-		NewPath string `json:"new_path"`
-	}
-	if err := c.ShouldBindJSON(&payload); err != nil {
-		HandleErrorBadRequest(c, err)
-		return
-	}
-
+func PostBaseFileCopy(rootPath, path, newPath string) (response *Response[any], err error) {
 	fsSvc, err := fs.GetBaseFileFsSvc(rootPath)
 	if err != nil {
-		HandleErrorBadRequest(c, err)
-		return
+		return GetErrorResponse[any](err)
 	}
 
-	if err := fsSvc.Copy(payload.Path, payload.NewPath); err != nil {
-		HandleErrorInternalServerError(c, err)
-		return
+	if err := fsSvc.Copy(path, newPath); err != nil {
+		return GetErrorResponse[any](err)
 	}
 
-	HandleSuccess(c)
+	return GetDataResponse[any](nil)
 }
 
-func PostBaseFileExport(rootPath string, c *gin.Context) {
+func PostBaseFileExport(rootPath string, c *gin.Context) (err error) {
 	fsSvc, err := fs.GetBaseFileFsSvc(rootPath)
 	if err != nil {
-		HandleErrorBadRequest(c, err)
-		return
+		return err
 	}
 
 	// zip file path
 	zipFilePath, err := fsSvc.Export()
 	if err != nil {
-		HandleErrorInternalServerError(c, err)
-		return
+		return err
 	}
 
 	// download
 	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", zipFilePath))
 	c.File(zipFilePath)
+
+	return nil
 }
