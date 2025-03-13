@@ -34,7 +34,10 @@ func TestCreateSpider(t *testing.T) {
 		Name:    "Test Spider",
 		ColName: "test_spiders",
 	}
-	jsonValue, _ := json.Marshal(payload)
+	requestParams := controllers.PostParams[models.Spider]{
+		Data: payload,
+	}
+	jsonValue, _ := json.Marshal(requestParams)
 	req, _ := http.NewRequest("POST", "/spiders", bytes.NewBuffer(jsonValue))
 	req.Header.Set("Authorization", TestToken)
 	resp := httptest.NewRecorder()
