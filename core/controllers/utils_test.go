@@ -34,7 +34,7 @@ func TestGetFilterFromConditionString(t *testing.T) {
 	assert.Equal(t, "test", filter.Conditions[0].Value)
 	assert.Equal(t, "priority", filter.Conditions[1].Key)
 	assert.Equal(t, "gt", filter.Conditions[1].Op)
-	assert.Equal(t, float64(5), filter.Conditions[1].Value) // JSON parses numbers as float64
+	assert.Equal(t, int64(5), filter.Conditions[1].Value)
 
 	// Invalid JSON should return error
 	condStr = `[{"key":"name","op":"eq","value":"test"`
@@ -56,7 +56,7 @@ func TestGetFilterQueryFromConditionString(t *testing.T) {
 	query, err = controllers.GetFilterQueryFromConditionString(condStr)
 	require.NoError(t, err)
 	require.NotNil(t, query)
-	expected = bson.M{"priority": bson.M{"$gt": float64(5)}}
+	expected = bson.M{"priority": bson.M{"$gt": int64(5)}}
 	assert.Equal(t, expected, query)
 
 	// Multiple conditions
@@ -64,11 +64,11 @@ func TestGetFilterQueryFromConditionString(t *testing.T) {
 	query, err = controllers.GetFilterQueryFromConditionString(condStr)
 	require.NoError(t, err)
 	require.NotNil(t, query)
-	expected = bson.M{"name": "test", "priority": bson.M{"$gt": float64(5)}}
+	expected = bson.M{"name": "test", "priority": bson.M{"$gt": int64(5)}}
 	assert.Equal(t, expected, query)
 
 	// Contains operator
-	condStr = `[{"key":"name","op":"contains","value":"test"}]`
+	condStr = `[{"key":"name","op":"c","value":"test"}]`
 	query, err = controllers.GetFilterQueryFromConditionString(condStr)
 	require.NoError(t, err)
 	require.NotNil(t, query)

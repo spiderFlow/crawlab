@@ -2,7 +2,9 @@ package controllers
 
 import (
 	"encoding/json"
-	"errors"
+	"net/http"
+	"reflect"
+
 	"github.com/crawlab-team/crawlab/core/constants"
 	"github.com/crawlab-team/crawlab/core/entity"
 	"github.com/crawlab-team/crawlab/core/models/models"
@@ -12,8 +14,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"net/http"
-	"reflect"
 )
 
 var logger = utils.NewLogger("Controllers")
@@ -67,30 +67,55 @@ func GetFilterFromConditionString(condStr string) (f *entity.Filter, err error) 
 			} else {
 				conditions[i].Value = item
 			}
+		case reflect.Float64:
+			// JSON numbers are decoded as float64 by default
+			switch cond.Value.(type) {
+			case float64:
+				num := cond.Value.(float64)
+				// Check if it's a whole number
+				if num == float64(int64(num)) {
+					conditions[i].Value = int64(num)
+				} else {
+					conditions[i].Value = num
+				}
+			case int:
+				num := cond.Value.(int)
+				conditions[i].Value = int64(num)
+			case int64:
+				num := cond.Value.(int64)
+				conditions[i].Value = num
+			}
+		case reflect.Bool:
+			conditions[i].Value = cond.Value.(bool)
 		case reflect.Slice, reflect.Array:
 			var items []interface{}
 			for i := 0; i < v.Len(); i++ {
 				vItem := v.Index(i)
 				item := vItem.Interface()
 
-				// string
-				stringItem, ok := item.(string)
-				if ok {
-					id, err := primitive.ObjectIDFromHex(stringItem)
-					if err == nil {
+				switch typedItem := item.(type) {
+				case string:
+					// Try to convert to ObjectID first
+					if id, err := primitive.ObjectIDFromHex(typedItem); err == nil {
 						items = append(items, id)
 					} else {
-						items = append(items, stringItem)
+						items = append(items, typedItem)
 					}
-					continue
+				case float64:
+					if typedItem == float64(int64(typedItem)) {
+						items = append(items, int64(typedItem))
+					} else {
+						items = append(items, typedItem)
+					}
+				case bool:
+					items = append(items, typedItem)
+				default:
+					items = append(items, item)
 				}
-
-				// default
-				items = append(items, item)
 			}
 			conditions[i].Value = items
 		default:
-			return nil, errors.New("invalid type")
+			conditions[i].Value = cond.Value
 		}
 	}
 
