@@ -11,12 +11,38 @@ import (
 
 type GetFilterColFieldOptionsParams struct {
 	Col        string `path:"col" validate:"required"`
+	Conditions string `query:"conditions" description:"Filter conditions. Format: [{\"key\":\"name\",\"op\":\"eq\",\"value\":\"test\"}]"`
+}
+
+func GetFilterColFieldOptions(c *gin.Context, params *GetFilterColFieldOptionsParams) (response *Response[[]entity.FilterSelectOption], err error) {
+	return GetFilterColFieldOptionsWithValueLabel(c, &GetFilterColFieldOptionsWithValueLabelParams{
+		Col:        params.Col,
+		Conditions: params.Conditions,
+	})
+}
+
+type GetFilterColFieldOptionsWithValueParams struct {
+	Col        string `path:"col" validate:"required"`
+	Value      string `path:"value"`
+	Conditions string `query:"conditions" description:"Filter conditions. Format: [{\"key\":\"name\",\"op\":\"eq\",\"value\":\"test\"}]"`
+}
+
+func GetFilterColFieldOptionsWithValue(c *gin.Context, params *GetFilterColFieldOptionsWithValueParams) (response *Response[[]entity.FilterSelectOption], err error) {
+	return GetFilterColFieldOptionsWithValueLabel(c, &GetFilterColFieldOptionsWithValueLabelParams{
+		Col:        params.Col,
+		Value:      params.Value,
+		Conditions: params.Conditions,
+	})
+}
+
+type GetFilterColFieldOptionsWithValueLabelParams struct {
+	Col        string `path:"col" validate:"required"`
 	Value      string `path:"value"`
 	Label      string `path:"label"`
 	Conditions string `query:"conditions" description:"Filter conditions. Format: [{\"key\":\"name\",\"op\":\"eq\",\"value\":\"test\"}]"`
 }
 
-func GetFilterColFieldOptions(_ *gin.Context, params *GetFilterColFieldOptionsParams) (response *Response[[]entity.FilterSelectOption], err error) {
+func GetFilterColFieldOptionsWithValueLabel(_ *gin.Context, params *GetFilterColFieldOptionsWithValueLabelParams) (response *Response[[]entity.FilterSelectOption], err error) {
 	value := params.Value
 	if value == "" {
 		value = "_id"

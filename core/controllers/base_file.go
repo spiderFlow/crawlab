@@ -62,46 +62,46 @@ type PostBaseFileSaveOneParams struct {
 	Data string `json:"data"`
 }
 
-func PostBaseFileSaveOne(rootPath, path, data string) (response *Response[any], err error) {
+func PostBaseFileSaveOne(rootPath, path, data string) (response *VoidResponse, err error) {
 	fsSvc, err := fs.GetBaseFileFsSvc(rootPath)
 	if err != nil {
-		return GetErrorResponse[any](err)
+		return GetErrorVoidResponse(err)
 	}
 
 	if err := fsSvc.Save(path, []byte(data)); err != nil {
-		return GetErrorResponse[any](err)
+		return GetErrorVoidResponse(err)
 	}
 
-	return GetDataResponse(any(data))
+	return GetVoidResponse()
 }
 
-func PostBaseFileSaveOneForm(rootPath, path string, file *multipart.FileHeader) (response *Response[any], err error) {
+func PostBaseFileSaveOneForm(rootPath, path string, file *multipart.FileHeader) (response *VoidResponse, err error) {
 	fsSvc, err := fs.GetBaseFileFsSvc(rootPath)
 	if err != nil {
-		return GetErrorResponse[any](err)
+		return GetErrorVoidResponse(err)
 	}
 
 	f, err := file.Open()
 	if err != nil {
-		return GetErrorResponse[any](err)
+		return GetErrorVoidResponse(err)
 	}
 
 	fileData, err := io.ReadAll(f)
 	if err != nil {
-		return GetErrorResponse[any](err)
+		return GetErrorVoidResponse(err)
 	}
 
 	if err := fsSvc.Save(path, fileData); err != nil {
-		return GetErrorResponse[any](err)
+		return GetErrorVoidResponse(err)
 	}
 
-	return GetDataResponse[any](nil)
+	return GetVoidResponse()
 }
 
-func PostBaseFileSaveMany(rootPath string, form *multipart.Form) (response *Response[any], err error) {
+func PostBaseFileSaveMany(rootPath string, form *multipart.Form) (response *VoidResponse, err error) {
 	fsSvc, err := fs.GetBaseFileFsSvc(rootPath)
 	if err != nil {
-		return GetErrorResponse[any](err)
+		return GetErrorVoidResponse(err)
 	}
 
 	wg := sync.WaitGroup{}
@@ -140,67 +140,67 @@ func PostBaseFileSaveMany(rootPath string, form *multipart.Form) (response *Resp
 	}
 	wg.Wait()
 
-	return GetDataResponse[any](nil)
+	return GetVoidResponse()
 }
 
-func PostBaseFileSaveDir(rootPath, path string) (response *Response[any], err error) {
+func PostBaseFileSaveDir(rootPath, path string) (response *VoidResponse, err error) {
 	fsSvc, err := fs.GetBaseFileFsSvc(rootPath)
 	if err != nil {
-		return GetErrorResponse[any](err)
+		return GetErrorVoidResponse(err)
 	}
 
 	if err := fsSvc.CreateDir(path); err != nil {
-		return GetErrorResponse[any](err)
+		return GetErrorVoidResponse(err)
 	}
 
-	return GetDataResponse[any](nil)
+	return GetVoidResponse()
 }
 
-func PostBaseFileRename(rootPath, path, newPath string) (response *Response[any], err error) {
+func PostBaseFileRename(rootPath, path, newPath string) (response *VoidResponse, err error) {
 	fsSvc, err := fs.GetBaseFileFsSvc(rootPath)
 	if err != nil {
-		return GetErrorResponse[any](err)
+		return GetErrorVoidResponse(err)
 	}
 
 	if err := fsSvc.Rename(path, newPath); err != nil {
-		return GetErrorResponse[any](err)
+		return GetErrorVoidResponse(err)
 	}
 
-	return GetDataResponse[any](nil)
+	return GetVoidResponse()
 }
 
-func DeleteBaseFile(rootPath, path string) (response *Response[any], err error) {
+func DeleteBaseFile(rootPath, path string) (response *VoidResponse, err error) {
 	if path == "~" {
 		path = "."
 	}
 
 	fsSvc, err := fs.GetBaseFileFsSvc(rootPath)
 	if err != nil {
-		return GetErrorResponse[any](err)
+		return GetErrorVoidResponse(err)
 	}
 
 	if err := fsSvc.Delete(path); err != nil {
-		return GetErrorResponse[any](err)
+		return GetErrorVoidResponse(err)
 	}
 	_, err = fsSvc.GetFileInfo(".")
 	if err != nil {
 		_ = fsSvc.CreateDir("/")
 	}
 
-	return GetDataResponse[any](nil)
+	return GetVoidResponse()
 }
 
-func PostBaseFileCopy(rootPath, path, newPath string) (response *Response[any], err error) {
+func PostBaseFileCopy(rootPath, path, newPath string) (response *VoidResponse, err error) {
 	fsSvc, err := fs.GetBaseFileFsSvc(rootPath)
 	if err != nil {
-		return GetErrorResponse[any](err)
+		return GetErrorVoidResponse(err)
 	}
 
 	if err := fsSvc.Copy(path, newPath); err != nil {
-		return GetErrorResponse[any](err)
+		return GetErrorVoidResponse(err)
 	}
 
-	return GetDataResponse[any](nil)
+	return GetVoidResponse()
 }
 
 func PostBaseFileExport(rootPath string, c *gin.Context) (err error) {

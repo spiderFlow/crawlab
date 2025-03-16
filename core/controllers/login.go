@@ -27,6 +27,6 @@ func PostLogin(c *gin.Context, params *PostLoginParams) (response *Response[stri
 	return GetDataResponse(token)
 }
 
-func PostLogout(_ *gin.Context) (response *Response[any], err error) {
-	return GetDataResponse[any](nil)
+func PostLogout(_ *gin.Context) (response *VoidResponse, err error) {
+	return GetVoidResponse()
 }

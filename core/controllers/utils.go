@@ -263,6 +263,12 @@ type ListResponse[T any] struct {
 	Error   string `json:"error"`
 }
 
+type VoidResponse struct {
+	Status  string `json:"status"`
+	Message string `json:"message"`
+	Error   string `json:"error"`
+}
+
 func GetDataResponse[T any](model T) (res *Response[T], err error) {
 	return &Response[T]{
 		Status:  constants.HttpResponseStatusOk,
@@ -280,8 +286,23 @@ func GetListResponse[T any](models []T, total int) (res *ListResponse[T], err er
 	}, nil
 }
 
+func GetVoidResponse() (res *VoidResponse, err error) {
+	return &VoidResponse{
+		Status:  constants.HttpResponseStatusOk,
+		Message: constants.HttpResponseMessageSuccess,
+	}, nil
+}
+
 func GetErrorResponse[T any](err error) (res *Response[T], err2 error) {
 	return &Response[T]{
+		Status:  constants.HttpResponseStatusOk,
+		Message: constants.HttpResponseMessageError,
+		Error:   err.Error(),
+	}, err
+}
+
+func GetErrorVoidResponse(err error) (res *VoidResponse, err2 error) {
+	return &VoidResponse{
 		Status:  constants.HttpResponseStatusOk,
 		Message: constants.HttpResponseMessageError,
 		Error:   err.Error(),

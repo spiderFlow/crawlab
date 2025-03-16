@@ -170,10 +170,10 @@ type DeleteTaskByIdParams struct {
 	Id string `path:"id"`
 }
 
-func DeleteTaskById(_ *gin.Context, params *DeleteTaskByIdParams) (response *Response[any], err error) {
+func DeleteTaskById(_ *gin.Context, params *DeleteTaskByIdParams) (response *VoidResponse, err error) {
 	id, err := primitive.ObjectIDFromHex(params.Id)
 	if err != nil {
-		return GetErrorResponse[any](err)
+		return GetErrorVoidResponse(err)
 	}
 
 	// delete in db
@@ -202,7 +202,7 @@ func DeleteTaskById(_ *gin.Context, params *DeleteTaskByIdParams) (response *Res
 
 		return nil
 	}); err != nil {
-		return GetErrorResponse[any](err)
+		return GetErrorVoidResponse(err)
 	}
 
 	// delete task logs
@@ -211,19 +211,19 @@ func DeleteTaskById(_ *gin.Context, params *DeleteTaskByIdParams) (response *Res
 		logger.Warnf("failed to remove task log directory: %s", logPath)
 	}
 
-	return GetDataResponse[any](nil)
+	return GetVoidResponse()
 }
 
 type DeleteTaskListParams struct {
 	Ids []string `json:"ids"`
 }
 
-func DeleteList(_ *gin.Context, params *DeleteTaskListParams) (response *Response[any], err error) {
+func DeleteList(_ *gin.Context, params *DeleteTaskListParams) (response *VoidResponse, err error) {
 	var ids []primitive.ObjectID
 	for _, id := range params.Ids {
 		id, err := primitive.ObjectIDFromHex(id)
 		if err != nil {
-			return GetErrorResponse[any](err)
+			return GetErrorVoidResponse(err)
 		}
 		ids = append(ids, id)
 	}
@@ -250,7 +250,7 @@ func DeleteList(_ *gin.Context, params *DeleteTaskListParams) (response *Respons
 
 		return nil
 	}); err != nil {
-		return GetErrorResponse[any](err)
+		return GetErrorVoidResponse(err)
 	}
 
 	// delete tasks logs
@@ -268,7 +268,7 @@ func DeleteList(_ *gin.Context, params *DeleteTaskListParams) (response *Respons
 	}
 	wg.Wait()
 
-	return GetDataResponse[any](nil)
+	return GetVoidResponse()
 }
 
 type PostTaskRunParams struct {
@@ -379,22 +379,22 @@ type PostTaskCancelParams struct {
 	Force bool   `json:"force,omitempty"`
 }
 
-func PostTaskCancel(c *gin.Context, params *PostTaskCancelParams) (response *Response[any], err error) {
+func PostTaskCancel(c *gin.Context, params *PostTaskCancelParams) (response *VoidResponse, err error) {
 	// id
 	id, err := primitive.ObjectIDFromHex(params.Id)
 	if err != nil {
-		return GetErrorResponse[any](err)
+		return GetErrorVoidResponse(err)
 	}
 
 	// task
 	t, err := service.NewModelService[models.Task]().GetById(id)
 	if err != nil {
-		return GetErrorResponse[any](err)
+		return GetErrorVoidResponse(err)
 	}
 
 	// validate
 	if !utils.IsCancellable(t.Status) {
-		return GetErrorResponse[any](errors.New("task is not cancellable"))
+		return GetErrorVoidResponse(errors.New("task is not cancellable"))
 	}
 
 	u := GetUserFromContext(c)
@@ -403,10 +403,10 @@ func PostTaskCancel(c *gin.Context, params *PostTaskCancelParams) (response *Res
 	schedulerSvc := scheduler.GetTaskSchedulerService()
 	err = schedulerSvc.Cancel(id, u.Id, params.Force)
 	if err != nil {
-		return GetErrorResponse[any](err)
+		return GetErrorVoidResponse(err)
 	}
 
-	return GetDataResponse[any](nil)
+	return GetVoidResponse()
 }
 
 type GetTaskLogsParams struct {

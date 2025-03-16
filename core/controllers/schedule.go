@@ -83,26 +83,26 @@ type PostScheduleEnableDisableParams struct {
 	Id string `path:"id"`
 }
 
-func PostScheduleEnable(c *gin.Context, params *PostScheduleEnableDisableParams) (response *Response[any], err error) {
+func PostScheduleEnable(c *gin.Context, params *PostScheduleEnableDisableParams) (response *VoidResponse, err error) {
 	userId := GetUserFromContext(c).Id
 	return postScheduleEnableDisableFunc(true, userId, params)
 }
 
-func PostScheduleDisable(c *gin.Context, params *PostScheduleEnableDisableParams) (response *Response[any], err error) {
+func PostScheduleDisable(c *gin.Context, params *PostScheduleEnableDisableParams) (response *VoidResponse, err error) {
 	userId := GetUserFromContext(c).Id
 	return postScheduleEnableDisableFunc(false, userId, params)
 }
 
-func postScheduleEnableDisableFunc(isEnable bool, userId primitive.ObjectID, params *PostScheduleEnableDisableParams) (response *Response[any], err error) {
+func postScheduleEnableDisableFunc(isEnable bool, userId primitive.ObjectID, params *PostScheduleEnableDisableParams) (response *VoidResponse, err error) {
 	id, err := primitive.ObjectIDFromHex(params.Id)
 	if err != nil {
-		return GetErrorResponse[any](errors.BadRequestf("invalid schedule id: %v", err))
+		return GetErrorVoidResponse(errors.BadRequestf("invalid schedule id: %v", err))
 	}
 
 	svc := schedule.GetScheduleService()
 	s, err := service.NewModelService[models.Schedule]().GetById(id)
 	if err != nil {
-		return GetErrorResponse[any](err)
+		return GetErrorVoidResponse(err)
 	}
 
 	if isEnable {
@@ -111,10 +111,10 @@ func postScheduleEnableDisableFunc(isEnable bool, userId primitive.ObjectID, par
 		err = svc.Disable(*s, userId)
 	}
 	if err != nil {
-		return GetErrorResponse[any](err)
+		return GetErrorVoidResponse(err)
 	}
 
-	return GetDataResponse[any](nil)
+	return GetVoidResponse()
 }
 
 type PostScheduleRunParams struct {

@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"github.com/crawlab-team/crawlab/core/interfaces"
 	"github.com/crawlab-team/crawlab/core/utils"
-	"github.com/loopfz/gadgeto/tonic"
-
 	"github.com/gin-gonic/gin"
+	"github.com/loopfz/gadgeto/tonic"
 	"github.com/wI2L/fizz"
+	"sync"
 )
 
 // FizzWrapper wraps an existing Gin Engine to add OpenAPI functionality
@@ -17,9 +17,9 @@ type FizzWrapper struct {
 	logger interfaces.Logger
 }
 
-// NewFizzWrapper creates a new wrapper around an existing Gin Engine
+// newFizzWrapper creates a new wrapper around an existing Gin Engine
 // This approach ensures we don't break existing functionality
-func NewFizzWrapper(engine *gin.Engine) *FizzWrapper {
+func newFizzWrapper(engine *gin.Engine) *FizzWrapper {
 	// Create a new Fizz instance using the existing Gin engine
 	f := fizz.NewFromEngine(engine)
 	return &FizzWrapper{
@@ -115,4 +115,14 @@ func (w *FizzWrapper) buildOperationOptions(id, summary, description string, res
 	}
 
 	return opts
+}
+
+var wrapper *FizzWrapper
+var wrapperOnce sync.Once
+
+func GetFizzWrapper(app *gin.Engine) *FizzWrapper {
+	wrapperOnce.Do(func() {
+		wrapper = newFizzWrapper(app)
+	})
+	return wrapper
 }

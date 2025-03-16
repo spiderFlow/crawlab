@@ -11,18 +11,22 @@ import (
 )
 
 type PostExportParams struct {
-	Type   string            `path:"type" validate:"required"`
-	Target string            `query:"target" validate:"required"`
-	Filter interfaces.Filter `query:"filter"`
+	Type       string `path:"type" validate:"required"`
+	Target     string `query:"target" validate:"required"`
+	Conditions string `query:"conditions" description:"Filter conditions. Format: [{\"key\":\"name\",\"op\":\"eq\",\"value\":\"test\"}]"`
 }
 
 func PostExport(_ *gin.Context, params *PostExportParams) (response *Response[string], err error) {
+	query, err := GetFilterQueryFromConditionString(params.Conditions)
+	if err != nil {
+		return GetErrorResponse[string](err)
+	}
 	var exportId string
 	switch params.Type {
 	case constants.ExportTypeCsv:
-		exportId, err = export.GetCsvService().Export(params.Type, params.Target, params.Filter)
+		exportId, err = export.GetCsvService().Export(params.Type, params.Target, query)
 	case constants.ExportTypeJson:
-		exportId, err = export.GetJsonService().Export(params.Type, params.Target, params.Filter)
+		exportId, err = export.GetJsonService().Export(params.Type, params.Target, query)
 	default:
 		return GetErrorResponse[string](errors.BadRequestf("invalid export type: %s", params.Type))
 	}

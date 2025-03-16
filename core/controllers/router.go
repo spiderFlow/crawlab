@@ -29,7 +29,7 @@ func GetGlobalFizzWrapper() *openapi.FizzWrapper {
 // NewRouterGroups initializes the router groups with their respective middleware
 func NewRouterGroups(app *gin.Engine) (groups *RouterGroups) {
 	// Create OpenAPI wrapper
-	globalWrapper = openapi.NewFizzWrapper(app)
+	globalWrapper = openapi.GetFizzWrapper(app)
 
 	return &RouterGroups{
 		AuthGroup:      app.Group("/", middlewares.AuthorizationMiddleware()),
@@ -485,12 +485,12 @@ func InitRoutes(app *gin.Engine) (err error) {
 		{
 			Method:      http.MethodGet,
 			Path:        "/:col/:value",
-			HandlerFunc: GetFilterColFieldOptions,
+			HandlerFunc: GetFilterColFieldOptionsWithValue,
 		},
 		{
 			Method:      http.MethodGet,
 			Path:        "/:col/:value/:label",
-			HandlerFunc: GetFilterColFieldOptions,
+			HandlerFunc: GetFilterColFieldOptionsWithValueLabel,
 		},
 	})
 	RegisterActions(groups.AuthGroup, "/settings", []Action{
@@ -543,13 +543,6 @@ func InitRoutes(app *gin.Engine) (err error) {
 	})
 
 	// Register public routes that don't require authentication
-	RegisterActions(groups.AnonymousGroup, "/health", []Action{
-		{
-			Path:        "",
-			Method:      http.MethodGet,
-			HandlerFunc: GetHealthFn(func() bool { return true }),
-		},
-	})
 	RegisterActions(groups.AnonymousGroup, "/system-info", []Action{
 		{
 			Path:        "",
@@ -569,6 +562,9 @@ func InitRoutes(app *gin.Engine) (err error) {
 			HandlerFunc: PostLogout,
 		},
 	})
+
+	// Register health check route
+	groups.AnonymousGroup.GET("/health", GetHealthFn(func() bool { return true }))
 
 	// Register OpenAPI documentation route
 	groups.AnonymousGroup.GET("/openapi.json", GetOpenAPI)

@@ -575,10 +575,10 @@ type PostSpiderSaveFileParams struct {
 	File *multipart.FileHeader `form:"file"`
 }
 
-func PostSpiderSaveFile(c *gin.Context, params *PostSpiderSaveFileParams) (response *Response[any], err error) {
+func PostSpiderSaveFile(c *gin.Context, params *PostSpiderSaveFileParams) (response *VoidResponse, err error) {
 	rootPath, err := getSpiderRootPathByContext(c)
 	if err != nil {
-		return GetErrorResponse[any](err)
+		return GetErrorVoidResponse(err)
 	}
 	if c.GetHeader("Content-Type") == "application/json" {
 		return PostBaseFileSaveOne(rootPath, params.Path, params.Data)
@@ -592,14 +592,14 @@ type PostSpiderSaveFilesParams struct {
 	TargetDirectory string `form:"targetDirectory"`
 }
 
-func PostSpiderSaveFiles(c *gin.Context, params *PostSpiderSaveFilesParams) (response *Response[any], err error) {
+func PostSpiderSaveFiles(c *gin.Context, params *PostSpiderSaveFilesParams) (response *VoidResponse, err error) {
 	rootPath, err := getSpiderRootPathByContext(c)
 	if err != nil {
-		return GetErrorResponse[any](err)
+		return GetErrorVoidResponse(err)
 	}
 	form, err := c.MultipartForm()
 	if err != nil {
-		return GetErrorResponse[any](err)
+		return GetErrorVoidResponse(err)
 	}
 	return PostBaseFileSaveMany(filepath.Join(rootPath, params.TargetDirectory), form)
 }
@@ -609,10 +609,10 @@ type PostSpiderSaveDirParams struct {
 	Path string `json:"path"`
 }
 
-func PostSpiderSaveDir(c *gin.Context, params *PostSpiderSaveDirParams) (response *Response[any], err error) {
+func PostSpiderSaveDir(c *gin.Context, params *PostSpiderSaveDirParams) (response *VoidResponse, err error) {
 	rootPath, err := getSpiderRootPathByContext(c)
 	if err != nil {
-		return GetErrorResponse[any](err)
+		return GetErrorVoidResponse(err)
 	}
 	return PostBaseFileSaveDir(rootPath, params.Path)
 }
@@ -623,10 +623,10 @@ type PostSpiderRenameFileParams struct {
 	NewPath string `json:"newPath"`
 }
 
-func PostSpiderRenameFile(c *gin.Context, params *PostSpiderRenameFileParams) (response *Response[any], err error) {
+func PostSpiderRenameFile(c *gin.Context, params *PostSpiderRenameFileParams) (response *VoidResponse, err error) {
 	rootPath, err := getSpiderRootPathByContext(c)
 	if err != nil {
-		return GetErrorResponse[any](err)
+		return GetErrorVoidResponse(err)
 	}
 	return PostBaseFileRename(rootPath, params.Path, params.NewPath)
 }
@@ -636,10 +636,10 @@ type DeleteSpiderFileParams struct {
 	Path string `json:"path"`
 }
 
-func DeleteSpiderFile(c *gin.Context, params *DeleteSpiderFileParams) (response *Response[any], err error) {
+func DeleteSpiderFile(c *gin.Context, params *DeleteSpiderFileParams) (response *VoidResponse, err error) {
 	rootPath, err := getSpiderRootPathByContext(c)
 	if err != nil {
-		return GetErrorResponse[any](err)
+		return GetErrorVoidResponse(err)
 	}
 	return DeleteBaseFile(rootPath, params.Path)
 }
@@ -650,10 +650,10 @@ type PostSpiderCopyFileParams struct {
 	NewPath string `json:"new_path"`
 }
 
-func PostSpiderCopyFile(c *gin.Context, params *PostSpiderCopyFileParams) (response *Response[any], err error) {
+func PostSpiderCopyFile(c *gin.Context, params *PostSpiderCopyFileParams) (response *VoidResponse, err error) {
 	rootPath, err := getSpiderRootPathByContext(c)
 	if err != nil {
-		return GetErrorResponse[any](err)
+		return GetErrorVoidResponse(err)
 	}
 	return PostBaseFileCopy(rootPath, params.Path, params.NewPath)
 }
