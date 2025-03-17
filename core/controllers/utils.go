@@ -42,6 +42,9 @@ func GetFilterQueryFromListParams(params *GetListParams) (q bson.M, err error) {
 }
 
 func GetFilterQueryFromConditionString(condStr string) (q bson.M, err error) {
+	if condStr == "" {
+		return nil, nil
+	}
 	conditions, err := GetFilterFromConditionString(condStr)
 	if err != nil {
 		return nil, err
@@ -50,6 +53,9 @@ func GetFilterQueryFromConditionString(condStr string) (q bson.M, err error) {
 }
 
 func GetFilterFromConditionString(condStr string) (f *entity.Filter, err error) {
+	if condStr == "" {
+		return nil, nil
+	}
 	var conditions []*entity.Condition
 	if err := json.Unmarshal([]byte(condStr), &conditions); err != nil {
 		return nil, err
