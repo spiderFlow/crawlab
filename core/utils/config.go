@@ -36,6 +36,7 @@ const (
 	DefaultNodeModulesPath     = "/usr/lib/node_modules"
 	DefaultGoPath              = "/root/go"
 	DefaultMcpServerBaseUrl    = "http://localhost:9000/sse"
+	DefaultOpenAPIUrl          = "http://localhost:8000/openapi.json"
 )
 
 func IsDev() bool {
@@ -292,4 +293,11 @@ func GetMcpServerBaseUrl() string {
 		return res
 	}
 	return DefaultMcpServerBaseUrl
+}
+
+func GetOpenAPIUrl() string {
+	if res := viper.GetString("openapi.url"); res != "" {
+		return res
+	}
+	return DefaultOpenAPIUrl
 }
