@@ -2,12 +2,13 @@ package openapi
 
 import (
 	"fmt"
+	"sync"
+
 	"github.com/crawlab-team/crawlab/core/interfaces"
 	"github.com/crawlab-team/crawlab/core/utils"
 	"github.com/crawlab-team/fizz"
 	"github.com/gin-gonic/gin"
 	"github.com/loopfz/gadgeto/tonic"
-	"sync"
 )
 
 // FizzWrapper wraps an existing Gin Engine to add OpenAPI functionality
@@ -46,26 +47,26 @@ type Response struct {
 }
 
 // RegisterRoute registers a route with OpenAPI documentation
-func (w *FizzWrapper) RegisterRoute(method, path string, handler interface{}, id, summary, description string, responses map[int]Response) {
+func (w *FizzWrapper) RegisterRoute(method, path string, group *fizz.RouterGroup, handler interface{}, id, summary, description string, responses map[int]Response) {
 	// Build operation options for OpenAPI documentation
 	opts := w.buildOperationOptions(id, summary, description, responses)
 
 	// Register the route with OpenAPI documentation
 	switch method {
 	case "GET":
-		w.fizz.GET(path, opts, tonic.Handler(handler, 200))
+		group.GET(path, opts, tonic.Handler(handler, 200))
 	case "POST":
-		w.fizz.POST(path, opts, tonic.Handler(handler, 200))
+		group.POST(path, opts, tonic.Handler(handler, 200))
 	case "PUT":
-		w.fizz.PUT(path, opts, tonic.Handler(handler, 200))
+		group.PUT(path, opts, tonic.Handler(handler, 200))
 	case "DELETE":
-		w.fizz.DELETE(path, opts, tonic.Handler(handler, 200))
+		group.DELETE(path, opts, tonic.Handler(handler, 200))
 	case "PATCH":
-		w.fizz.PATCH(path, opts, tonic.Handler(handler, 200))
+		group.PATCH(path, opts, tonic.Handler(handler, 200))
 	case "HEAD":
-		w.fizz.HEAD(path, opts, tonic.Handler(handler, 200))
+		group.HEAD(path, opts, tonic.Handler(handler, 200))
 	case "OPTIONS":
-		w.fizz.OPTIONS(path, opts, tonic.Handler(handler, 200))
+		group.OPTIONS(path, opts, tonic.Handler(handler, 200))
 	}
 }
 

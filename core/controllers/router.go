@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/crawlab-team/fizz"
+
 	"github.com/crawlab-team/crawlab/core/middlewares"
 	"github.com/crawlab-team/crawlab/core/models/models"
 	"github.com/crawlab-team/crawlab/core/openapi"
@@ -12,9 +14,9 @@ import (
 
 // RouterGroups defines the different authentication levels for API routes
 type RouterGroups struct {
-	AuthGroup      *gin.RouterGroup     // Routes requiring full authentication
+	AuthGroup      *fizz.RouterGroup    // Routes requiring full authentication
+	AnonymousGroup *fizz.RouterGroup    // Public routes that don't require auth
 	SyncAuthGroup  *gin.RouterGroup     // Routes for sync operations with special auth
-	AnonymousGroup *gin.RouterGroup     // Public routes that don't require auth
 	Wrapper        *openapi.FizzWrapper // OpenAPI wrapper for documentation
 }
 
@@ -31,32 +33,34 @@ func NewRouterGroups(app *gin.Engine) (groups *RouterGroups) {
 	// Create OpenAPI wrapper
 	globalWrapper = openapi.GetFizzWrapper(app)
 
+	f := globalWrapper.GetFizz()
+
 	return &RouterGroups{
-		AuthGroup:      app.Group("/", middlewares.AuthorizationMiddleware()),
+		AuthGroup:      f.Group("/", "AuthGroup", "Router group that requires authentication", middlewares.AuthorizationMiddleware()),
+		AnonymousGroup: f.Group("/", "AnonymousGroup", "Router group that doesn't require authentication"),
 		SyncAuthGroup:  app.Group("/", middlewares.SyncAuthorizationMiddleware()),
-		AnonymousGroup: app.Group("/"),
 		Wrapper:        globalWrapper,
 	}
 }
 
 // RegisterController registers a generic controller with standard CRUD endpoints
 // and any additional custom actions
-func RegisterController[T any](group *gin.RouterGroup, basePath string, ctr *BaseController[T]) {
+func RegisterController[T any](group *fizz.RouterGroup, basePath string, ctr *BaseController[T]) {
 	// Track registered paths to avoid duplicates
 	actionPaths := make(map[string]bool)
 	for _, action := range ctr.actions {
-		path := basePath + action.Path
-		key := action.Method + " - " + path
+		fullPath := basePath + action.Path
+		key := action.Method + " - " + fullPath
 		actionPaths[key] = true
 
 		// Create appropriate model response based on the action
 		responses := globalWrapper.BuildModelResponse()
 
-		id := getIDForAction(action.Method, path)
+		id := getIDForAction(action.Method, fullPath)
 		summary := getSummaryForAction(action.Method, basePath, action.Path)
 		description := getDescriptionForAction(action.Method, basePath, action.Path)
 
-		globalWrapper.RegisterRoute(action.Method, path, action.HandlerFunc, id, summary, description, responses)
+		globalWrapper.RegisterRoute(action.Method, fullPath, group, action.HandlerFunc, id, summary, description, responses)
 	}
 
 	// Register built-in handlers if they haven't been overridden
@@ -72,24 +76,24 @@ func RegisterController[T any](group *gin.RouterGroup, basePath string, ctr *Bas
 }
 
 // RegisterActions registers a list of custom action handlers to a route group
-func RegisterActions(group *gin.RouterGroup, basePath string, actions []Action) {
+func RegisterActions(group *fizz.RouterGroup, basePath string, actions []Action) {
 	for _, action := range actions {
-		path := basePath + action.Path
+		fullPath := basePath + action.Path
 
 		// Create generic response
 		responses := globalWrapper.BuildModelResponse()
 
-		id := getIDForAction(action.Method, path)
+		id := getIDForAction(action.Method, fullPath)
 		summary := getSummaryForAction(action.Method, basePath, action.Path)
 		description := getDescriptionForAction(action.Method, basePath, action.Path)
 
-		globalWrapper.RegisterRoute(action.Method, path, action.HandlerFunc, id, summary, description, responses)
+		globalWrapper.RegisterRoute(action.Method, fullPath, group, action.HandlerFunc, id, summary, description, responses)
 	}
 }
 
 // registerBuiltinHandler registers a standard handler if it hasn't been overridden
 // by a custom action
-func registerBuiltinHandler[T any](group *gin.RouterGroup, wrapper *openapi.FizzWrapper, basePath, method, pathSuffix string, handlerFunc interface{}, existingActionPaths map[string]bool, summary, description string, model T) {
+func registerBuiltinHandler[T any](group *fizz.RouterGroup, wrapper *openapi.FizzWrapper, basePath, method, pathSuffix string, handlerFunc interface{}, existingActionPaths map[string]bool, summary, description string, model T) {
 	path := basePath + pathSuffix
 	key := method + " - " + path
 	_, ok := existingActionPaths[key]
@@ -102,7 +106,7 @@ func registerBuiltinHandler[T any](group *gin.RouterGroup, wrapper *openapi.Fizz
 	// Create appropriate response based on the method
 	responses := wrapper.BuildModelResponse()
 
-	wrapper.RegisterRoute(method, path, handlerFunc, id, summary, description, responses)
+	wrapper.RegisterRoute(method, path, group, handlerFunc, id, summary, description, responses)
 }
 
 // Helper functions to generate OpenAPI documentation
@@ -222,17 +226,17 @@ func InitRoutes(app *gin.Engine) (err error) {
 	// Register resource controllers with their respective endpoints
 	// Each RegisterController call sets up standard CRUD operations
 	// Additional custom actions can be specified in the controller initialization
-	RegisterController(groups.AuthGroup, "/data/collections", NewController[models.DataCollection]())
-	RegisterController(groups.AuthGroup, "/environments", NewController[models.Environment]())
-	RegisterController(groups.AuthGroup, "/nodes", NewController[models.Node]())
-	RegisterController(groups.AuthGroup, "/projects", NewController[models.Project]([]Action{
+	RegisterController(groups.AuthGroup.Group("", "Data Collections", "APIs for data collections management"), "/data/collections", NewController[models.DataCollection]())
+	RegisterController(groups.AuthGroup.Group("", "Environments", "APIs for environment variables management"), "/environments", NewController[models.Environment]())
+	RegisterController(groups.AuthGroup.Group("", "Nodes", "APIs for nodes management"), "/nodes", NewController[models.Node]())
+	RegisterController(groups.AuthGroup.Group("", "Projects", "APIs for projects management"), "/projects", NewController[models.Project]([]Action{
 		{
 			Method:      http.MethodGet,
 			Path:        "",
 			HandlerFunc: GetProjectList,
 		},
 	}...))
-	RegisterController(groups.AuthGroup, "/spiders", NewController[models.Spider]([]Action{
+	RegisterController(groups.AuthGroup.Group("", "Spiders", "APIs for spiders management"), "/spiders", NewController[models.Spider]([]Action{
 		{
 			Method:      http.MethodGet,
 			Path:        "/:id",
@@ -324,7 +328,7 @@ func InitRoutes(app *gin.Engine) (err error) {
 			HandlerFunc: GetSpiderResults,
 		},
 	}...))
-	RegisterController(groups.AuthGroup, "/schedules", NewController[models.Schedule]([]Action{
+	RegisterController(groups.AuthGroup.Group("", "Schedules", "APIs for schedules management"), "/schedules", NewController[models.Schedule]([]Action{
 		{
 			Method:      http.MethodPost,
 			Path:        "",
@@ -351,7 +355,7 @@ func InitRoutes(app *gin.Engine) (err error) {
 			HandlerFunc: PostScheduleRun,
 		},
 	}...))
-	RegisterController(groups.AuthGroup, "/tasks", NewController[models.Task]([]Action{
+	RegisterController(groups.AuthGroup.Group("", "Tasks", "APIs for tasks management"), "/tasks", NewController[models.Task]([]Action{
 		{
 			Method:      http.MethodGet,
 			Path:        "/:id",
@@ -393,7 +397,7 @@ func InitRoutes(app *gin.Engine) (err error) {
 			HandlerFunc: GetTaskLogs,
 		},
 	}...))
-	RegisterController(groups.AuthGroup, "/tokens", NewController[models.Token]([]Action{
+	RegisterController(groups.AuthGroup.Group("", "Tokens", "APIs for PAT management"), "/tokens", NewController[models.Token]([]Action{
 		{
 			Method:      http.MethodPost,
 			Path:        "",
@@ -405,7 +409,7 @@ func InitRoutes(app *gin.Engine) (err error) {
 			HandlerFunc: GetTokenList,
 		},
 	}...))
-	RegisterController(groups.AuthGroup, "/users", NewController[models.User]([]Action{
+	RegisterController(groups.AuthGroup.Group("", "Users", "APIs for users management"), "/users", NewController[models.User]([]Action{
 		{
 			Method:      http.MethodGet,
 			Path:        "/:id",
@@ -459,7 +463,7 @@ func InitRoutes(app *gin.Engine) (err error) {
 	}...))
 
 	// Register standalone action routes that don't fit the standard CRUD pattern
-	RegisterActions(groups.AuthGroup, "/export", []Action{
+	RegisterActions(groups.AuthGroup.Group("", "Export", "APIs for exporting data"), "/export", []Action{
 		{
 			Method:      http.MethodPost,
 			Path:        "/:type",
@@ -476,7 +480,7 @@ func InitRoutes(app *gin.Engine) (err error) {
 			HandlerFunc: GetExportDownload,
 		},
 	})
-	RegisterActions(groups.AuthGroup, "/filters", []Action{
+	RegisterActions(groups.AuthGroup.Group("", "Filters", "APIs for data collections filters management"), "/filters", []Action{
 		{
 			Method:      http.MethodGet,
 			Path:        "/:col",
@@ -493,7 +497,7 @@ func InitRoutes(app *gin.Engine) (err error) {
 			HandlerFunc: GetFilterColFieldOptionsWithValueLabel,
 		},
 	})
-	RegisterActions(groups.AuthGroup, "/settings", []Action{
+	RegisterActions(groups.AuthGroup.Group("", "Settings", "APIs for settings management"), "/settings", []Action{
 		{
 			Method:      http.MethodGet,
 			Path:        "/:key",
@@ -510,7 +514,7 @@ func InitRoutes(app *gin.Engine) (err error) {
 			HandlerFunc: PutSetting,
 		},
 	})
-	RegisterActions(groups.AuthGroup, "/stats", []Action{
+	RegisterActions(groups.AuthGroup.Group("", "Stats", "APIs for data stats"), "/stats", []Action{
 		{
 			Method:      http.MethodGet,
 			Path:        "/overview",
@@ -528,29 +532,15 @@ func InitRoutes(app *gin.Engine) (err error) {
 		},
 	})
 
-	// Register sync routes that require special authentication
-	RegisterActions(groups.SyncAuthGroup, "/sync", []Action{
-		{
-			Method:      http.MethodGet,
-			Path:        "/:id/scan",
-			HandlerFunc: GetSyncScan,
-		},
-		{
-			Method:      http.MethodGet,
-			Path:        "/:id/download",
-			HandlerFunc: GetSyncDownload,
-		},
-	})
-
 	// Register public routes that don't require authentication
-	RegisterActions(groups.AnonymousGroup, "/system-info", []Action{
+	RegisterActions(groups.AnonymousGroup.Group("", "System", "APIs for system info"), "/system-info", []Action{
 		{
 			Path:        "",
 			Method:      http.MethodGet,
 			HandlerFunc: GetSystemInfo,
 		},
 	})
-	RegisterActions(groups.AnonymousGroup, "/", []Action{
+	RegisterActions(groups.AnonymousGroup.Group("", "Auth", "APIs for authentication"), "/", []Action{
 		{
 			Method:      http.MethodPost,
 			Path:        "/login",
@@ -563,11 +553,15 @@ func InitRoutes(app *gin.Engine) (err error) {
 		},
 	})
 
+	// Register sync routes that require special authentication
+	groups.SyncAuthGroup.GET("/sync/:id/scan", GetSyncScan)
+	groups.SyncAuthGroup.GET("/sync/:id/download", GetSyncDownload)
+
 	// Register health check route
-	groups.AnonymousGroup.GET("/health", GetHealthFn(func() bool { return true }))
+	groups.AnonymousGroup.GinRouterGroup().GET("/health", GetHealthFn(func() bool { return true }))
 
 	// Register OpenAPI documentation route
-	groups.AnonymousGroup.GET("/openapi.json", GetOpenAPI)
+	groups.AnonymousGroup.GinRouterGroup().GET("/openapi.json", GetOpenAPI)
 
 	return nil
 }
