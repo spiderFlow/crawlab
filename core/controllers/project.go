@@ -21,9 +21,14 @@ func GetProjectList(c *gin.Context, params *GetListParams) (response *ListRespon
 		return GetErrorListResponse[models.Project](errors.BadRequestf("invalid request parameters: %v", err))
 	}
 
+	sort, err := GetSortOptionFromString(params.Sort)
+	if err != nil {
+		return GetErrorListResponse[models.Project](errors.BadRequestf("invalid request parameters: %v", err))
+	}
+
 	// get list
 	projects, err := service.NewModelService[models.Project]().GetMany(query, &mongo.FindOptions{
-		Sort:  params.Sort,
+		Sort:  sort,
 		Skip:  params.Size * (params.Page - 1),
 		Limit: params.Size,
 	})

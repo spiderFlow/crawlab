@@ -1,6 +1,8 @@
 package controllers
 
 import (
+	"github.com/loopfz/gadgeto/tonic"
+	"net/http"
 	"time"
 
 	"github.com/crawlab-team/crawlab/core/interfaces"
@@ -12,6 +14,33 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	mongo2 "go.mongodb.org/mongo-driver/mongo"
 )
+
+func init() {
+	tonic.SetErrorHook(func(context *gin.Context, err error) (int, interface{}) {
+		response := gin.H{
+			"error": errors.Unwrap(err).Error(),
+		}
+		status := http.StatusInternalServerError
+		constErr, ok := errors.AsType[errors.ConstError](err)
+		if ok {
+			switch {
+			case errors.Is(constErr, errors.NotFound):
+				status = http.StatusNotFound
+			case errors.Is(constErr, errors.BadRequest):
+				status = http.StatusBadRequest
+			case errors.Is(constErr, errors.Unauthorized):
+				status = http.StatusUnauthorized
+			case errors.Is(constErr, errors.Forbidden):
+				status = http.StatusForbidden
+			default:
+				status = http.StatusInternalServerError
+			}
+		} else {
+			status = http.StatusInternalServerError
+		}
+		return status, response
+	})
+}
 
 type Action struct {
 	Method      string
@@ -27,7 +56,7 @@ type BaseController[T any] struct {
 // GetListParams represents parameters for GetList with pagination
 type GetListParams struct {
 	Conditions string `query:"conditions" description:"Filter conditions. Format: [{\"key\":\"name\",\"op\":\"eq\",\"value\":\"test\"}]"`
-	Sort       bson.D `query:"sort" description:"Sort options"`
+	Sort       string `query:"sort" description:"Sort options"`
 	Page       int    `query:"page" default:"1" description:"Page number"`
 	Size       int    `query:"size" default:"10" description:"Page size"`
 	All        bool   `query:"all" default:"false" description:"Whether to get all items"`
@@ -201,15 +230,19 @@ func (ctr *BaseController[T]) DeleteList(_ *gin.Context, params *DeleteListParam
 
 // GetAll retrieves all items based on filter and sort
 func (ctr *BaseController[T]) GetAll(params *GetListParams) (response *ListResponse[T], err error) {
+	// Get filter query
 	query, err := GetFilterQueryFromListParams(params)
 	if err != nil {
 		return GetErrorListResponse[T](errors.BadRequestf("invalid request parameters: %v", err))
 	}
-	sort := params.Sort
-	if sort == nil {
-		sort = bson.D{{"_id", -1}}
+
+	// Get sort options
+	sort, err := GetSortOptionFromString(params.Sort)
+	if err != nil {
+		return GetErrorListResponse[T](errors.BadRequestf("invalid sort format: %v", err))
 	}
 
+	// Get models
 	models, err := ctr.modelSvc.GetMany(query, &mongo.FindOptions{
 		Sort: sort,
 	})
@@ -217,22 +250,33 @@ func (ctr *BaseController[T]) GetAll(params *GetListParams) (response *ListRespo
 		return nil, err
 	}
 
+	// Total count
 	total, err := ctr.modelSvc.Count(query)
 	if err != nil {
 		return nil, err
 	}
 
+	// Response
 	return GetListResponse(models, total)
 }
 
 // GetWithPagination retrieves items with pagination
 func (ctr *BaseController[T]) GetWithPagination(params *GetListParams) (response *ListResponse[T], err error) {
+	// Get filter query
 	query, err := GetFilterQueryFromListParams(params)
 	if err != nil {
 		return GetErrorListResponse[T](errors.BadRequestf("invalid request parameters: %v", err))
 	}
+
+	// Get sort options
+	sort, err := GetSortOptionFromString(params.Sort)
+	if err != nil {
+		return GetErrorListResponse[T](errors.BadRequestf("invalid sort format: %v", err))
+	}
+
+	// Get models
 	models, err := ctr.modelSvc.GetMany(query, &mongo.FindOptions{
-		Sort:  params.Sort,
+		Sort:  sort,
 		Skip:  params.Size * (params.Page - 1),
 		Limit: params.Size,
 	})
@@ -244,13 +288,13 @@ func (ctr *BaseController[T]) GetWithPagination(params *GetListParams) (response
 		}
 	}
 
-	// total count
+	// Total count
 	total, err := ctr.modelSvc.Count(query)
 	if err != nil {
 		return nil, err
 	}
 
-	// response
+	// Response
 	return GetListResponse(models, total)
 }
 

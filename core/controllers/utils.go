@@ -205,6 +205,27 @@ func MustGetPagination(c *gin.Context) (p *entity.Pagination) {
 	return p
 }
 
+func GetSortsFromString(sortStr string) (sorts []entity.Sort, err error) {
+	if sortStr == "" {
+		return nil, nil
+	}
+	if err := json.Unmarshal([]byte(sortStr), &sorts); err != nil {
+		return nil, err
+	}
+	return sorts, nil
+}
+
+func GetSortOptionFromString(sortStr string) (sort bson.D, err error) {
+	sorts, err := GetSortsFromString(sortStr)
+	if err != nil {
+		return nil, err
+	}
+	if sorts == nil || len(sorts) == 0 {
+		return bson.D{{"_id", -1}}, nil
+	}
+	return SortsToOption(sorts)
+}
+
 // GetSorts Get entity.Sort from gin.Context
 func GetSorts(c *gin.Context) (sorts []entity.Sort, err error) {
 	// bind

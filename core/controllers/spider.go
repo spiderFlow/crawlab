@@ -93,9 +93,14 @@ func getSpiderListWithStats(params *GetListParams) (response *ListResponse[model
 	if err != nil {
 		return GetErrorListResponse[models.Spider](errors.BadRequestf("invalid request parameters: %v", err))
 	}
-	// get list
+
+	sort, err := GetSortOptionFromString(params.Sort)
+	if err != nil {
+		return GetErrorListResponse[models.Spider](errors.BadRequestf("invalid request parameters: %v", err))
+	}
+
 	spiders, err := service.NewModelService[models.Spider]().GetMany(query, &mongo2.FindOptions{
-		Sort:  params.Sort,
+		Sort:  sort,
 		Skip:  params.Size * (params.Page - 1),
 		Limit: params.Size,
 	})
@@ -662,7 +667,7 @@ type PostSpiderExportParams struct {
 	Id string `path:"id"`
 }
 
-func PostSpiderExport(c *gin.Context, params *PostSpiderExportParams) (err error) {
+func PostSpiderExport(c *gin.Context, _ *PostSpiderExportParams) (err error) {
 	rootPath, err := getSpiderRootPathByContext(c)
 	if err != nil {
 		return err
@@ -712,9 +717,6 @@ func PostSpiderRun(c *gin.Context, params *PostSpiderRunParams) (response *Respo
 		ScheduleId: scheduleId,
 		Priority:   params.Priority,
 	}
-	if err := c.ShouldBindJSON(&opts); err != nil {
-		return GetErrorResponse[[]primitive.ObjectID](err)
-	}
 
 	// user
 	if u := GetUserFromContext(c); u != nil {
@@ -731,7 +733,9 @@ func PostSpiderRun(c *gin.Context, params *PostSpiderRunParams) (response *Respo
 }
 
 type GetSpiderResultsParams struct {
-	Id string `path:"id"`
+	Id   string `path:"id"`
+	Page int    `query:"page"`
+	Size int    `query:"size"`
 }
 
 func GetSpiderResults(c *gin.Context, params *GetSpiderResultsParams) (response *ListResponse[bson.M], err error) {
@@ -745,8 +749,6 @@ func GetSpiderResults(c *gin.Context, params *GetSpiderResultsParams) (response 
 		return GetErrorListResponse[bson.M](err)
 	}
 
-	// params
-	pagination := MustGetPagination(c)
 	query := getResultListQuery(c)
 
 	col := mongo2.GetMongoCol(s.ColName)
@@ -754,8 +756,8 @@ func GetSpiderResults(c *gin.Context, params *GetSpiderResultsParams) (response 
 	var results []bson.M
 	err = col.Find(mongo2.GetMongoQuery(query), mongo2.GetMongoOpts(&mongo2.ListOptions{
 		Sort:  []mongo2.ListSort{{"_id", mongo2.SortDirectionDesc}},
-		Skip:  pagination.Size * (pagination.Page - 1),
-		Limit: pagination.Size,
+		Skip:  params.Size * (params.Page - 1),
+		Limit: params.Size,
 	})).All(&results)
 	if err != nil {
 		return GetErrorListResponse[bson.M](err)

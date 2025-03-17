@@ -28,8 +28,14 @@ func GetUserList(_ *gin.Context, params *GetListParams) (response *ListResponse[
 	if err != nil {
 		return GetErrorListResponse[models.User](err)
 	}
+
+	sort, err := GetSortOptionFromString(params.Sort)
+	if err != nil {
+		return GetErrorListResponse[models.User](err)
+	}
+
 	users, err := service.NewModelService[models.User]().GetMany(query, &mongo.FindOptions{
-		Sort:  params.Sort,
+		Sort:  sort,
 		Skip:  params.Size * (params.Page - 1),
 		Limit: params.Size,
 	})

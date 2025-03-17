@@ -51,9 +51,15 @@ func GetTokenList(c *gin.Context, params *GetListParams) (response *ListResponse
 	// Add filter for tokens created by the current user
 	query["created_by"] = u.Id
 
+	// Get sort options
+	sort, err := GetSortOptionFromString(params.Sort)
+	if err != nil {
+		return GetErrorListResponse[models.Token](errors.BadRequestf("invalid request parameters: %v", err))
+	}
+
 	// Get tokens with pagination
 	tokens, err := service.NewModelService[models.Token]().GetMany(query, &mongo.FindOptions{
-		Sort:  params.Sort,
+		Sort:  sort,
 		Skip:  params.Size * (params.Page - 1),
 		Limit: params.Size,
 	})

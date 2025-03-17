@@ -84,9 +84,14 @@ func GetTaskList(c *gin.Context, params *GetTaskListParams) (response *ListRespo
 		return GetErrorListResponse[models.Task](err)
 	}
 
+	sort, err := GetSortOptionFromString(params.GetListParams.Sort)
+	if err != nil {
+		return GetErrorListResponse[models.Task](err)
+	}
+
 	// get tasks
 	tasks, err := service.NewModelService[models.Task]().GetMany(query, &mongo3.FindOptions{
-		Sort:  params.Sort,
+		Sort:  sort,
 		Skip:  params.Size * (params.Page - 1),
 		Limit: params.Size,
 	})
