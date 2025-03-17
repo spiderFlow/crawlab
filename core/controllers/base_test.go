@@ -20,10 +20,10 @@ import (
 	"github.com/crawlab-team/crawlab/core/models/service"
 	"github.com/crawlab-team/crawlab/core/mongo"
 	"github.com/crawlab-team/crawlab/core/user"
+	"github.com/crawlab-team/fizz"
 	"github.com/loopfz/gadgeto/tonic"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
-	"github.com/wI2L/fizz"
 
 	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/bson"

@@ -1,8 +1,8 @@
 package controllers
 
 import (
+	"github.com/crawlab-team/fizz/openapi"
 	"github.com/gin-gonic/gin"
-	"github.com/wI2L/fizz/openapi"
 )
 
 func GetOpenAPI(c *gin.Context) {

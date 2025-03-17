@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"github.com/crawlab-team/crawlab/core/interfaces"
 	"github.com/crawlab-team/crawlab/core/utils"
+	"github.com/crawlab-team/fizz"
 	"github.com/gin-gonic/gin"
 	"github.com/loopfz/gadgeto/tonic"
-	"github.com/wI2L/fizz"
 	"sync"
 )
 
