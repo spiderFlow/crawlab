@@ -1,11 +1,12 @@
 package controllers_test
 
 import (
+	"testing"
+
 	"github.com/crawlab-team/crawlab/core/controllers"
 	"github.com/crawlab-team/crawlab/core/models/models"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestRouterGroups(t *testing.T) {
@@ -16,8 +17,8 @@ func TestRouterGroups(t *testing.T) {
 		group *gin.RouterGroup
 		name  string
 	}{
-		{groups.AuthGroup, "AuthGroup"},
-		{groups.AnonymousGroup, "AnonymousGroup"},
+		{groups.AuthGroup.GinRouterGroup(), "AuthGroup"},
+		{groups.AnonymousGroup.GinRouterGroup(), "AnonymousGroup"},
 	}
 
 	for _, a := range assertions {
@@ -60,7 +61,7 @@ func TestRegisterController_Routes(t *testing.T) {
 func TestInitRoutes_ProjectsRoute(t *testing.T) {
 	router := gin.Default()
 
-	controllers.InitRoutes(router)
+	_ = controllers.InitRoutes(router)
 
 	// Check if the projects route is registered
 	routes := router.Routes()

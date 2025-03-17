@@ -1,34 +1,36 @@
 package controllers
 
 import (
-	"errors"
 	"github.com/crawlab-team/crawlab/core/models/models"
 	"github.com/crawlab-team/crawlab/core/models/service"
 	"github.com/crawlab-team/crawlab/core/mongo"
 	"github.com/gin-gonic/gin"
+	"github.com/juju/errors"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	mongo2 "go.mongodb.org/mongo-driver/mongo"
 )
 
-func GetProjectList(c *gin.Context) {
-	// get all list
-	all := MustGetFilterAll(c)
-	if all {
-		NewController[models.Project]().getAll(c)
-		return
+func GetProjectList(c *gin.Context, params *GetListParams) (response *ListResponse[models.Project], err error) {
+	if params.All {
+		return NewController[models.Project]().GetAll(params)
 	}
 
-	// params
-	pagination := MustGetPagination(c)
-	query := MustGetFilterQuery(c)
-	sort := MustGetSortOption(c)
+	query, err := GetFilterQueryFromListParams(params)
+	if err != nil {
+		return GetErrorListResponse[models.Project](errors.BadRequestf("invalid request parameters: %v", err))
+	}
+
+	sort, err := GetSortOptionFromString(params.Sort)
+	if err != nil {
+		return GetErrorListResponse[models.Project](errors.BadRequestf("invalid request parameters: %v", err))
+	}
 
 	// get list
 	projects, err := service.NewModelService[models.Project]().GetMany(query, &mongo.FindOptions{
 		Sort:  sort,
-		Skip:  pagination.Size * (pagination.Page - 1),
-		Limit: pagination.Size,
+		Skip:  params.Size * (params.Page - 1),
+		Limit: params.Size,
 	})
 	if err != nil {
 		if err.Error() != mongo2.ErrNoDocuments.Error() {
@@ -82,5 +84,5 @@ func GetProjectList(c *gin.Context) {
 		projects[i].Spiders = cache[p.Id]
 	}
 
-	HandleSuccessWithListData(c, projects, total)
+	return GetListResponse[models.Project](projects, total)
 }

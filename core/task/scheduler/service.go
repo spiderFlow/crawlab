@@ -245,6 +245,7 @@ func newTaskSchedulerService() *Service {
 		interval:   5 * time.Second,
 		svr:        server.GetGrpcServer(),
 		handlerSvc: handler.GetTaskHandlerService(),
+		Logger:     utils.NewLogger("TaskScheduler"),
 	}
 }
 

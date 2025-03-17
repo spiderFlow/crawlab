@@ -2,6 +2,11 @@ package controllers
 
 import (
 	"errors"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+
 	"github.com/crawlab-team/crawlab/core/constants"
 	"github.com/crawlab-team/crawlab/core/interfaces"
 	"github.com/crawlab-team/crawlab/core/models/models"
@@ -15,35 +20,31 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	mongo2 "go.mongodb.org/mongo-driver/mongo"
-	"os"
-	"path/filepath"
-	"strings"
-	"sync"
 )
 
-func GetTaskById(c *gin.Context) {
+type GetTaskByIdParams struct {
+	Id string `path:"id"`
+}
+
+func GetTaskById(_ *gin.Context, params *GetTaskByIdParams) (response *Response[models.Task], err error) {
 	// id
-	id, err := primitive.ObjectIDFromHex(c.Param("id"))
+	id, err := primitive.ObjectIDFromHex(params.Id)
 	if err != nil {
-		HandleErrorBadRequest(c, err)
-		return
+		return GetErrorResponse[models.Task](err)
 	}
 
 	// task
 	t, err := service.NewModelService[models.Task]().GetById(id)
 	if errors.Is(err, mongo2.ErrNoDocuments) {
-		HandleErrorNotFound(c, err)
-		return
+		return GetErrorResponse[models.Task](err)
 	}
 	if err != nil {
-		HandleErrorInternalServerError(c, err)
-		return
+		return GetErrorResponse[models.Task](err)
 	}
 
 	// skip if task status is pending
 	if t.Status == constants.TaskStatusPending {
-		HandleSuccessWithData(c, t)
-		return
+		return GetDataResponse(*t)
 	}
 
 	// spider
@@ -64,40 +65,46 @@ func GetTaskById(c *gin.Context) {
 	// task stat
 	t.Stat, _ = service.NewModelService[models.TaskStat]().GetById(id)
 
-	HandleSuccessWithData(c, t)
+	return GetDataResponse(*t)
 }
 
-func GetTaskList(c *gin.Context) {
-	withStats := c.Query("stats")
-	if withStats == "" {
-		NewController[models.Task]().GetList(c)
-		return
+type GetTaskListParams struct {
+	*GetListParams
+	Stats bool `query:"stats"`
+}
+
+func GetTaskList(c *gin.Context, params *GetTaskListParams) (response *ListResponse[models.Task], err error) {
+	if params.Stats {
+		return NewController[models.Task]().GetList(c, params.GetListParams)
 	}
 
-	// params
-	pagination := MustGetPagination(c)
-	query := MustGetFilterQuery(c)
-	sort := MustGetSortOption(c)
+	// get query
+	query, err := GetFilterQueryFromListParams(params.GetListParams)
+	if err != nil {
+		return GetErrorListResponse[models.Task](err)
+	}
+
+	sort, err := GetSortOptionFromString(params.GetListParams.Sort)
+	if err != nil {
+		return GetErrorListResponse[models.Task](err)
+	}
 
 	// get tasks
 	tasks, err := service.NewModelService[models.Task]().GetMany(query, &mongo3.FindOptions{
 		Sort:  sort,
-		Skip:  pagination.Size * (pagination.Page - 1),
-		Limit: pagination.Size,
+		Skip:  params.Size * (params.Page - 1),
+		Limit: params.Size,
 	})
 	if err != nil {
 		if errors.Is(err, mongo2.ErrNoDocuments) {
-			HandleErrorNotFound(c, err)
-		} else {
-			HandleErrorInternalServerError(c, err)
+			return GetErrorListResponse[models.Task](err)
 		}
-		return
+		return GetErrorListResponse[models.Task](err)
 	}
 
 	// check empty list
 	if len(tasks) == 0 {
-		HandleSuccessWithListData(c, nil, 0)
-		return
+		return GetListResponse[models.Task](nil, 0)
 	}
 
 	// ids
@@ -111,8 +118,7 @@ func GetTaskList(c *gin.Context) {
 	// total count
 	total, err := service.NewModelService[models.Task]().Count(query)
 	if err != nil {
-		HandleErrorInternalServerError(c, err)
-		return
+		return GetErrorListResponse[models.Task](err)
 	}
 
 	// stat list
@@ -122,8 +128,7 @@ func GetTaskList(c *gin.Context) {
 		},
 	}, nil)
 	if err != nil {
-		HandleErrorInternalServerError(c, err)
-		return
+		return GetErrorListResponse[models.Task](err)
 	}
 
 	// cache stat list to dict
@@ -139,8 +144,7 @@ func GetTaskList(c *gin.Context) {
 		},
 	}, nil)
 	if err != nil {
-		HandleErrorInternalServerError(c, err)
-		return
+		return GetErrorListResponse[models.Task](err)
 	}
 
 	// cache spider list to dict
@@ -164,15 +168,17 @@ func GetTaskList(c *gin.Context) {
 		}
 	}
 
-	// response
-	HandleSuccessWithListData(c, tasks, total)
+	return GetListResponse(tasks, total)
 }
 
-func DeleteTaskById(c *gin.Context) {
-	id, err := primitive.ObjectIDFromHex(c.Param("id"))
+type DeleteTaskByIdParams struct {
+	Id string `path:"id"`
+}
+
+func DeleteTaskById(_ *gin.Context, params *DeleteTaskByIdParams) (response *VoidResponse, err error) {
+	id, err := primitive.ObjectIDFromHex(params.Id)
 	if err != nil {
-		HandleErrorBadRequest(c, err)
-		return
+		return GetErrorVoidResponse(err)
 	}
 
 	// delete in db
@@ -201,8 +207,7 @@ func DeleteTaskById(c *gin.Context) {
 
 		return nil
 	}); err != nil {
-		HandleErrorInternalServerError(c, err)
-		return
+		return GetErrorVoidResponse(err)
 	}
 
 	// delete task logs
@@ -211,23 +216,28 @@ func DeleteTaskById(c *gin.Context) {
 		logger.Warnf("failed to remove task log directory: %s", logPath)
 	}
 
-	HandleSuccess(c)
+	return GetVoidResponse()
 }
 
-func DeleteList(c *gin.Context) {
-	var payload struct {
-		Ids []primitive.ObjectID `json:"ids"`
-	}
-	if err := c.ShouldBindJSON(&payload); err != nil {
-		HandleErrorBadRequest(c, err)
-		return
+type DeleteTaskListParams struct {
+	Ids []string `json:"ids"`
+}
+
+func DeleteList(_ *gin.Context, params *DeleteTaskListParams) (response *VoidResponse, err error) {
+	var ids []primitive.ObjectID
+	for _, id := range params.Ids {
+		id, err := primitive.ObjectIDFromHex(id)
+		if err != nil {
+			return GetErrorVoidResponse(err)
+		}
+		ids = append(ids, id)
 	}
 
 	if err := mongo3.RunTransaction(func(context mongo2.SessionContext) error {
 		// delete tasks
 		if err := service.NewModelService[models.Task]().DeleteMany(bson.M{
 			"_id": bson.M{
-				"$in": payload.Ids,
+				"$in": ids,
 			},
 		}); err != nil {
 			return err
@@ -236,7 +246,7 @@ func DeleteList(c *gin.Context) {
 		// delete task stats
 		if err := service.NewModelService[models.Task]().DeleteMany(bson.M{
 			"_id": bson.M{
-				"$in": payload.Ids,
+				"$in": ids,
 			},
 		}); err != nil {
 			logger.Warnf("delete task stat error: %s", err.Error())
@@ -245,56 +255,66 @@ func DeleteList(c *gin.Context) {
 
 		return nil
 	}); err != nil {
-		HandleErrorInternalServerError(c, err)
-		return
+		return GetErrorVoidResponse(err)
 	}
 
 	// delete tasks logs
 	wg := sync.WaitGroup{}
-	wg.Add(len(payload.Ids))
-	for _, id := range payload.Ids {
-		go func(id string) {
+	wg.Add(len(ids))
+	for _, id := range ids {
+		go func(taskId primitive.ObjectID) {
 			// delete task logs
-			logPath := filepath.Join(utils.GetTaskLogPath(), id)
+			logPath := filepath.Join(utils.GetTaskLogPath(), taskId.Hex())
 			if err := os.RemoveAll(logPath); err != nil {
 				logger.Warnf("failed to remove task log directory: %s", logPath)
 			}
 			wg.Done()
-		}(id.Hex())
+		}(id)
 	}
 	wg.Wait()
 
-	HandleSuccess(c)
+	return GetVoidResponse()
 }
 
-func PostTaskRun(c *gin.Context) {
-	// task
-	var t models.Task
-	if err := c.ShouldBindJSON(&t); err != nil {
-		HandleErrorBadRequest(c, err)
-		return
+type PostTaskRunParams struct {
+	SpiderId string   `json:"spider_id" validate:"required"`
+	Mode     string   `json:"mode"`
+	NodeIds  []string `json:"node_ids"`
+	Cmd      string   `json:"cmd"`
+	Param    string   `json:"param"`
+	Priority int      `json:"priority"`
+}
+
+func PostTaskRun(c *gin.Context, params *PostTaskRunParams) (response *Response[[]primitive.ObjectID], err error) {
+	spiderId, err := primitive.ObjectIDFromHex(params.SpiderId)
+	if err != nil {
+		return GetErrorResponse[[]primitive.ObjectID](err)
 	}
 
-	// validate spider id
-	if t.SpiderId.IsZero() {
-		HandleErrorBadRequest(c, errors.New("spider id is required"))
-		return
+	var nodeIds []primitive.ObjectID
+	if params.NodeIds != nil {
+		for _, nodeId := range params.NodeIds {
+			nodeId, err := primitive.ObjectIDFromHex(nodeId)
+			if err != nil {
+				return GetErrorResponse[[]primitive.ObjectID](err)
+			}
+			nodeIds = append(nodeIds, nodeId)
+		}
 	}
 
 	// spider
-	s, err := service.NewModelService[models.Spider]().GetById(t.SpiderId)
+	s, err := service.NewModelService[models.Spider]().GetById(spiderId)
 	if err != nil {
-		HandleErrorInternalServerError(c, err)
-		return
+		return GetErrorResponse[[]primitive.ObjectID](err)
 	}
 
 	// options
 	opts := &interfaces.SpiderRunOptions{
-		Mode:     t.Mode,
-		NodeIds:  t.NodeIds,
-		Cmd:      t.Cmd,
-		Param:    t.Param,
-		Priority: t.Priority,
+		Mode:     params.Mode,
+		NodeIds:  nodeIds,
+		Cmd:      params.Cmd,
+		Param:    params.Param,
+		Priority: params.Priority,
 	}
 
 	// user
@@ -306,27 +326,27 @@ func PostTaskRun(c *gin.Context) {
 	adminSvc := admin.GetSpiderAdminService()
 	taskIds, err := adminSvc.Schedule(s.Id, opts)
 	if err != nil {
-		HandleErrorInternalServerError(c, err)
-		return
+		return GetErrorResponse[[]primitive.ObjectID](err)
 	}
 
-	HandleSuccessWithData(c, taskIds)
-
+	return GetDataResponse(taskIds)
 }
 
-func PostTaskRestart(c *gin.Context) {
+type PostTaskRestartParams struct {
+	Id string `path:"id"`
+}
+
+func PostTaskRestart(c *gin.Context, params *PostTaskRestartParams) (response *Response[[]primitive.ObjectID], err error) {
 	// id
-	id, err := primitive.ObjectIDFromHex(c.Param("id"))
+	id, err := primitive.ObjectIDFromHex(params.Id)
 	if err != nil {
-		HandleErrorBadRequest(c, err)
-		return
+		return GetErrorResponse[[]primitive.ObjectID](err)
 	}
 
 	// task
 	t, err := service.NewModelService[models.Task]().GetById(id)
 	if err != nil {
-		HandleErrorInternalServerError(c, err)
-		return
+		return GetErrorResponse[[]primitive.ObjectID](err)
 	}
 
 	// options
@@ -353,89 +373,73 @@ func PostTaskRestart(c *gin.Context) {
 	adminSvc := admin.GetSpiderAdminService()
 	taskIds, err := adminSvc.Schedule(t.SpiderId, opts)
 	if err != nil {
-		HandleErrorInternalServerError(c, err)
-		return
+		return GetErrorResponse[[]primitive.ObjectID](err)
 	}
 
-	HandleSuccessWithData(c, taskIds)
+	return GetDataResponse(taskIds)
 }
 
-func PostTaskCancel(c *gin.Context) {
-	type Payload struct {
-		Force bool `json:"force,omitempty"`
-	}
+type PostTaskCancelParams struct {
+	Id    string `path:"id"`
+	Force bool   `json:"force,omitempty"`
+}
 
+func PostTaskCancel(c *gin.Context, params *PostTaskCancelParams) (response *VoidResponse, err error) {
 	// id
-	id, err := primitive.ObjectIDFromHex(c.Param("id"))
+	id, err := primitive.ObjectIDFromHex(params.Id)
 	if err != nil {
-		HandleErrorBadRequest(c, err)
-		return
-	}
-
-	// payload
-	var p Payload
-	if err := c.ShouldBindJSON(&p); err != nil {
-		HandleErrorBadRequest(c, err)
-		return
+		return GetErrorVoidResponse(err)
 	}
 
 	// task
 	t, err := service.NewModelService[models.Task]().GetById(id)
 	if err != nil {
-		HandleErrorInternalServerError(c, err)
-		return
+		return GetErrorVoidResponse(err)
 	}
 
 	// validate
 	if !utils.IsCancellable(t.Status) {
-		HandleErrorInternalServerError(c, errors.New("task is not cancellable"))
-		return
+		return GetErrorVoidResponse(errors.New("task is not cancellable"))
 	}
 
 	u := GetUserFromContext(c)
 
 	// cancel
 	schedulerSvc := scheduler.GetTaskSchedulerService()
-	err = schedulerSvc.Cancel(id, u.Id, p.Force)
+	err = schedulerSvc.Cancel(id, u.Id, params.Force)
 	if err != nil {
-		HandleErrorInternalServerError(c, err)
-		return
+		return GetErrorVoidResponse(err)
 	}
 
-	HandleSuccess(c)
+	return GetVoidResponse()
 }
 
-func GetTaskLogs(c *gin.Context) {
-	// id
-	id, err := primitive.ObjectIDFromHex(c.Param("id"))
-	if err != nil {
-		HandleErrorBadRequest(c, err)
-		return
-	}
+type GetTaskLogsParams struct {
+	Id   string `path:"id"`
+	Page int    `query:"page"`
+	Size int    `query:"size"`
+}
 
-	// pagination
-	p, err := GetPagination(c)
+func GetTaskLogs(_ *gin.Context, params *GetTaskLogsParams) (response *ListResponse[string], err error) {
+	// id
+	id, err := primitive.ObjectIDFromHex(params.Id)
 	if err != nil {
-		HandleErrorBadRequest(c, err)
-		return
+		return GetErrorListResponse[string](err)
 	}
 
 	// logs
 	logDriver := log.GetFileLogDriver()
-	logs, err := logDriver.Find(id.Hex(), "", (p.Page-1)*p.Size, p.Size)
+	logs, err := logDriver.Find(id.Hex(), "", (params.Page-1)*params.Size, params.Size)
 	if err != nil {
 		if strings.HasSuffix(err.Error(), "Status:404 Not Found") {
-			HandleSuccess(c)
-			return
+			return GetListResponse[string](nil, 0)
 		}
-		HandleErrorInternalServerError(c, err)
-		return
+		return GetErrorListResponse[string](err)
 	}
 	total, err := logDriver.Count(id.Hex(), "")
 	if err != nil {
-		HandleErrorInternalServerError(c, err)
-		return
+		return GetErrorListResponse[string](err)
 	}
 
-	HandleSuccessWithListData(c, logs, total)
+	return GetListResponse(logs, total)
 }

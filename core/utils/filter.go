@@ -25,9 +25,9 @@ func FilterToQuery(f interfaces.Filter) (q bson.M, err error) {
 			q[key] = cond.GetValue()
 		case constants.FilterOpNotEqual:
 			q[key] = bson.M{"$ne": value}
-		case constants.FilterOpContains, constants.FilterOpRegex, constants.FilterOpSearch:
+		case constants.FilterOpContains, constants.FilterOpContainsShort, constants.FilterOpRegex, constants.FilterOpSearch, constants.FilterOpSearchShort:
 			q[key] = bson.M{"$regex": value, "$options": "i"}
-		case constants.FilterOpNotContains:
+		case constants.FilterOpNotContains, constants.FilterOpNotContainsShort:
 			q[key] = bson.M{"$not": bson.M{"$regex": value}}
 		case constants.FilterOpIn:
 			q[key] = bson.M{"$in": value}

@@ -7,7 +7,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type BaseModel[T any] struct {
+type BaseModel struct {
 	Id        primitive.ObjectID `json:"_id" bson:"_id"`
 	CreatedAt time.Time          `json:"created_ts,omitempty" bson:"created_ts,omitempty"`
 	CreatedBy primitive.ObjectID `json:"created_by,omitempty" bson:"created_by,omitempty"`
@@ -15,52 +15,52 @@ type BaseModel[T any] struct {
 	UpdatedBy primitive.ObjectID `json:"updated_by,omitempty" bson:"updated_by,omitempty"`
 }
 
-func (m *BaseModel[T]) GetId() primitive.ObjectID {
+func (m *BaseModel) GetId() primitive.ObjectID {
 	return m.Id
 }
 
-func (m *BaseModel[T]) SetId(id primitive.ObjectID) {
+func (m *BaseModel) SetId(id primitive.ObjectID) {
 	m.Id = id
 }
 
-func (m *BaseModel[T]) GetCreatedAt() time.Time {
+func (m *BaseModel) GetCreatedAt() time.Time {
 	return m.CreatedAt
 }
 
-func (m *BaseModel[T]) SetCreatedAt(t time.Time) {
+func (m *BaseModel) SetCreatedAt(t time.Time) {
 	m.CreatedAt = t
 }
 
-func (m *BaseModel[T]) GetCreatedBy() primitive.ObjectID {
+func (m *BaseModel) GetCreatedBy() primitive.ObjectID {
 	return m.CreatedBy
 }
 
-func (m *BaseModel[T]) SetCreatedBy(id primitive.ObjectID) {
+func (m *BaseModel) SetCreatedBy(id primitive.ObjectID) {
 	m.CreatedBy = id
 }
 
-func (m *BaseModel[T]) GetUpdatedAt() time.Time {
+func (m *BaseModel) GetUpdatedAt() time.Time {
 	return m.UpdatedAt
 }
 
-func (m *BaseModel[T]) SetUpdatedAt(t time.Time) {
+func (m *BaseModel) SetUpdatedAt(t time.Time) {
 	m.UpdatedAt = t
 }
 
-func (m *BaseModel[T]) GetUpdatedBy() primitive.ObjectID {
+func (m *BaseModel) GetUpdatedBy() primitive.ObjectID {
 	return m.UpdatedBy
 }
 
-func (m *BaseModel[T]) SetUpdatedBy(id primitive.ObjectID) {
+func (m *BaseModel) SetUpdatedBy(id primitive.ObjectID) {
 	m.UpdatedBy = id
 }
 
-func (m *BaseModel[T]) SetCreated(id primitive.ObjectID) {
+func (m *BaseModel) SetCreated(id primitive.ObjectID) {
 	m.SetCreatedAt(time.Now())
 	m.SetCreatedBy(id)
 }
 
-func (m *BaseModel[T]) SetUpdated(id primitive.ObjectID) {
+func (m *BaseModel) SetUpdated(id primitive.ObjectID) {
 	m.SetUpdatedAt(time.Now())
 	m.SetUpdatedBy(id)
 }

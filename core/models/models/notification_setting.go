@@ -3,11 +3,11 @@ package models
 import "go.mongodb.org/mongo-driver/bson/primitive"
 
 type NotificationSetting struct {
-	any                            `collection:"notification_settings"`
-	BaseModel[NotificationSetting] `bson:",inline"`
-	Name                           string `json:"name" bson:"name"`
-	Description                    string `json:"description" bson:"description"`
-	Enabled                        bool   `json:"enabled" bson:"enabled"`
+	any         `collection:"notification_settings"`
+	BaseModel   `bson:",inline"`
+	Name        string `json:"name" bson:"name"`
+	Description string `json:"description" bson:"description"`
+	Enabled     bool   `json:"enabled" bson:"enabled"`
 
 	Title                string `json:"title,omitempty" bson:"title,omitempty"`
 	Template             string `json:"template" bson:"template"`
