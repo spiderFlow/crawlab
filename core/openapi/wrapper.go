@@ -2,6 +2,7 @@ package openapi
 
 import (
 	"fmt"
+	"github.com/crawlab-team/fizz/openapi"
 	"sync"
 
 	"github.com/crawlab-team/crawlab/core/interfaces"
@@ -23,6 +24,21 @@ type FizzWrapper struct {
 func newFizzWrapper(engine *gin.Engine) *FizzWrapper {
 	// Create a new Fizz instance using the existing Gin engine
 	f := fizz.NewFromEngine(engine)
+
+	// Add security middleware
+	f.Generator().SetSecuritySchemes(map[string]*openapi.SecuritySchemeOrRef{
+		"apiToken": {
+			SecurityScheme: &openapi.SecurityScheme{
+				Type: "apiKey",
+				Name: "API Token",
+				In:   "header",
+			},
+		},
+	})
+
+	// Sort tags
+	f.Generator().SetSortTags(false)
+
 	return &FizzWrapper{
 		fizz:   f,
 		gin:    engine,

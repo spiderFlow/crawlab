@@ -6,11 +6,14 @@ import (
 )
 
 func GetOpenAPI(c *gin.Context) {
+	f := globalWrapper.GetFizz()
+
 	info := &openapi.Info{
 		Title:       "Crawlab API",
 		Description: "REST API for Crawlab",
 		Version:     "0.7.0",
 	}
-	handleFunc := globalWrapper.GetFizz().OpenAPI(info, "json")
+
+	handleFunc := f.OpenAPI(info, "json")
 	handleFunc(c)
 }
