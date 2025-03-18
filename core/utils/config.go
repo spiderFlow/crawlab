@@ -35,7 +35,7 @@ const (
 	DefaultPyenvPath           = "/root/.pyenv"
 	DefaultNodeModulesPath     = "/usr/lib/node_modules"
 	DefaultGoPath              = "/root/go"
-	DefaultMcpServerBaseUrl    = "http://localhost:9000/sse"
+	DefaultMcpServerBaseUrl    = "http://localhost:9000"
 	DefaultOpenAPIUrl          = "http://localhost:8000/openapi.json"
 )
 
