@@ -14,7 +14,7 @@ import (
 )
 
 type PostScheduleParams struct {
-	Data models.Schedule `json:"data"`
+	Data models.Schedule `json:"data" description:"The data to create" validate:"required"`
 }
 
 func PostSchedule(c *gin.Context, params *PostScheduleParams) (response *Response[models.Schedule], err error) {
@@ -42,8 +42,8 @@ func PostSchedule(c *gin.Context, params *PostScheduleParams) (response *Respons
 }
 
 type PutScheduleByIdParams struct {
-	Id   string          `path:"id"`
-	Data models.Schedule `json:"data"`
+	Id   string          `path:"id" description:"Schedule ID" format:"objectid" pattern:"^[0-9a-fA-F]{24}$"`
+	Data models.Schedule `json:"data" description:"The data to update" validate:"required"`
 }
 
 func PutScheduleById(c *gin.Context, params *PutScheduleByIdParams) (response *Response[models.Schedule], err error) {
@@ -80,7 +80,7 @@ func PutScheduleById(c *gin.Context, params *PutScheduleByIdParams) (response *R
 }
 
 type PostScheduleEnableDisableParams struct {
-	Id string `path:"id"`
+	Id string `path:"id" description:"Schedule ID" format:"objectid" pattern:"^[0-9a-fA-F]{24}$"`
 }
 
 func PostScheduleEnable(c *gin.Context, params *PostScheduleEnableDisableParams) (response *VoidResponse, err error) {
@@ -118,12 +118,12 @@ func postScheduleEnableDisableFunc(isEnable bool, userId primitive.ObjectID, par
 }
 
 type PostScheduleRunParams struct {
-	Id       string   `path:"id"`
-	Mode     string   `json:"mode"`
-	NodeIds  []string `json:"node_ids"`
-	Cmd      string   `json:"cmd"`
-	Param    string   `json:"param"`
-	Priority int      `json:"priority"`
+	Id       string   `path:"id" description:"Schedule ID" format:"objectid" pattern:"^[0-9a-fA-F]{24}$"`
+	Mode     string   `json:"mode" description:"Run mode" enum:"random,all,selected-nodes"`
+	NodeIds  []string `json:"node_ids" description:"Node IDs" items.type:"string" items.format:"objectid" items.pattern:"^[0-9a-fA-F]{24}$"`
+	Cmd      string   `json:"cmd" description:"Command"`
+	Param    string   `json:"param" description:"Parameters"`
+	Priority int      `json:"priority" description:"Priority" default:"5" minimum:"1" maximum:"10"`
 }
 
 func PostScheduleRun(c *gin.Context, params *PostScheduleRunParams) (response *Response[[]primitive.ObjectID], err error) {

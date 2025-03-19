@@ -89,11 +89,11 @@ func GetUserList(_ *gin.Context, params *GetListParams) (response *ListResponse[
 }
 
 type PostUserParams struct {
-	Username string             `json:"username" validate:"required"`
-	Password string             `json:"password" validate:"required"`
-	Role     string             `json:"role"`
-	RoleId   primitive.ObjectID `json:"role_id"`
-	Email    string             `json:"email"`
+	Username string `json:"username" description:"Username" validate:"required"`
+	Password string `json:"password" description:"Password" validate:"required"`
+	Role     string `json:"role" description:"Role"`
+	RoleId   string `json:"role_id" description:"Role ID" format:"objectid" pattern:"^[0-9a-fA-F]{24}$"`
+	Email    string `json:"email" description:"Email"`
 }
 
 func PostUser(c *gin.Context, params *PostUserParams) (response *Response[models.User], err error) {
@@ -105,8 +105,13 @@ func PostUser(c *gin.Context, params *PostUserParams) (response *Response[models
 		}
 	}
 
-	if !params.RoleId.IsZero() {
-		_, err := service.NewModelService[models.Role]().GetById(params.RoleId)
+	var roleId primitive.ObjectID
+	if params.RoleId != "" {
+		roleId, err = primitive.ObjectIDFromHex(params.RoleId)
+		if err != nil {
+			return GetErrorResponse[models.User](errors.BadRequestf("invalid role id: %v", err))
+		}
+		_, err = service.NewModelService[models.Role]().GetById(roleId)
 		if err != nil {
 			return GetErrorResponse[models.User](errors.BadRequestf("role not found: %v", err))
 		}
@@ -116,7 +121,7 @@ func PostUser(c *gin.Context, params *PostUserParams) (response *Response[models
 		Username: params.Username,
 		Password: utils.EncryptMd5(params.Password),
 		Role:     params.Role,
-		RoleId:   params.RoleId,
+		RoleId:   roleId,
 		Email:    params.Email,
 	}
 	model.SetCreated(u.Id)
@@ -143,12 +148,12 @@ func PutUserById(c *gin.Context, params *PutByIdParams[models.User]) (response *
 }
 
 type PostUserChangePasswordParams struct {
-	Id       string `path:"id"`
-	Password string `json:"password" validate:"required"`
+	Id       string `path:"id" description:"User ID" format:"objectid" pattern:"^[0-9a-fA-F]{24}$"`
+	Password string `json:"password" description:"Password" validate:"required"`
 }
 
 func PostUserChangePassword(c *gin.Context, params *PostUserChangePasswordParams) (response *Response[models.User], err error) {
-	id, err := primitive.ObjectIDFromHex(c.Param("id"))
+	id, err := primitive.ObjectIDFromHex(params.Id)
 	if err != nil {
 		return GetErrorResponse[models.User](errors.BadRequestf("invalid user id: %v", err))
 	}
@@ -228,7 +233,7 @@ func PutUserMe(c *gin.Context, params *PutUserMeParams) (response *Response[mode
 }
 
 type PostUserMeChangePasswordParams struct {
-	Password string `json:"password" validate:"required"`
+	Password string `json:"password" description:"Password" validate:"required"`
 }
 
 func PostUserMeChangePassword(c *gin.Context, params *PostUserMeChangePasswordParams) (response *Response[models.User], err error) {

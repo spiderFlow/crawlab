@@ -9,7 +9,7 @@ import (
 )
 
 type GetSettingParams struct {
-	Key string `path:"key" validate:"required"`
+	Key string `path:"key" description:"Setting key" validate:"required"`
 }
 
 func GetSetting(_ *gin.Context, params *GetSettingParams) (response *Response[models.Setting], err error) {
@@ -26,8 +26,8 @@ func GetSetting(_ *gin.Context, params *GetSettingParams) (response *Response[mo
 }
 
 type PostSettingParams struct {
-	Key  string         `path:"key" validate:"required"`
-	Data models.Setting `json:"data"`
+	Key  string         `path:"key" description:"Setting key" validate:"required"`
+	Data models.Setting `json:"data" description:"The data to create" validate:"required"`
 }
 
 func PostSetting(c *gin.Context, params *PostSettingParams) (response *Response[models.Setting], err error) {
@@ -50,8 +50,8 @@ func PostSetting(c *gin.Context, params *PostSettingParams) (response *Response[
 }
 
 type PutSettingParams struct {
-	Key  string         `path:"key" validate:"required"`
-	Data models.Setting `json:"data"`
+	Key  string         `path:"key" description:"Setting key" validate:"required"`
+	Data models.Setting `json:"data" description:"The data to update" validate:"required"`
 }
 
 func PutSetting(c *gin.Context, params *PutSettingParams) (response *Response[models.Setting], err error) {

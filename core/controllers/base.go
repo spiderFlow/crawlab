@@ -1,9 +1,10 @@
 package controllers
 
 import (
-	"github.com/loopfz/gadgeto/tonic"
 	"net/http"
 	"time"
+
+	"github.com/loopfz/gadgeto/tonic"
 
 	"github.com/crawlab-team/crawlab/core/interfaces"
 	"github.com/crawlab-team/crawlab/core/models/service"
@@ -45,6 +46,8 @@ func init() {
 type Action struct {
 	Method      string
 	Path        string
+	Name        string
+	Description string
 	HandlerFunc interface{}
 }
 
@@ -57,8 +60,8 @@ type BaseController[T any] struct {
 type GetListParams struct {
 	Conditions string `query:"conditions" description:"Filter conditions. Format: [{\"key\":\"name\",\"op\":\"eq\",\"value\":\"test\"}]"`
 	Sort       string `query:"sort" description:"Sort options"`
-	Page       int    `query:"page" default:"1" description:"Page number"`
-	Size       int    `query:"size" default:"10" description:"Page size"`
+	Page       int    `query:"page" default:"1" description:"Page number" minimum:"1"`
+	Size       int    `query:"size" default:"10" description:"Page size" minimum:"1"`
 	All        bool   `query:"all" default:"false" description:"Whether to get all items"`
 }
 
@@ -72,7 +75,7 @@ func (ctr *BaseController[T]) GetList(_ *gin.Context, params *GetListParams) (re
 }
 
 type GetByIdParams struct {
-	Id string `path:"id" description:"The ID of the item to get"`
+	Id string `path:"id" description:"The ID of the item to get" format:"objectid" pattern:"^[0-9a-fA-F]{24}$"`
 }
 
 func (ctr *BaseController[T]) GetById(_ *gin.Context, params *GetByIdParams) (response *Response[T], err error) {
@@ -90,7 +93,7 @@ func (ctr *BaseController[T]) GetById(_ *gin.Context, params *GetByIdParams) (re
 }
 
 type PostParams[T any] struct {
-	Data T `json:"data"`
+	Data T `json:"data" description:"The data to create" validate:"required"`
 }
 
 func (ctr *BaseController[T]) Post(c *gin.Context, params *PostParams[T]) (response *Response[T], err error) {
@@ -114,8 +117,8 @@ func (ctr *BaseController[T]) Post(c *gin.Context, params *PostParams[T]) (respo
 }
 
 type PutByIdParams[T any] struct {
-	Id   string `path:"id" description:"The ID of the item to update"`
-	Data T      `json:"data"`
+	Id   string `path:"id" description:"The ID of the item to update" format:"objectid" pattern:"^[0-9a-fA-F]{24}$"`
+	Data T      `json:"data" description:"The data to update" validate:"required"`
 }
 
 func (ctr *BaseController[T]) PutById(c *gin.Context, params *PutByIdParams[T]) (response *Response[T], err error) {
@@ -144,7 +147,7 @@ func (ctr *BaseController[T]) PutById(c *gin.Context, params *PutByIdParams[T]) 
 }
 
 type PatchParams struct {
-	Ids    []string `json:"ids" description:"The IDs of the items to update" validate:"required"`
+	Ids    []string `json:"ids" description:"The IDs of the items to update" validate:"required" items.type:"string" items.format:"objectid" items.pattern:"^[0-9a-fA-F]{24}$"`
 	Update bson.M   `json:"update" description:"The update object" validate:"required"`
 }
 
@@ -184,7 +187,7 @@ func (ctr *BaseController[T]) PatchList(c *gin.Context, params *PatchParams) (re
 }
 
 type DeleteByIdParams struct {
-	Id string `path:"id" description:"The ID of the item to get"`
+	Id string `path:"id" description:"The ID of the item to delete" format:"objectid" pattern:"^[0-9a-fA-F]{24}$"`
 }
 
 func (ctr *BaseController[T]) DeleteById(c *gin.Context, params *DeleteByIdParams) (res *Response[T], err error) {
@@ -203,7 +206,7 @@ func (ctr *BaseController[T]) DeleteById(c *gin.Context, params *DeleteByIdParam
 }
 
 type DeleteListParams struct {
-	Ids []string `json:"ids" description:"The IDs of the items to delete"`
+	Ids []string `json:"ids" description:"The IDs of the items to delete" items.type:"string" items.format:"objectid" items.pattern:"^[0-9a-fA-F]{24}$"`
 }
 
 func (ctr *BaseController[T]) DeleteList(_ *gin.Context, params *DeleteListParams) (res *Response[T], err error) {

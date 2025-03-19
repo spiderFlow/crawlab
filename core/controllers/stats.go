@@ -15,7 +15,7 @@ var statsDefaultQuery = bson.M{
 }
 
 type GetStatsOverviewParams struct {
-	Query bson.M `json:"query"`
+	Query bson.M `json:"query" description:"Query"`
 }
 
 func GetStatsOverview(_ *gin.Context, params *GetStatsOverviewParams) (response *Response[bson.M], err error) {
@@ -32,7 +32,7 @@ func GetStatsOverview(_ *gin.Context, params *GetStatsOverviewParams) (response 
 }
 
 type GetStatsDailyParams struct {
-	Query bson.M `json:"query"`
+	Query bson.M `json:"query" description:"Query"`
 }
 
 func GetStatsDaily(_ *gin.Context, params *GetStatsDailyParams) (response *Response[bson.M], err error) {
@@ -49,7 +49,7 @@ func GetStatsDaily(_ *gin.Context, params *GetStatsDailyParams) (response *Respo
 }
 
 type GetStatsTasksParams struct {
-	Query bson.M `json:"query"`
+	Query bson.M `json:"query" description:"Query"`
 }
 
 func GetStatsTasks(_ *gin.Context, params *GetStatsTasksParams) (response *Response[bson.M], err error) {

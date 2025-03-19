@@ -11,7 +11,7 @@ import (
 )
 
 type PostTokenParams struct {
-	Data models.Token `json:"data"`
+	Data models.Token `json:"data" description:"The data to create" validate:"required"`
 }
 
 func PostToken(c *gin.Context, params *PostTokenParams) (response *Response[models.Token], err error) {

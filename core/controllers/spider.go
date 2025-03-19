@@ -535,8 +535,8 @@ func DeleteSpiderList(_ *gin.Context, params *DeleteSpiderListParams) (response 
 }
 
 type GetSpiderListDirParams struct {
-	Id   string `path:"id"`
-	Path string `query:"path"`
+	Id   string `path:"id" description:"Spider ID" format:"objectid" pattern:"^[0-9a-fA-F]{24}$"`
+	Path string `query:"path" description:"Directory path"`
 }
 
 func GetSpiderListDir(c *gin.Context, params *GetSpiderListDirParams) (response *Response[[]interfaces.FsFileInfo], err error) {
@@ -548,8 +548,8 @@ func GetSpiderListDir(c *gin.Context, params *GetSpiderListDirParams) (response 
 }
 
 type GetSpiderFileContentParams struct {
-	Id   string `path:"id"`
-	Path string `query:"path"`
+	Id   string `path:"id" description:"Spider ID" format:"objectid" pattern:"^[0-9a-fA-F]{24}$"`
+	Path string `query:"path" description:"File path"`
 }
 
 func GetSpiderFileContent(c *gin.Context, params *GetSpiderFileContentParams) (response *Response[string], err error) {
@@ -561,8 +561,8 @@ func GetSpiderFileContent(c *gin.Context, params *GetSpiderFileContentParams) (r
 }
 
 type GetSpiderFileInfoParams struct {
-	Id   string `path:"id"`
-	Path string `query:"path"`
+	Id   string `path:"id" description:"Spider ID" format:"objectid" pattern:"^[0-9a-fA-F]{24}$"`
+	Path string `query:"path" description:"File path"`
 }
 
 func GetSpiderFileInfo(c *gin.Context, params *GetSpiderFileInfoParams) (response *Response[interfaces.FsFileInfo], err error) {
@@ -574,9 +574,9 @@ func GetSpiderFileInfo(c *gin.Context, params *GetSpiderFileInfoParams) (respons
 }
 
 type PostSpiderSaveFileParams struct {
-	Id   string                `path:"id"`
-	Path string                `json:"path"`
-	Data string                `json:"data"`
+	Id   string                `path:"id" description:"Spider ID" format:"objectid" pattern:"^[0-9a-fA-F]{24}$"`
+	Path string                `json:"path" description:"File path to save"`
+	Data string                `json:"data" description:"File content"`
 	File *multipart.FileHeader `form:"file"`
 }
 
@@ -593,8 +593,8 @@ func PostSpiderSaveFile(c *gin.Context, params *PostSpiderSaveFileParams) (respo
 }
 
 type PostSpiderSaveFilesParams struct {
-	Id              string `path:"id"`
-	TargetDirectory string `form:"targetDirectory"`
+	Id              string `path:"id" description:"Spider ID" format:"objectid" pattern:"^[0-9a-fA-F]{24}$"`
+	TargetDirectory string `form:"targetDirectory" description:"Target directory path"`
 }
 
 func PostSpiderSaveFiles(c *gin.Context, params *PostSpiderSaveFilesParams) (response *VoidResponse, err error) {
@@ -610,8 +610,8 @@ func PostSpiderSaveFiles(c *gin.Context, params *PostSpiderSaveFilesParams) (res
 }
 
 type PostSpiderSaveDirParams struct {
-	Id   string `path:"id"`
-	Path string `json:"path"`
+	Id   string `path:"id" description:"Spider ID" format:"objectid" pattern:"^[0-9a-fA-F]{24}$"`
+	Path string `json:"path" description:"File path to save"`
 }
 
 func PostSpiderSaveDir(c *gin.Context, params *PostSpiderSaveDirParams) (response *VoidResponse, err error) {
@@ -623,9 +623,9 @@ func PostSpiderSaveDir(c *gin.Context, params *PostSpiderSaveDirParams) (respons
 }
 
 type PostSpiderRenameFileParams struct {
-	Id      string `path:"id"`
-	Path    string `json:"path"`
-	NewPath string `json:"newPath"`
+	Id      string `path:"id" description:"Spider ID" format:"objectid" pattern:"^[0-9a-fA-F]{24}$"`
+	Path    string `json:"path" description:"File path to rename"`
+	NewPath string `json:"newPath" description:"New file path"`
 }
 
 func PostSpiderRenameFile(c *gin.Context, params *PostSpiderRenameFileParams) (response *VoidResponse, err error) {
@@ -637,8 +637,8 @@ func PostSpiderRenameFile(c *gin.Context, params *PostSpiderRenameFileParams) (r
 }
 
 type DeleteSpiderFileParams struct {
-	Id   string `path:"id"`
-	Path string `json:"path"`
+	Id   string `path:"id" description:"Spider ID" format:"objectid" pattern:"^[0-9a-fA-F]{24}$"`
+	Path string `json:"path" description:"File path to delete"`
 }
 
 func DeleteSpiderFile(c *gin.Context, params *DeleteSpiderFileParams) (response *VoidResponse, err error) {
@@ -650,9 +650,9 @@ func DeleteSpiderFile(c *gin.Context, params *DeleteSpiderFileParams) (response 
 }
 
 type PostSpiderCopyFileParams struct {
-	Id      string `path:"id"`
-	Path    string `json:"path"`
-	NewPath string `json:"new_path"`
+	Id      string `path:"id" description:"Spider ID" format:"objectid" pattern:"^[0-9a-fA-F]{24}$"`
+	Path    string `json:"path" description:"File path to copy"`
+	NewPath string `json:"new_path" description:"New file path"`
 }
 
 func PostSpiderCopyFile(c *gin.Context, params *PostSpiderCopyFileParams) (response *VoidResponse, err error) {
@@ -664,7 +664,7 @@ func PostSpiderCopyFile(c *gin.Context, params *PostSpiderCopyFileParams) (respo
 }
 
 type PostSpiderExportParams struct {
-	Id string `path:"id"`
+	Id string `path:"id" description:"Spider ID" format:"objectid" pattern:"^[0-9a-fA-F]{24}$"`
 }
 
 func PostSpiderExport(c *gin.Context, _ *PostSpiderExportParams) (err error) {
@@ -676,13 +676,13 @@ func PostSpiderExport(c *gin.Context, _ *PostSpiderExportParams) (err error) {
 }
 
 type PostSpiderRunParams struct {
-	Id         string   `path:"id"`
-	Mode       string   `json:"mode"`
-	NodeIds    []string `json:"node_ids"`
-	Cmd        string   `json:"cmd"`
-	Param      string   `json:"param"`
-	ScheduleId string   `json:"schedule_id"`
-	Priority   int      `json:"priority"`
+	Id         string   `path:"id" description:"Spider ID" format:"objectid" pattern:"^[0-9a-fA-F]{24}$"`
+	Mode       string   `json:"mode" description:"Run mode" enum:"random,all,selected-nodes"`
+	NodeIds    []string `json:"node_ids" description:"Node IDs, used in selected-nodes mode"`
+	Cmd        string   `json:"cmd" description:"Command"`
+	Param      string   `json:"param" description:"Parameters"`
+	ScheduleId string   `json:"schedule_id" description:"Schedule ID" format:"objectid" pattern:"^[0-9a-fA-F]{24}$"`
+	Priority   int      `json:"priority" description:"Priority" default:"5" minimum:"1" maximum:"10"`
 }
 
 func PostSpiderRun(c *gin.Context, params *PostSpiderRunParams) (response *Response[[]primitive.ObjectID], err error) {
@@ -733,9 +733,9 @@ func PostSpiderRun(c *gin.Context, params *PostSpiderRunParams) (response *Respo
 }
 
 type GetSpiderResultsParams struct {
-	Id   string `path:"id"`
-	Page int    `query:"page"`
-	Size int    `query:"size"`
+	Id   string `path:"id" description:"Spider ID" format:"objectid" pattern:"^[0-9a-fA-F]{24}$"`
+	Page int    `query:"page" description:"Page" default:"1" minimum:"1"`
+	Size int    `query:"size" description:"Size" default:"10" minimum:"1"`
 }
 
 func GetSpiderResults(c *gin.Context, params *GetSpiderResultsParams) (response *ListResponse[bson.M], err error) {

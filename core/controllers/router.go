@@ -1,8 +1,11 @@
 package controllers
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
+
+	"github.com/crawlab-team/crawlab/core/utils"
 
 	"github.com/crawlab-team/fizz"
 
@@ -56,23 +59,22 @@ func RegisterController[T any](group *fizz.RouterGroup, basePath string, ctr *Ba
 		// Create appropriate model response based on the action
 		responses := globalWrapper.BuildModelResponse()
 
-		id := getIDForAction(action.Method, fullPath)
-		summary := getSummaryForAction(action.Method, basePath, action.Path)
-		description := getDescriptionForAction(action.Method, basePath, action.Path)
+		id := getIDForAction(action.Method, fullPath, action.Name)
+		summary := getSummaryForAction(action.Method, basePath, action.Path, action.Name)
+		description := getDescriptionForAction(action.Method, basePath, action.Path, action.Description)
 
 		globalWrapper.RegisterRoute(action.Method, fullPath, group, action.HandlerFunc, id, summary, description, responses)
 	}
 
 	// Register built-in handlers if they haven't been overridden
-	// Create a zero value of T to use as the model
-	var model T
-	registerBuiltinHandler(group, globalWrapper, basePath, http.MethodGet, "", ctr.GetList, actionPaths, "Get list", "Get a list of items", model)
-	registerBuiltinHandler(group, globalWrapper, basePath, http.MethodGet, "/:id", ctr.GetById, actionPaths, "Get by ID", "Get a single item by ID", model)
-	registerBuiltinHandler(group, globalWrapper, basePath, http.MethodPost, "", ctr.Post, actionPaths, "Create", "Create a new item", model)
-	registerBuiltinHandler(group, globalWrapper, basePath, http.MethodPut, "/:id", ctr.PutById, actionPaths, "Update by ID", "Update an item by ID", model)
-	registerBuiltinHandler(group, globalWrapper, basePath, http.MethodPatch, "", ctr.PatchList, actionPaths, "Patch list", "Patch multiple items", model)
-	registerBuiltinHandler(group, globalWrapper, basePath, http.MethodDelete, "/:id", ctr.DeleteById, actionPaths, "Delete by ID", "Delete an item by ID", model)
-	registerBuiltinHandler(group, globalWrapper, basePath, http.MethodDelete, "", ctr.DeleteList, actionPaths, "Delete list", "Delete multiple items", model)
+	resource := getResourceName(basePath)
+	registerBuiltinHandler(group, globalWrapper, basePath, http.MethodGet, "", ctr.GetList, actionPaths, fmt.Sprintf("Get %s List", resource), "Get a list of items")
+	registerBuiltinHandler(group, globalWrapper, basePath, http.MethodGet, "/:id", ctr.GetById, actionPaths, fmt.Sprintf("Get %s by ID", resource), "Get a single item by ID")
+	registerBuiltinHandler(group, globalWrapper, basePath, http.MethodPost, "", ctr.Post, actionPaths, fmt.Sprintf("Create %s", resource), "Create a new item")
+	registerBuiltinHandler(group, globalWrapper, basePath, http.MethodPut, "/:id", ctr.PutById, actionPaths, fmt.Sprintf("Update %s by ID", resource), "Update an item by ID")
+	registerBuiltinHandler(group, globalWrapper, basePath, http.MethodPatch, "", ctr.PatchList, actionPaths, fmt.Sprintf("Patch %s List", resource), "Patch multiple items")
+	registerBuiltinHandler(group, globalWrapper, basePath, http.MethodDelete, "/:id", ctr.DeleteById, actionPaths, fmt.Sprintf("Delete %s by ID", resource), "Delete an item by ID")
+	registerBuiltinHandler(group, globalWrapper, basePath, http.MethodDelete, "", ctr.DeleteList, actionPaths, fmt.Sprintf("Delete %s List", resource), "Delete multiple items")
 }
 
 // RegisterActions registers a list of custom action handlers to a route group
@@ -83,9 +85,9 @@ func RegisterActions(group *fizz.RouterGroup, basePath string, actions []Action)
 		// Create generic response
 		responses := globalWrapper.BuildModelResponse()
 
-		id := getIDForAction(action.Method, fullPath)
-		summary := getSummaryForAction(action.Method, basePath, action.Path)
-		description := getDescriptionForAction(action.Method, basePath, action.Path)
+		id := getIDForAction(action.Method, fullPath, action.Name)
+		summary := getSummaryForAction(action.Method, basePath, action.Path, action.Name)
+		description := getDescriptionForAction(action.Method, basePath, action.Path, action.Description)
 
 		globalWrapper.RegisterRoute(action.Method, fullPath, group, action.HandlerFunc, id, summary, description, responses)
 	}
@@ -93,7 +95,7 @@ func RegisterActions(group *fizz.RouterGroup, basePath string, actions []Action)
 
 // registerBuiltinHandler registers a standard handler if it hasn't been overridden
 // by a custom action
-func registerBuiltinHandler[T any](group *fizz.RouterGroup, wrapper *openapi.FizzWrapper, basePath, method, pathSuffix string, handlerFunc interface{}, existingActionPaths map[string]bool, summary, description string, model T) {
+func registerBuiltinHandler(group *fizz.RouterGroup, wrapper *openapi.FizzWrapper, basePath, method, pathSuffix string, handlerFunc interface{}, existingActionPaths map[string]bool, summary, description string) {
 	path := basePath + pathSuffix
 	key := method + " - " + path
 	_, ok := existingActionPaths[key]
@@ -101,7 +103,7 @@ func registerBuiltinHandler[T any](group *fizz.RouterGroup, wrapper *openapi.Fiz
 		return
 	}
 
-	id := getIDForAction(method, path)
+	id := getIDForAction(method, path, summary)
 
 	// Create appropriate response based on the method
 	responses := wrapper.BuildModelResponse()
@@ -110,7 +112,11 @@ func registerBuiltinHandler[T any](group *fizz.RouterGroup, wrapper *openapi.Fiz
 }
 
 // Helper functions to generate OpenAPI documentation
-func getIDForAction(method, path string) string {
+func getIDForAction(method, path, summary string) string {
+	if summary != "" {
+		return utils.ToPascalCase(summary)
+	}
+
 	// Remove leading slash and convert remaining slashes to underscores
 	cleanPath := strings.TrimPrefix(path, "/")
 	cleanPath = strings.ReplaceAll(cleanPath, "/", "_")
@@ -120,7 +126,11 @@ func getIDForAction(method, path string) string {
 	return method + "_" + cleanPath
 }
 
-func getSummaryForAction(method, basePath, path string) string {
+func getSummaryForAction(method, basePath, path, summary string) string {
+	if summary != "" {
+		return summary
+	}
+
 	resource := getResourceName(basePath)
 
 	switch method {
@@ -140,13 +150,13 @@ func getSummaryForAction(method, basePath, path string) string {
 		}
 	case http.MethodPatch:
 		if path == "" {
-			return "Patch " + resource + " list"
+			return "Patch " + resource + " List"
 		}
 	case http.MethodDelete:
 		if path == "/:id" {
 			return "Delete " + resource + " by ID"
 		} else if path == "" {
-			return "Delete " + resource + " list"
+			return "Delete " + resource + " List"
 		}
 	}
 
@@ -158,7 +168,11 @@ func getSummaryForAction(method, basePath, path string) string {
 	return method + " " + resource
 }
 
-func getDescriptionForAction(method, basePath, path string) string {
+func getDescriptionForAction(method, basePath, path, description string) string {
+	if description != "" {
+		return description
+	}
+
 	resource := getResourceName(basePath)
 
 	switch method {
@@ -197,22 +211,25 @@ func getDescriptionForAction(method, basePath, path string) string {
 }
 
 func getResourceName(basePath string) string {
+	resource := basePath
+
 	// Remove leading slash and get the last part of the path
-	if len(basePath) > 0 && basePath[0] == '/' {
-		basePath = basePath[1:]
+	if len(resource) > 0 && resource[0] == '/' {
+		resource = resource[1:]
 	}
 
 	// Remove trailing slash if present
-	if len(basePath) > 0 && basePath[len(basePath)-1] == '/' {
-		basePath = basePath[:len(basePath)-1]
+	if len(resource) > 0 && resource[len(resource)-1] == '/' {
+		resource = resource[:len(resource)-1]
 	}
 
-	// If path is empty, return "resource"
-	if basePath == "" {
-		return "resource"
-	}
+	// Convert to capitalized form
+	resource = utils.Capitalize(resource)
 
-	return basePath
+	// Convert to non-plural form
+	resource = strings.TrimSuffix(resource, "s")
+
+	return resource
 }
 
 // InitRoutes configures all API routes for the application
@@ -233,6 +250,8 @@ func InitRoutes(app *gin.Engine) (err error) {
 		{
 			Method:      http.MethodGet,
 			Path:        "",
+			Name:        "Get Project List",
+			Description: "Get a list of projects",
 			HandlerFunc: GetProjectList,
 		},
 	}...))
@@ -240,91 +259,127 @@ func InitRoutes(app *gin.Engine) (err error) {
 		{
 			Method:      http.MethodGet,
 			Path:        "/:id",
+			Name:        "Get Spider by ID",
+			Description: "Get a single spider by ID",
 			HandlerFunc: GetSpiderById,
 		},
 		{
 			Method:      http.MethodGet,
 			Path:        "",
+			Name:        "Get Spider List",
+			Description: "Get a list of spiders",
 			HandlerFunc: GetSpiderList,
 		},
 		{
 			Method:      http.MethodPost,
 			Path:        "",
+			Name:        "Create Spider",
+			Description: "Create a new spider",
 			HandlerFunc: PostSpider,
 		},
 		{
 			Method:      http.MethodPut,
 			Path:        "/:id",
+			Name:        "Update Spider by ID",
+			Description: "Update a spider by ID",
 			HandlerFunc: PutSpiderById,
 		},
 		{
 			Method:      http.MethodDelete,
 			Path:        "/:id",
+			Name:        "Delete Spider by ID",
+			Description: "Delete a spider by ID",
 			HandlerFunc: DeleteSpiderById,
 		},
 		{
 			Method:      http.MethodDelete,
 			Path:        "",
+			Name:        "Delete Spider List",
+			Description: "Delete a list of spiders",
 			HandlerFunc: DeleteSpiderList,
 		},
 		{
 			Method:      http.MethodGet,
 			Path:        "/:id/files/list",
+			Name:        "Get Spider List Dir",
+			Description: "Get a list of files in a spider directory",
 			HandlerFunc: GetSpiderListDir,
 		},
 		{
 			Method:      http.MethodGet,
 			Path:        "/:id/files/get",
+			Name:        "Get Spider File Content",
+			Description: "Get the content of a spider file",
 			HandlerFunc: GetSpiderFileContent,
 		},
 		{
 			Method:      http.MethodGet,
 			Path:        "/:id/files/info",
+			Name:        "Get Spider File Info",
+			Description: "Get the info of a spider file",
 			HandlerFunc: GetSpiderFileInfo,
 		},
 		{
 			Method:      http.MethodPost,
 			Path:        "/:id/files/save",
+			Name:        "Save Spider File",
+			Description: "Save a spider file",
 			HandlerFunc: PostSpiderSaveFile,
 		},
 		{
 			Method:      http.MethodPost,
 			Path:        "/:id/files/save/batch",
+			Name:        "Save Spider Files",
+			Description: "Save multiple spider files",
 			HandlerFunc: PostSpiderSaveFiles,
 		},
 		{
 			Method:      http.MethodPost,
 			Path:        "/:id/files/save/dir",
+			Name:        "Save Spider Dir",
+			Description: "Save a spider directory",
 			HandlerFunc: PostSpiderSaveDir,
 		},
 		{
 			Method:      http.MethodPost,
 			Path:        "/:id/files/rename",
+			Name:        "Rename Spider File",
+			Description: "Rename a spider file",
 			HandlerFunc: PostSpiderRenameFile,
 		},
 		{
 			Method:      http.MethodDelete,
 			Path:        "/:id/files",
+			Name:        "Delete Spider File",
+			Description: "Delete a spider file",
 			HandlerFunc: DeleteSpiderFile,
 		},
 		{
 			Method:      http.MethodPost,
 			Path:        "/:id/files/copy",
+			Name:        "Copy Spider File",
+			Description: "Copy a spider file",
 			HandlerFunc: PostSpiderCopyFile,
 		},
 		{
 			Method:      http.MethodPost,
 			Path:        "/:id/files/export",
+			Name:        "Export Spider Files",
+			Description: "Export spider files to a zip file",
 			HandlerFunc: PostSpiderExport,
 		},
 		{
 			Method:      http.MethodPost,
 			Path:        "/:id/run",
+			Name:        "Run Spider",
+			Description: "Run a task for the given spider",
 			HandlerFunc: PostSpiderRun,
 		},
 		{
 			Method:      http.MethodGet,
 			Path:        "/:id/results",
+			Name:        "Get Spider Results",
+			Description: "Get the results of a spider",
 			HandlerFunc: GetSpiderResults,
 		},
 	}...))
@@ -332,26 +387,36 @@ func InitRoutes(app *gin.Engine) (err error) {
 		{
 			Method:      http.MethodPost,
 			Path:        "",
+			Name:        "Create Schedule",
+			Description: "Create a new schedule",
 			HandlerFunc: PostSchedule,
 		},
 		{
 			Method:      http.MethodPut,
 			Path:        "/:id",
+			Name:        "Update Schedule by ID",
+			Description: "Update a schedule by ID",
 			HandlerFunc: PutScheduleById,
 		},
 		{
 			Method:      http.MethodPost,
 			Path:        "/:id/enable",
+			Name:        "Enable Schedule",
+			Description: "Enable a schedule",
 			HandlerFunc: PostScheduleEnable,
 		},
 		{
 			Method:      http.MethodPost,
 			Path:        "/:id/disable",
+			Name:        "Disable Schedule",
+			Description: "Disable a schedule",
 			HandlerFunc: PostScheduleDisable,
 		},
 		{
 			Method:      http.MethodPost,
 			Path:        "/:id/run",
+			Name:        "Run Schedule",
+			Description: "Run a schedule",
 			HandlerFunc: PostScheduleRun,
 		},
 	}...))
@@ -359,41 +424,57 @@ func InitRoutes(app *gin.Engine) (err error) {
 		{
 			Method:      http.MethodGet,
 			Path:        "/:id",
+			Name:        "Get Task by ID",
+			Description: "Get a single task by ID",
 			HandlerFunc: GetTaskById,
 		},
 		{
 			Method:      http.MethodGet,
 			Path:        "",
+			Name:        "Get Task List",
+			Description: "Get a list of tasks",
 			HandlerFunc: GetTaskList,
 		},
 		{
 			Method:      http.MethodDelete,
 			Path:        "/:id",
+			Name:        "Delete Task by ID",
+			Description: "Delete a task by ID",
 			HandlerFunc: DeleteTaskById,
 		},
 		{
 			Method:      http.MethodDelete,
 			Path:        "",
-			HandlerFunc: DeleteList,
+			Name:        "Delete Task List",
+			Description: "Delete a list of tasks",
+			HandlerFunc: DeleteTaskList,
 		},
 		{
 			Method:      http.MethodPost,
 			Path:        "/run",
+			Name:        "Run Task",
+			Description: "Run a task",
 			HandlerFunc: PostTaskRun,
 		},
 		{
 			Method:      http.MethodPost,
 			Path:        "/:id/restart",
+			Name:        "Restart Task",
+			Description: "Restart a task",
 			HandlerFunc: PostTaskRestart,
 		},
 		{
 			Method:      http.MethodPost,
 			Path:        "/:id/cancel",
+			Name:        "Cancel Task",
+			Description: "Cancel a task",
 			HandlerFunc: PostTaskCancel,
 		},
 		{
 			Method:      http.MethodGet,
 			Path:        "/:id/logs",
+			Name:        "Get Task Logs",
+			Description: "Get the logs of a task",
 			HandlerFunc: GetTaskLogs,
 		},
 	}...))
@@ -401,11 +482,15 @@ func InitRoutes(app *gin.Engine) (err error) {
 		{
 			Method:      http.MethodPost,
 			Path:        "",
+			Name:        "Create Token",
+			Description: "Create a new token",
 			HandlerFunc: PostToken,
 		},
 		{
 			Method:      http.MethodGet,
 			Path:        "",
+			Name:        "Get Token List",
+			Description: "Get a list of tokens",
 			HandlerFunc: GetTokenList,
 		},
 	}...))
@@ -413,51 +498,71 @@ func InitRoutes(app *gin.Engine) (err error) {
 		{
 			Method:      http.MethodGet,
 			Path:        "/:id",
+			Name:        "Get User by ID",
+			Description: "Get a single user by ID",
 			HandlerFunc: GetUserById,
 		},
 		{
 			Method:      http.MethodGet,
 			Path:        "",
+			Name:        "Get User List",
+			Description: "Get a list of users",
 			HandlerFunc: GetUserList,
 		},
 		{
 			Method:      http.MethodPost,
 			Path:        "",
+			Name:        "Create User",
+			Description: "Create a new user",
 			HandlerFunc: PostUser,
 		},
 		{
 			Method:      http.MethodPut,
 			Path:        "/:id",
+			Name:        "Update User by ID",
+			Description: "Update a user by ID",
 			HandlerFunc: PutUserById,
 		},
 		{
 			Method:      http.MethodPost,
 			Path:        "/:id/change-password",
+			Name:        "Change User Password",
+			Description: "Change a user's password",
 			HandlerFunc: PostUserChangePassword,
 		},
 		{
 			Method:      http.MethodDelete,
 			Path:        "/:id",
+			Name:        "Delete User by ID",
+			Description: "Delete a user by ID",
 			HandlerFunc: DeleteUserById,
 		},
 		{
 			Method:      http.MethodDelete,
 			Path:        "",
+			Name:        "Delete User List",
+			Description: "Delete a list of users",
 			HandlerFunc: DeleteUserList,
 		},
 		{
 			Method:      http.MethodGet,
 			Path:        "/me",
+			Name:        "Get Me",
+			Description: "Get the current user",
 			HandlerFunc: GetUserMe,
 		},
 		{
 			Method:      http.MethodPut,
 			Path:        "/me",
+			Name:        "Update Me",
+			Description: "Update the current user",
 			HandlerFunc: PutUserMe,
 		},
 		{
 			Method:      http.MethodPost,
 			Path:        "/me/change-password",
+			Name:        "Change My Password",
+			Description: "Change the current user's password",
 			HandlerFunc: PostUserMeChangePassword,
 		},
 	}...))
@@ -467,16 +572,22 @@ func InitRoutes(app *gin.Engine) (err error) {
 		{
 			Method:      http.MethodPost,
 			Path:        "/:type",
+			Name:        "Export Data",
+			Description: "Export data",
 			HandlerFunc: PostExport,
 		},
 		{
 			Method:      http.MethodGet,
 			Path:        "/:type/:id",
+			Name:        "Get Export",
+			Description: "Get an export",
 			HandlerFunc: GetExport,
 		},
 		{
 			Method:      http.MethodGet,
 			Path:        "/:type/:id/download",
+			Name:        "Get Export Download",
+			Description: "Get an export download",
 			HandlerFunc: GetExportDownload,
 		},
 	})
@@ -484,16 +595,22 @@ func InitRoutes(app *gin.Engine) (err error) {
 		{
 			Method:      http.MethodGet,
 			Path:        "/:col",
+			Name:        "Get Filter Column Field Options",
+			Description: "Get the field options of a collection",
 			HandlerFunc: GetFilterColFieldOptions,
 		},
 		{
 			Method:      http.MethodGet,
 			Path:        "/:col/:value",
+			Name:        "Get Filter Col Field Options With Value",
+			Description: "Get the field options of a collection with a value",
 			HandlerFunc: GetFilterColFieldOptionsWithValue,
 		},
 		{
 			Method:      http.MethodGet,
 			Path:        "/:col/:value/:label",
+			Name:        "Get Filter Col Field Options With Value And Label",
+			Description: "Get the field options of a collection with a value and label",
 			HandlerFunc: GetFilterColFieldOptionsWithValueLabel,
 		},
 	})
@@ -501,16 +618,22 @@ func InitRoutes(app *gin.Engine) (err error) {
 		{
 			Method:      http.MethodGet,
 			Path:        "/:key",
+			Name:        "Get Setting",
+			Description: "Get a setting",
 			HandlerFunc: GetSetting,
 		},
 		{
 			Method:      http.MethodPost,
 			Path:        "/:key",
+			Name:        "Create Setting",
+			Description: "Create a new setting",
 			HandlerFunc: PostSetting,
 		},
 		{
 			Method:      http.MethodPut,
 			Path:        "/:key",
+			Name:        "Update Setting",
+			Description: "Update a setting",
 			HandlerFunc: PutSetting,
 		},
 	})
@@ -518,16 +641,22 @@ func InitRoutes(app *gin.Engine) (err error) {
 		{
 			Method:      http.MethodGet,
 			Path:        "/overview",
+			Name:        "Get Stats Overview",
+			Description: "Get the overview of the stats",
 			HandlerFunc: GetStatsOverview,
 		},
 		{
 			Method:      http.MethodGet,
 			Path:        "/daily",
+			Name:        "Get Stats Daily",
+			Description: "Get the daily stats",
 			HandlerFunc: GetStatsDaily,
 		},
 		{
 			Method:      http.MethodGet,
 			Path:        "/tasks",
+			Name:        "Get Stats Tasks",
+			Description: "Get the tasks stats",
 			HandlerFunc: GetStatsTasks,
 		},
 	})
@@ -537,6 +666,8 @@ func InitRoutes(app *gin.Engine) (err error) {
 		{
 			Path:        "",
 			Method:      http.MethodGet,
+			Name:        "Get System Info",
+			Description: "Get the system info",
 			HandlerFunc: GetSystemInfo,
 		},
 	})
@@ -544,11 +675,15 @@ func InitRoutes(app *gin.Engine) (err error) {
 		{
 			Method:      http.MethodPost,
 			Path:        "/login",
+			Name:        "Login",
+			Description: "Login",
 			HandlerFunc: PostLogin,
 		},
 		{
 			Method:      http.MethodPost,
 			Path:        "/logout",
+			Name:        "Logout",
+			Description: "Logout",
 			HandlerFunc: PostLogout,
 		},
 	})

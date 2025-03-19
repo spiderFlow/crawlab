@@ -23,7 +23,7 @@ import (
 )
 
 type GetTaskByIdParams struct {
-	Id string `path:"id"`
+	Id string `path:"id" description:"Task ID" format:"objectid" pattern:"^[0-9a-fA-F]{24}$"`
 }
 
 func GetTaskById(_ *gin.Context, params *GetTaskByIdParams) (response *Response[models.Task], err error) {
@@ -172,7 +172,7 @@ func GetTaskList(c *gin.Context, params *GetTaskListParams) (response *ListRespo
 }
 
 type DeleteTaskByIdParams struct {
-	Id string `path:"id"`
+	Id string `path:"id" description:"Task ID" format:"objectid" pattern:"^[0-9a-fA-F]{24}$"`
 }
 
 func DeleteTaskById(_ *gin.Context, params *DeleteTaskByIdParams) (response *VoidResponse, err error) {
@@ -223,7 +223,7 @@ type DeleteTaskListParams struct {
 	Ids []string `json:"ids"`
 }
 
-func DeleteList(_ *gin.Context, params *DeleteTaskListParams) (response *VoidResponse, err error) {
+func DeleteTaskList(_ *gin.Context, params *DeleteTaskListParams) (response *VoidResponse, err error) {
 	var ids []primitive.ObjectID
 	for _, id := range params.Ids {
 		id, err := primitive.ObjectIDFromHex(id)
@@ -333,7 +333,7 @@ func PostTaskRun(c *gin.Context, params *PostTaskRunParams) (response *Response[
 }
 
 type PostTaskRestartParams struct {
-	Id string `path:"id"`
+	Id string `path:"id" description:"Task ID" format:"objectid" pattern:"^[0-9a-fA-F]{24}$"`
 }
 
 func PostTaskRestart(c *gin.Context, params *PostTaskRestartParams) (response *Response[[]primitive.ObjectID], err error) {
@@ -380,8 +380,8 @@ func PostTaskRestart(c *gin.Context, params *PostTaskRestartParams) (response *R
 }
 
 type PostTaskCancelParams struct {
-	Id    string `path:"id"`
-	Force bool   `json:"force,omitempty"`
+	Id    string `path:"id" description:"Task ID" format:"objectid" pattern:"^[0-9a-fA-F]{24}$"`
+	Force bool   `json:"force,omitempty" description:"Force cancel" default:"false"`
 }
 
 func PostTaskCancel(c *gin.Context, params *PostTaskCancelParams) (response *VoidResponse, err error) {
@@ -415,9 +415,9 @@ func PostTaskCancel(c *gin.Context, params *PostTaskCancelParams) (response *Voi
 }
 
 type GetTaskLogsParams struct {
-	Id   string `path:"id"`
-	Page int    `query:"page"`
-	Size int    `query:"size"`
+	Id   string `path:"id" description:"Task ID" format:"objectid" pattern:"^[0-9a-fA-F]{24}$"`
+	Page int    `query:"page" description:"Page" default:"1" minimum:"1"`
+	Size int    `query:"size" description:"Size" default:"10" minimum:"1"`
 }
 
 func GetTaskLogs(_ *gin.Context, params *GetTaskLogsParams) (response *ListResponse[string], err error) {

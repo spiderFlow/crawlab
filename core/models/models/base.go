@@ -8,11 +8,11 @@ import (
 )
 
 type BaseModel struct {
-	Id        primitive.ObjectID `json:"_id" bson:"_id"`
-	CreatedAt time.Time          `json:"created_ts,omitempty" bson:"created_ts,omitempty"`
-	CreatedBy primitive.ObjectID `json:"created_by,omitempty" bson:"created_by,omitempty"`
-	UpdatedAt time.Time          `json:"updated_ts,omitempty" bson:"updated_ts,omitempty"`
-	UpdatedBy primitive.ObjectID `json:"updated_by,omitempty" bson:"updated_by,omitempty"`
+	Id        primitive.ObjectID `json:"_id" bson:"_id" description:"ID"`
+	CreatedAt time.Time          `json:"created_ts,omitempty" bson:"created_ts,omitempty" description:"Created timestamp"`
+	CreatedBy primitive.ObjectID `json:"created_by,omitempty" bson:"created_by,omitempty" description:"Created by"`
+	UpdatedAt time.Time          `json:"updated_ts,omitempty" bson:"updated_ts,omitempty" description:"Updated timestamp"`
+	UpdatedBy primitive.ObjectID `json:"updated_by,omitempty" bson:"updated_by,omitempty" description:"Updated by"`
 }
 
 func (m *BaseModel) GetId() primitive.ObjectID {

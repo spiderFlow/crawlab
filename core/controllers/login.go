@@ -8,8 +8,8 @@ import (
 )
 
 type PostLoginParams struct {
-	Username string `json:"username" validate:"required"`
-	Password string `json:"password" validate:"required"`
+	Username string `json:"username" description:"Username" validate:"required"`
+	Password string `json:"password" description:"Password" validate:"required"`
 }
 
 func PostLogin(c *gin.Context, params *PostLoginParams) (response *Response[string], err error) {
