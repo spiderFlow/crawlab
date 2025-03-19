@@ -18,8 +18,12 @@ import (
 
 func init() {
 	tonic.SetErrorHook(func(context *gin.Context, err error) (int, interface{}) {
+		unwrappedErr := errors.Unwrap(err)
+		if unwrappedErr != nil {
+			err = unwrappedErr
+		}
 		response := gin.H{
-			"error": errors.Unwrap(err).Error(),
+			"error": err.Error(),
 		}
 		status := http.StatusInternalServerError
 		constErr, ok := errors.AsType[errors.ConstError](err)
