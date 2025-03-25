@@ -35,7 +35,8 @@ const (
 	DefaultPyenvPath           = "/root/.pyenv"
 	DefaultNodeModulesPath     = "/usr/lib/node_modules"
 	DefaultGoPath              = "/root/go"
-	DefaultMcpServerBaseUrl    = "http://localhost:9000"
+	DefaultMCPServerBaseUrl    = "http://localhost:9000"
+	DefaultMCPClientBaseUrl    = "http://localhost:9000/sse"
 	DefaultOpenAPIUrl          = "http://localhost:8000/openapi.json"
 )
 
@@ -288,11 +289,18 @@ func GetGoPath() string {
 	return DefaultGoPath
 }
 
-func GetMcpServerBaseUrl() string {
+func GetMCPServerBaseUrl() string {
 	if res := viper.GetString("mcp.server.base_url"); res != "" {
 		return res
 	}
-	return DefaultMcpServerBaseUrl
+	return DefaultMCPServerBaseUrl
+}
+
+func GetMCPClientBaseUrl() string {
+	if res := viper.GetString("mcp.client.base_url"); res != "" {
+		return res
+	}
+	return DefaultMCPClientBaseUrl
 }
 
 func GetOpenAPIUrl() string {

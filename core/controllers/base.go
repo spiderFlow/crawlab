@@ -90,6 +90,9 @@ func (ctr *BaseController[T]) GetById(_ *gin.Context, params *GetByIdParams) (re
 
 	model, err := ctr.modelSvc.GetById(id)
 	if err != nil {
+		if errors.Is(err, mongo2.ErrNoDocuments) {
+			return nil, errors.NotFoundf("item not found")
+		}
 		return nil, err
 	}
 
