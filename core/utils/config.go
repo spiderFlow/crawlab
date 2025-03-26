@@ -35,9 +35,10 @@ const (
 	DefaultPyenvPath           = "/root/.pyenv"
 	DefaultNodeModulesPath     = "/usr/lib/node_modules"
 	DefaultGoPath              = "/root/go"
-	DefaultMCPServerBaseUrl    = "http://localhost:9000"
-	DefaultMCPClientBaseUrl    = "http://localhost:9000/sse"
-	DefaultOpenAPIUrl          = "http://localhost:8000/openapi.json"
+	DefaultMCPServerHost       = "0.0.0.0"
+	DefaultMCPServerPort       = 9777
+	DefaultMCPClientBaseUrl    = "http://localhost:9777/sse"
+	DefaultOpenAPIUrlPath      = "/openapi.json"
 )
 
 func IsDev() bool {
@@ -289,11 +290,16 @@ func GetGoPath() string {
 	return DefaultGoPath
 }
 
-func GetMCPServerBaseUrl() string {
-	if res := viper.GetString("mcp.server.base_url"); res != "" {
-		return res
+func GetMCPServerAddress() string {
+	host := viper.GetString("mcp.server.host")
+	if host == "" {
+		host = DefaultMCPServerHost
 	}
-	return DefaultMCPServerBaseUrl
+	port := viper.GetInt("mcp.server.port")
+	if port == 0 {
+		port = DefaultMCPServerPort
+	}
+	return fmt.Sprintf("%s:%d", host, port)
 }
 
 func GetMCPClientBaseUrl() string {
@@ -307,5 +313,5 @@ func GetOpenAPIUrl() string {
 	if res := viper.GetString("openapi.url"); res != "" {
 		return res
 	}
-	return DefaultOpenAPIUrl
+	return GetApiEndpoint() + DefaultOpenAPIUrlPath
 }

@@ -35,7 +35,7 @@ func TestRegisterController_Routes(t *testing.T) {
 	controllers.RegisterController(groups.AuthGroup, basePath, ctr)
 
 	// Check if all routes are registered
-	routes := router.Routes()
+	routes := controllers.GetGlobalFizzWrapper().GetFizz().Engine().Routes()
 
 	var methodPaths []string
 	for _, route := range routes {
@@ -64,7 +64,7 @@ func TestInitRoutes_ProjectsRoute(t *testing.T) {
 	_ = controllers.InitRoutes(router)
 
 	// Check if the projects route is registered
-	routes := router.Routes()
+	routes := controllers.GetGlobalFizzWrapper().GetFizz().Engine().Routes()
 
 	var methodPaths []string
 	for _, route := range routes {

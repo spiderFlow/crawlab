@@ -10,36 +10,36 @@ import (
 )
 
 type GetFilterColFieldOptionsParams struct {
-	Col        string `path:"col" validate:"required"`
-	Conditions string `query:"conditions" description:"Filter conditions. Format: [{\"key\":\"name\",\"op\":\"eq\",\"value\":\"test\"}]"`
+	Col    string `path:"col" validate:"required"`
+	Filter string `query:"filter" description:"Filter query"`
 }
 
 func GetFilterColFieldOptions(c *gin.Context, params *GetFilterColFieldOptionsParams) (response *Response[[]entity.FilterSelectOption], err error) {
 	return GetFilterColFieldOptionsWithValueLabel(c, &GetFilterColFieldOptionsWithValueLabelParams{
-		Col:        params.Col,
-		Conditions: params.Conditions,
+		Col:    params.Col,
+		Filter: params.Filter,
 	})
 }
 
 type GetFilterColFieldOptionsWithValueParams struct {
-	Col        string `path:"col" validate:"required"`
-	Value      string `path:"value"`
-	Conditions string `query:"conditions" description:"Filter conditions. Format: [{\"key\":\"name\",\"op\":\"eq\",\"value\":\"test\"}]"`
+	Col    string `path:"col" validate:"required"`
+	Value  string `path:"value"`
+	Filter string `query:"filter" description:"Filter query"`
 }
 
 func GetFilterColFieldOptionsWithValue(c *gin.Context, params *GetFilterColFieldOptionsWithValueParams) (response *Response[[]entity.FilterSelectOption], err error) {
 	return GetFilterColFieldOptionsWithValueLabel(c, &GetFilterColFieldOptionsWithValueLabelParams{
-		Col:        params.Col,
-		Value:      params.Value,
-		Conditions: params.Conditions,
+		Col:    params.Col,
+		Value:  params.Value,
+		Filter: params.Filter,
 	})
 }
 
 type GetFilterColFieldOptionsWithValueLabelParams struct {
-	Col        string `path:"col" validate:"required"`
-	Value      string `path:"value"`
-	Label      string `path:"label"`
-	Conditions string `query:"conditions" description:"Filter conditions. Format: [{\"key\":\"name\",\"op\":\"eq\",\"value\":\"test\"}]"`
+	Col    string `path:"col" validate:"required"`
+	Value  string `path:"value"`
+	Label  string `path:"label"`
+	Filter string `query:"filter" description:"Filter query"`
 }
 
 func GetFilterColFieldOptionsWithValueLabel(_ *gin.Context, params *GetFilterColFieldOptionsWithValueLabelParams) (response *Response[[]entity.FilterSelectOption], err error) {
@@ -53,11 +53,8 @@ func GetFilterColFieldOptionsWithValueLabel(_ *gin.Context, params *GetFilterCol
 	}
 
 	pipelines := mongo2.Pipeline{}
-	if params.Conditions != "" {
-		query, err := GetFilterFromConditionString(params.Conditions)
-		if err != nil {
-			return GetErrorResponse[[]entity.FilterSelectOption](errors.Trace(err))
-		}
+	if params.Filter != "" {
+		query := ConvertToFilter(params.Filter)
 		pipelines = append(pipelines, bson.D{{"$match", query}})
 	}
 	pipelines = append(

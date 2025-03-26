@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"reflect"
+	"strings"
 
 	"github.com/crawlab-team/crawlab/core/constants"
 	"github.com/crawlab-team/crawlab/core/entity"
@@ -30,142 +31,152 @@ func GetUserFromContext(c *gin.Context) (u *models.User) {
 	return u
 }
 
-func GetFilterQueryFromListParams(params *GetListParams) (q bson.M, err error) {
-	if params.Conditions == "" {
-		return nil, nil
+func ConvertToBsonMFromListParams(params *GetListParams) (q bson.M) {
+	if params.Filter == "" {
+		return nil
 	}
-	conditions, err := GetFilterFromConditionString(params.Conditions)
-	if err != nil {
-		return nil, err
-	}
-	return utils.FilterToQuery(conditions)
+	filter := ConvertToFilter(params.Filter)
+	return utils.FilterToQuery(filter)
 }
 
-func GetFilterQueryFromConditionString(condStr string) (q bson.M, err error) {
-	if condStr == "" {
-		return nil, nil
+func ConvertToBsonMFromFilter(filterStr string) (q bson.M) {
+	if filterStr == "" {
+		return nil
 	}
-	conditions, err := GetFilterFromConditionString(condStr)
-	if err != nil {
-		return nil, err
-	}
-	return utils.FilterToQuery(conditions)
+	filter := ConvertToFilter(filterStr)
+	return utils.FilterToQuery(filter)
 }
 
-func GetFilterFromConditionString(condStr string) (f *entity.Filter, err error) {
-	if condStr == "" {
-		return nil, nil
+func ConvertToFilter(filterStr string) (f *entity.Filter) {
+	if filterStr == "" {
+		return nil
 	}
+	trimmedFilterStr := strings.TrimSpace(filterStr)
+	if strings.HasPrefix(trimmedFilterStr, "[") {
+		return convertToFilterArray(filterStr)
+	} else if strings.HasPrefix(trimmedFilterStr, "{") {
+		return convertToFilterMap(filterStr)
+	} else {
+		return nil
+	}
+}
+
+func convertToFilterMap(filterStr string) (f *entity.Filter) {
+	var filter map[string]interface{}
+	if err := json.Unmarshal([]byte(filterStr), &filter); err != nil {
+		return nil
+	}
+
 	var conditions []*entity.Condition
-	if err := json.Unmarshal([]byte(condStr), &conditions); err != nil {
-		return nil, err
-	}
-
-	for i, cond := range conditions {
-		v := reflect.ValueOf(cond.Value)
-		switch v.Kind() {
-		case reflect.String:
-			item := cond.Value.(string)
-			// attempt to convert object id
-			id, err := primitive.ObjectIDFromHex(item)
-			if err == nil {
-				conditions[i].Value = id
-			} else {
-				conditions[i].Value = item
-			}
-		case reflect.Float64:
-			// JSON numbers are decoded as float64 by default
-			switch cond.Value.(type) {
-			case float64:
-				num := cond.Value.(float64)
-				// Check if it's a whole number
-				if num == float64(int64(num)) {
-					conditions[i].Value = int64(num)
-				} else {
-					conditions[i].Value = num
-				}
-			case int:
-				num := cond.Value.(int)
-				conditions[i].Value = int64(num)
-			case int64:
-				num := cond.Value.(int64)
-				conditions[i].Value = num
-			}
-		case reflect.Bool:
-			conditions[i].Value = cond.Value.(bool)
-		case reflect.Slice, reflect.Array:
-			var items []interface{}
-			for i := 0; i < v.Len(); i++ {
-				vItem := v.Index(i)
-				item := vItem.Interface()
-
-				switch typedItem := item.(type) {
-				case string:
-					// Try to convert to ObjectID first
-					if id, err := primitive.ObjectIDFromHex(typedItem); err == nil {
-						items = append(items, id)
-					} else {
-						items = append(items, typedItem)
-					}
-				case float64:
-					if typedItem == float64(int64(typedItem)) {
-						items = append(items, int64(typedItem))
-					} else {
-						items = append(items, typedItem)
-					}
-				case bool:
-					items = append(items, typedItem)
-				default:
-					items = append(items, item)
-				}
-			}
-			conditions[i].Value = items
-		default:
-			conditions[i].Value = cond.Value
-		}
+	for k, v := range filter {
+		conditions = append(conditions, &entity.Condition{
+			Key:   k,
+			Op:    constants.FilterOpEqual,
+			Value: convertFilterValue(v),
+		})
 	}
 
 	return &entity.Filter{
 		IsOr:       false,
 		Conditions: conditions,
-	}, nil
+	}
 }
 
-// GetFilter Get entity.Filter from gin.Context
-func GetFilter(c *gin.Context) (f *entity.Filter, err error) {
-	condStr := c.Query(constants.FilterQueryFieldConditions)
-	return GetFilterFromConditionString(condStr)
+func convertToFilterArray(filterStr string) (f *entity.Filter) {
+	var conditions []*entity.Condition
+	if err := json.Unmarshal([]byte(filterStr), &conditions); err != nil {
+		return nil
+	}
+
+	for i, cond := range conditions {
+		conditions[i].Value = convertFilterValue(cond.Value)
+	}
+
+	return &entity.Filter{
+		IsOr:       false,
+		Conditions: conditions,
+	}
 }
 
-// GetFilterQuery Get bson.M from gin.Context
-func GetFilterQuery(c *gin.Context) (q bson.M, err error) {
-	f, err := GetFilter(c)
-	if err != nil {
-		return nil, err
+func convertFilterValue(value interface{}) interface{} {
+	v := reflect.ValueOf(value)
+	switch v.Kind() {
+	case reflect.String:
+		item := value.(string)
+		// attempt to convert object id
+		id, err := primitive.ObjectIDFromHex(item)
+		if err == nil {
+			return id
+		} else {
+			return item
+		}
+	case reflect.Float64:
+		// JSON numbers are decoded as float64 by default
+		switch value.(type) {
+		case float64:
+			num := value.(float64)
+			// Check if it's a whole number
+			if num == float64(int64(num)) {
+				return int64(num)
+			} else {
+				return num
+			}
+		case int:
+			num := value.(int)
+			return int64(num)
+		case int64:
+			num := value.(int64)
+			return num
+		}
+	case reflect.Bool:
+		return value.(bool)
+	case reflect.Slice, reflect.Array:
+		var items []interface{}
+		for i := 0; i < v.Len(); i++ {
+			vItem := v.Index(i)
+			item := vItem.Interface()
+
+			switch typedItem := item.(type) {
+			case string:
+				// Try to convert to ObjectID first
+				if id, err := primitive.ObjectIDFromHex(typedItem); err == nil {
+					items = append(items, id)
+				} else {
+					items = append(items, typedItem)
+				}
+			case float64:
+				if typedItem == float64(int64(typedItem)) {
+					items = append(items, int64(typedItem))
+				} else {
+					items = append(items, typedItem)
+				}
+			case bool:
+				items = append(items, typedItem)
+			default:
+				items = append(items, item)
+			}
+		}
+		return items
+	default:
+		return value
 	}
+	return value
+}
 
-	if f == nil {
-		return nil, nil
-	}
+// GetFilterFromContext Get entity.Filter from gin.Context
+func GetFilterFromContext(c *gin.Context) (f *entity.Filter) {
+	filterStr := c.GetString(constants.FilterQueryFieldFilter)
+	return ConvertToFilter(filterStr)
+}
 
-	// TODO: implement logic OR
-
+// ConvertToBsonMFromContext Get bson.M from gin.Context
+func ConvertToBsonMFromContext(c *gin.Context) (q bson.M) {
+	f := GetFilterFromContext(c)
 	return utils.FilterToQuery(f)
 }
 
-func MustGetFilterQuery(c *gin.Context) (q bson.M) {
-	q, err := GetFilterQuery(c)
-	if err != nil {
-		return nil
-	}
-	return q
-}
-
-func getResultListQuery(c *gin.Context) (q mongo.ListQuery) {
-	f, err := GetFilter(c)
-	if err != nil {
-		return q
-	}
+func GetResultListQuery(c *gin.Context) (q mongo.ListQuery) {
+	f := GetFilterFromContext(c)
 	for _, cond := range f.Conditions {
 		q = append(q, mongo.ListQueryCondition{
 			Key:   cond.Key,
@@ -174,35 +185,6 @@ func getResultListQuery(c *gin.Context) (q mongo.ListQuery) {
 		})
 	}
 	return q
-}
-
-func GetDefaultPagination() (p *entity.Pagination) {
-	return &entity.Pagination{
-		Page: constants.PaginationDefaultPage,
-		Size: constants.PaginationDefaultSize,
-	}
-}
-
-func GetPagination(c *gin.Context) (p *entity.Pagination, err error) {
-	var _p entity.Pagination
-	if err := c.ShouldBindQuery(&_p); err != nil {
-		return GetDefaultPagination(), err
-	}
-	if _p.Page == 0 {
-		_p.Page = constants.PaginationDefaultPage
-	}
-	if _p.Size == 0 {
-		_p.Size = constants.PaginationDefaultSize
-	}
-	return &_p, nil
-}
-
-func MustGetPagination(c *gin.Context) (p *entity.Pagination) {
-	p, err := GetPagination(c)
-	if err != nil || p == nil {
-		return GetDefaultPagination()
-	}
-	return p
 }
 
 func GetSortsFromString(sortStr string) (sorts []entity.Sort, err error) {

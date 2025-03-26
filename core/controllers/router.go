@@ -243,8 +243,6 @@ func InitRoutes(app *gin.Engine) (err error) {
 	// Register resource controllers with their respective endpoints
 	// Each RegisterController call sets up standard CRUD operations
 	// Additional custom actions can be specified in the controller initialization
-	RegisterController(groups.AuthGroup.Group("", "Data Collections", "APIs for data collections management"), "/data/collections", NewController[models.DataCollection]())
-	RegisterController(groups.AuthGroup.Group("", "Environments", "APIs for environment variables management"), "/environments", NewController[models.Environment]())
 	RegisterController(groups.AuthGroup.Group("", "Nodes", "APIs for nodes management"), "/nodes", NewController[models.Node]())
 	RegisterController(groups.AuthGroup.Group("", "Projects", "APIs for projects management"), "/projects", NewController[models.Project]([]Action{
 		{
@@ -478,22 +476,6 @@ func InitRoutes(app *gin.Engine) (err error) {
 			HandlerFunc: GetTaskLogs,
 		},
 	}...))
-	RegisterController(groups.AuthGroup.Group("", "Tokens", "APIs for PAT management"), "/tokens", NewController[models.Token]([]Action{
-		{
-			Method:      http.MethodPost,
-			Path:        "",
-			Name:        "Create Token",
-			Description: "Create a new token",
-			HandlerFunc: PostToken,
-		},
-		{
-			Method:      http.MethodGet,
-			Path:        "",
-			Name:        "Get Token List",
-			Description: "Get a list of tokens",
-			HandlerFunc: GetTokenList,
-		},
-	}...))
 	RegisterController(groups.AuthGroup.Group("", "Users", "APIs for users management"), "/users", NewController[models.User]([]Action{
 		{
 			Method:      http.MethodGet,
@@ -566,6 +548,24 @@ func InitRoutes(app *gin.Engine) (err error) {
 			HandlerFunc: PostUserMeChangePassword,
 		},
 	}...))
+	RegisterController(groups.AuthGroup.Group("", "Tokens", "APIs for PAT management"), "/tokens", NewController[models.Token]([]Action{
+		{
+			Method:      http.MethodPost,
+			Path:        "",
+			Name:        "Create Token",
+			Description: "Create a new token",
+			HandlerFunc: PostToken,
+		},
+		{
+			Method:      http.MethodGet,
+			Path:        "",
+			Name:        "Get Token List",
+			Description: "Get a list of tokens",
+			HandlerFunc: GetTokenList,
+		},
+	}...))
+	RegisterController(groups.AuthGroup.Group("", "Environments", "APIs for environment variables management"), "/environments", NewController[models.Environment]())
+	RegisterController(groups.AuthGroup.Group("", "Data Collections", "APIs for data collections management"), "/data/collections", NewController[models.DataCollection]())
 
 	// Register standalone action routes that don't fit the standard CRUD pattern
 	RegisterActions(groups.AuthGroup.Group("", "Export", "APIs for exporting data"), "/export", []Action{

@@ -24,10 +24,7 @@ func GetUserById(_ *gin.Context, params *GetByIdParams) (response *Response[mode
 }
 
 func GetUserList(_ *gin.Context, params *GetListParams) (response *ListResponse[models.User], err error) {
-	query, err := GetFilterQueryFromListParams(params)
-	if err != nil {
-		return GetErrorListResponse[models.User](err)
-	}
+	query := ConvertToBsonMFromListParams(params)
 
 	sort, err := GetSortOptionFromString(params.Sort)
 	if err != nil {
@@ -171,7 +168,7 @@ func DeleteUserById(_ *gin.Context, params *DeleteByIdParams) (response *Respons
 		return GetErrorResponse[models.User](err)
 	}
 	if user.RootAdmin {
-		return GetErrorResponse[models.User](errors.New("root admin cannot be deleted"))
+		return GetErrorResponse[models.User](errors.Forbiddenf("root admin cannot be deleted"))
 	}
 
 	if err := service.NewModelService[models.User]().DeleteById(id); err != nil {
@@ -200,7 +197,7 @@ func DeleteUserList(_ *gin.Context, params *DeleteListParams) (response *Respons
 		"root_admin": true,
 	}, nil)
 	if err == nil {
-		return GetErrorResponse[models.User](errors.New("root admin cannot be deleted"))
+		return GetErrorResponse[models.User](errors.Forbiddenf("root admin cannot be deleted"))
 	}
 	if !errors.Is(err, mongo2.ErrNoDocuments) {
 		return GetErrorResponse[models.User](err)

@@ -79,10 +79,7 @@ func GetTaskList(c *gin.Context, params *GetTaskListParams) (response *ListRespo
 	}
 
 	// get query
-	query, err := GetFilterQueryFromListParams(params.GetListParams)
-	if err != nil {
-		return GetErrorListResponse[models.Task](err)
-	}
+	query := ConvertToBsonMFromListParams(params.GetListParams)
 
 	sort, err := GetSortOptionFromString(params.GetListParams.Sort)
 	if err != nil {

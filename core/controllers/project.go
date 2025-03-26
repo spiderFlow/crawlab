@@ -16,10 +16,7 @@ func GetProjectList(c *gin.Context, params *GetListParams) (response *ListRespon
 		return NewController[models.Project]().GetAll(params)
 	}
 
-	query, err := GetFilterQueryFromListParams(params)
-	if err != nil {
-		return GetErrorListResponse[models.Project](errors.BadRequestf("invalid request parameters: %v", err))
-	}
+	query := ConvertToBsonMFromListParams(params)
 
 	sort, err := GetSortOptionFromString(params.Sort)
 	if err != nil {

@@ -11,16 +11,13 @@ import (
 )
 
 type PostExportParams struct {
-	Type       string `path:"type" validate:"required"`
-	Target     string `query:"target" validate:"required"`
-	Conditions string `query:"conditions" description:"Filter conditions. Format: [{\"key\":\"name\",\"op\":\"eq\",\"value\":\"test\"}]"`
+	Type   string `path:"type" validate:"required"`
+	Target string `query:"target" validate:"required"`
+	Filter string `query:"filter" description:"Filter query"`
 }
 
 func PostExport(_ *gin.Context, params *PostExportParams) (response *Response[string], err error) {
-	query, err := GetFilterQueryFromConditionString(params.Conditions)
-	if err != nil {
-		return GetErrorResponse[string](err)
-	}
+	query := ConvertToBsonMFromFilter(params.Filter)
 	var exportId string
 	switch params.Type {
 	case constants.ExportTypeCsv:

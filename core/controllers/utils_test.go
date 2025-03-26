@@ -1,9 +1,11 @@
 package controllers_test
 
 import (
+	"sort"
 	"testing"
 
 	"github.com/crawlab-team/crawlab/core/controllers"
+	"github.com/crawlab-team/crawlab/core/entity"
 	"github.com/crawlab-team/crawlab/core/models/models"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -15,8 +17,7 @@ import (
 func TestGetFilterFromConditionString(t *testing.T) {
 	// Simple condition with string value
 	condStr := `[{"key":"name","op":"eq","value":"test"}]`
-	filter, err := controllers.GetFilterFromConditionString(condStr)
-	require.NoError(t, err)
+	filter := controllers.ConvertToFilter(condStr)
 	require.NotNil(t, filter)
 	require.Len(t, filter.Conditions, 1)
 	assert.Equal(t, "name", filter.Conditions[0].Key)
@@ -25,8 +26,7 @@ func TestGetFilterFromConditionString(t *testing.T) {
 
 	// Multiple conditions with different types
 	condStr = `[{"key":"name","op":"eq","value":"test"},{"key":"priority","op":"gt","value":5}]`
-	filter, err = controllers.GetFilterFromConditionString(condStr)
-	require.NoError(t, err)
+	filter = controllers.ConvertToFilter(condStr)
 	require.NotNil(t, filter)
 	require.Len(t, filter.Conditions, 2)
 	assert.Equal(t, "name", filter.Conditions[0].Key)
@@ -38,60 +38,54 @@ func TestGetFilterFromConditionString(t *testing.T) {
 
 	// Invalid JSON should return error
 	condStr = `[{"key":"name","op":"eq","value":"test"`
-	_, err = controllers.GetFilterFromConditionString(condStr)
-	assert.Error(t, err)
+	filter = controllers.ConvertToFilter(condStr)
+	assert.Nil(t, filter)
 }
 
 func TestGetFilterQueryFromConditionString(t *testing.T) {
 	// Simple equality condition
 	condStr := `[{"key":"name","op":"eq","value":"test"}]`
-	query, err := controllers.GetFilterQueryFromConditionString(condStr)
-	require.NoError(t, err)
+	query := controllers.ConvertToBsonMFromFilter(condStr)
 	require.NotNil(t, query)
 	expected := bson.M{"name": "test"}
 	assert.Equal(t, expected, query)
 
 	// Greater than condition
 	condStr = `[{"key":"priority","op":"gt","value":5}]`
-	query, err = controllers.GetFilterQueryFromConditionString(condStr)
-	require.NoError(t, err)
+	query = controllers.ConvertToBsonMFromFilter(condStr)
 	require.NotNil(t, query)
 	expected = bson.M{"priority": bson.M{"$gt": int64(5)}}
 	assert.Equal(t, expected, query)
 
 	// Multiple conditions
 	condStr = `[{"key":"name","op":"eq","value":"test"},{"key":"priority","op":"gt","value":5}]`
-	query, err = controllers.GetFilterQueryFromConditionString(condStr)
-	require.NoError(t, err)
+	query = controllers.ConvertToBsonMFromFilter(condStr)
 	require.NotNil(t, query)
 	expected = bson.M{"name": "test", "priority": bson.M{"$gt": int64(5)}}
 	assert.Equal(t, expected, query)
 
 	// Contains operator
 	condStr = `[{"key":"name","op":"c","value":"test"}]`
-	query, err = controllers.GetFilterQueryFromConditionString(condStr)
-	require.NoError(t, err)
+	query = controllers.ConvertToBsonMFromFilter(condStr)
 	require.NotNil(t, query)
 	expectedRegex := bson.M{"name": bson.M{"$regex": "test", "$options": "i"}}
 	assert.Equal(t, expectedRegex, query)
 
 	// Invalid condition should return error
 	condStr = `[{"key":"name","op":"invalid_op","value":"test"}]`
-	_, err = controllers.GetFilterQueryFromConditionString(condStr)
-	assert.Error(t, err)
+	query = controllers.ConvertToBsonMFromFilter(condStr)
+	assert.Nil(t, query)
 }
 
 func TestGetFilterQueryFromListParams(t *testing.T) {
 	// No conditions
 	params := &controllers.GetListParams{}
-	query, err := controllers.GetFilterQueryFromListParams(params)
-	require.NoError(t, err)
+	query := controllers.ConvertToBsonMFromListParams(params)
 	assert.Nil(t, query)
 
 	// With conditions
-	params.Conditions = `[{"key":"name","op":"eq","value":"test"}]`
-	query, err = controllers.GetFilterQueryFromListParams(params)
-	require.NoError(t, err)
+	params.Filter = `[{"key":"name","op":"eq","value":"test"}]`
+	query = controllers.ConvertToBsonMFromListParams(params)
 	require.NotNil(t, query)
 	expected := bson.M{"name": "test"}
 	assert.Equal(t, expected, query)
@@ -175,4 +169,53 @@ func TestGetErrorListResponse(t *testing.T) {
 	assert.Equal(t, err.Error(), resp.Error)
 	assert.Nil(t, resp.Data)
 	assert.Equal(t, 0, resp.Total)
+}
+
+func TestConvertToFilterMap(t *testing.T) {
+	// Simple map with string value
+	condStr := `{"name": "test"}`
+	filter := controllers.ConvertToFilter(condStr)
+	require.NotNil(t, filter)
+	require.Len(t, filter.Conditions, 1)
+	assert.Equal(t, "name", filter.Conditions[0].Key)
+	assert.Equal(t, "eq", filter.Conditions[0].Op)
+	assert.Equal(t, "test", filter.Conditions[0].Value)
+
+	// Map with multiple fields of different types
+	condStr = `{"name": "test", "priority": 5, "active": true}`
+	filter = controllers.ConvertToFilter(condStr)
+	require.NotNil(t, filter)
+	require.Len(t, filter.Conditions, 3)
+	// Sort conditions to ensure consistent test results
+	sortConditions(filter.Conditions)
+	assert.Equal(t, "active", filter.Conditions[0].Key)
+	assert.Equal(t, "eq", filter.Conditions[0].Op)
+	assert.Equal(t, true, filter.Conditions[0].Value)
+	assert.Equal(t, "name", filter.Conditions[1].Key)
+	assert.Equal(t, "eq", filter.Conditions[1].Op)
+	assert.Equal(t, "test", filter.Conditions[1].Value)
+	assert.Equal(t, "priority", filter.Conditions[2].Key)
+	assert.Equal(t, "eq", filter.Conditions[2].Op)
+	assert.Equal(t, int64(5), filter.Conditions[2].Value)
+
+	// Map with ObjectID string
+	id := primitive.NewObjectID()
+	condStr = `{"_id": "` + id.Hex() + `"}`
+	filter = controllers.ConvertToFilter(condStr)
+	require.NotNil(t, filter)
+	require.Len(t, filter.Conditions, 1)
+	assert.Equal(t, "_id", filter.Conditions[0].Key)
+	assert.Equal(t, "eq", filter.Conditions[0].Op)
+	assert.Equal(t, id, filter.Conditions[0].Value)
+
+	// Invalid JSON should return nil
+	condStr = `{"name": "test"`
+	filter = controllers.ConvertToFilter(condStr)
+	assert.Nil(t, filter)
+}
+
+func sortConditions(conditions []*entity.Condition) {
+	sort.Slice(conditions, func(i, j int) bool {
+		return conditions[i].Key < conditions[j].Key
+	})
 }

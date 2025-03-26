@@ -269,7 +269,7 @@ func TestBaseController_GetList(t *testing.T) {
 		condBytes, err := json.Marshal(cond)
 		require.Nil(t, err)
 		params := url.Values{}
-		params.Add("conditions", string(condBytes))
+		params.Add("filter", string(condBytes))
 		params.Add("page", "1")
 		params.Add("size", "10")
 		requestUrl := url.URL{Path: "/testmodels/list", RawQuery: params.Encode()}

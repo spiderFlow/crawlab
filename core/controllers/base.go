@@ -25,9 +25,8 @@ func init() {
 		response := gin.H{
 			"error": err.Error(),
 		}
-		status := http.StatusInternalServerError
-		constErr, ok := errors.AsType[errors.ConstError](err)
-		if ok {
+		var status int
+		if constErr, ok := errors.AsType[errors.ConstError](err); ok {
 			switch {
 			case errors.Is(constErr, errors.NotFound):
 				status = http.StatusNotFound
@@ -40,6 +39,8 @@ func init() {
 			default:
 				status = http.StatusInternalServerError
 			}
+		} else if _, ok := errors.AsType[tonic.BindError](err); ok {
+			status = http.StatusBadRequest
 		} else {
 			status = http.StatusInternalServerError
 		}
@@ -62,11 +63,11 @@ type BaseController[T any] struct {
 
 // GetListParams represents parameters for GetList with pagination
 type GetListParams struct {
-	Conditions string `query:"conditions" description:"Filter conditions. Format: [{\"key\":\"name\",\"op\":\"eq\",\"value\":\"test\"}]"`
-	Sort       string `query:"sort" description:"Sort options"`
-	Page       int    `query:"page" default:"1" description:"Page number" minimum:"1"`
-	Size       int    `query:"size" default:"10" description:"Page size" minimum:"1"`
-	All        bool   `query:"all" default:"false" description:"Whether to get all items"`
+	Filter string `query:"filter" description:"Filter query"`
+	Sort   string `query:"sort" description:"Sort options"`
+	Page   int    `query:"page" default:"1" description:"Page number" minimum:"1"`
+	Size   int    `query:"size" default:"10" description:"Page size" minimum:"1"`
+	All    bool   `query:"all" default:"false" description:"Whether to get all items"`
 }
 
 func (ctr *BaseController[T]) GetList(_ *gin.Context, params *GetListParams) (response *ListResponse[T], err error) {
@@ -221,7 +222,7 @@ func (ctr *BaseController[T]) DeleteList(_ *gin.Context, params *DeleteListParam
 	for _, id := range params.Ids {
 		objectId, err := primitive.ObjectIDFromHex(id)
 		if err != nil {
-			return GetErrorResponse[T](err)
+			return GetErrorResponse[T](errors.BadRequestf("invalid id format: %v", err))
 		}
 		ids = append(ids, objectId)
 	}
@@ -241,10 +242,7 @@ func (ctr *BaseController[T]) DeleteList(_ *gin.Context, params *DeleteListParam
 // GetAll retrieves all items based on filter and sort
 func (ctr *BaseController[T]) GetAll(params *GetListParams) (response *ListResponse[T], err error) {
 	// Get filter query
-	query, err := GetFilterQueryFromListParams(params)
-	if err != nil {
-		return GetErrorListResponse[T](errors.BadRequestf("invalid request parameters: %v", err))
-	}
+	query := ConvertToBsonMFromListParams(params)
 
 	// Get sort options
 	sort, err := GetSortOptionFromString(params.Sort)
@@ -273,10 +271,7 @@ func (ctr *BaseController[T]) GetAll(params *GetListParams) (response *ListRespo
 // GetWithPagination retrieves items with pagination
 func (ctr *BaseController[T]) GetWithPagination(params *GetListParams) (response *ListResponse[T], err error) {
 	// Get filter query
-	query, err := GetFilterQueryFromListParams(params)
-	if err != nil {
-		return GetErrorListResponse[T](errors.BadRequestf("invalid request parameters: %v", err))
-	}
+	query := ConvertToBsonMFromListParams(params)
 
 	// Get sort options
 	sort, err := GetSortOptionFromString(params.Sort)

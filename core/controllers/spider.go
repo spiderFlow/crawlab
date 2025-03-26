@@ -89,10 +89,7 @@ func GetSpiderList(c *gin.Context, params *GetListParams) (response *ListRespons
 }
 
 func getSpiderListWithStats(params *GetListParams) (response *ListResponse[models.Spider], err error) {
-	query, err := GetFilterQueryFromListParams(params)
-	if err != nil {
-		return GetErrorListResponse[models.Spider](errors.BadRequestf("invalid request parameters: %v", err))
-	}
+	query := ConvertToBsonMFromListParams(params)
 
 	sort, err := GetSortOptionFromString(params.Sort)
 	if err != nil {
@@ -749,7 +746,7 @@ func GetSpiderResults(c *gin.Context, params *GetSpiderResultsParams) (response 
 		return GetErrorListResponse[bson.M](err)
 	}
 
-	query := getResultListQuery(c)
+	query := GetResultListQuery(c)
 
 	col := mongo2.GetMongoCol(s.ColName)
 

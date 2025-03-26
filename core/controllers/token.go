@@ -43,10 +43,7 @@ func GetTokenList(c *gin.Context, params *GetListParams) (response *ListResponse
 	u := GetUserFromContext(c)
 
 	// Get filter query
-	query, err := GetFilterQueryFromListParams(params)
-	if err != nil {
-		return GetErrorListResponse[models.Token](errors.BadRequestf("invalid request parameters: %v", err))
-	}
+	query := ConvertToBsonMFromListParams(params)
 
 	// Add filter for tokens created by the current user
 	query["created_by"] = u.Id
