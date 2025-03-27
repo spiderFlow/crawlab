@@ -191,8 +191,31 @@ func GetSortsFromString(sortStr string) (sorts []entity.Sort, err error) {
 	if sortStr == "" {
 		return nil, nil
 	}
-	if err := json.Unmarshal([]byte(sortStr), &sorts); err != nil {
-		return nil, err
+	parts := strings.Split(sortStr, ",")
+	for _, part := range parts {
+		trimmed := strings.TrimSpace(part)
+		if trimmed == "" {
+			continue
+		}
+		if !strings.HasPrefix(trimmed, "-") {
+			key := strings.TrimLeft(trimmed, "+")
+			sorts = append(sorts, entity.Sort{
+				Key:       key,
+				Direction: constants.DESCENDING,
+			})
+		} else if strings.HasPrefix(trimmed, "+") {
+			key := strings.TrimLeft(trimmed, "+")
+			sorts = append(sorts, entity.Sort{
+				Key:       key,
+				Direction: constants.ASCENDING,
+			})
+		} else {
+			key := strings.TrimLeft(trimmed, "-")
+			sorts = append(sorts, entity.Sort{
+				Key:       key,
+				Direction: constants.ASCENDING,
+			})
+		}
 	}
 	return sorts, nil
 }
