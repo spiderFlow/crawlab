@@ -136,6 +136,11 @@ func newMongoClient(_opts *ClientOptions) (c *mongo.Client, err error) {
 		if err != nil {
 			return err
 		}
+		err = c.Ping(ctx, nil)
+		if err != nil {
+			logger.Errorf("ping mongo error: %v", err)
+			return err
+		}
 		logger.Infof("connected to mongo")
 		return nil
 	}
