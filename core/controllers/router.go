@@ -114,7 +114,7 @@ func registerBuiltinHandler(group *fizz.RouterGroup, wrapper *openapi.FizzWrappe
 // Helper functions to generate OpenAPI documentation
 func getIDForAction(method, path, summary string) string {
 	if summary != "" {
-		return utils.ToPascalCase(summary)
+		return utils.ToSnakeCase(summary)
 	}
 
 	// Remove leading slash and convert remaining slashes to underscores

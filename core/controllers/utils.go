@@ -280,11 +280,28 @@ func SortsToOption(sorts []entity.Sort) (sort bson.D, err error) {
 	return sort, nil
 }
 
+type BaseResponse interface {
+	GetData() interface{}
+	GetDataString() string
+}
+
 type Response[T any] struct {
 	Status  string `json:"status"`
 	Message string `json:"message"`
 	Data    T      `json:"data"`
 	Error   string `json:"error"`
+}
+
+func (r Response[T]) GetData() any {
+	return r.Data
+}
+
+func (r Response[T]) GetDataString() string {
+	data, err := json.Marshal(r.Data)
+	if err != nil {
+		return ""
+	}
+	return string(data)
 }
 
 type ListResponse[T any] struct {
@@ -295,10 +312,33 @@ type ListResponse[T any] struct {
 	Error   string `json:"error"`
 }
 
+func (r ListResponse[T]) GetData() any {
+	return r.Data
+}
+
+func (r ListResponse[T]) GetDataString() string {
+	if r.Data == nil {
+		return ""
+	}
+	data, err := json.Marshal(r.Data)
+	if err != nil {
+		return ""
+	}
+	return string(data)
+}
+
 type VoidResponse struct {
 	Status  string `json:"status"`
 	Message string `json:"message"`
 	Error   string `json:"error"`
+}
+
+func (r VoidResponse) GetData() any {
+	return nil
+}
+
+func (r VoidResponse) GetDataString() string {
+	return ""
 }
 
 func GetDataResponse[T any](model T) (res *Response[T], err error) {
