@@ -21,27 +21,14 @@ package models
 
 import "go.mongodb.org/mongo-driver/bson/primitive"
 
-type ChatMessageContentType string
-
-const (
-	ChatMessageContentTypeText   ChatMessageContentType = "text"
-	ChatMessageContentTypeAction ChatMessageContentType = "action"
-)
-
-type ChatMessageContentActionStatus string
-
-const (
-	ChatMessageContentActionStatusPending ChatMessageContentActionStatus = "pending"
-	ChatMessageContentActionStatusSuccess ChatMessageContentActionStatus = "success"
-	ChatMessageContentActionStatusFailed  ChatMessageContentActionStatus = "failed"
-)
-
 type ChatMessageContent struct {
 	any          `collection:"chat_message_contents"`
 	BaseModel    `bson:",inline"`
-	MessageId    primitive.ObjectID             `json:"message_id" bson:"message_id" description:"Message ID"`
-	Content      string                         `json:"content" bson:"content" description:"Message content"`
-	Type         ChatMessageContentType         `json:"type" bson:"type" description:"Message type (text/action)"`
-	Action       string                         `json:"action,omitempty" bson:"action,omitempty" description:"Action name"`
-	ActionStatus ChatMessageContentActionStatus `json:"action_status,omitempty" bson:"action_status,omitempty" description:"Action status"`
+	MessageId    primitive.ObjectID `json:"message_id" bson:"message_id" description:"Message ID"`
+	Key          string             `json:"key" bson:"key" description:"Message content key"`
+	Content      string             `json:"content" bson:"content" description:"Message content"`
+	Type         string             `json:"type" bson:"type" description:"Message type (text/action)"`
+	Action       string             `json:"action,omitempty" bson:"action,omitempty" description:"Action name"`
+	ActionStatus string             `json:"action_status,omitempty" bson:"action_status,omitempty" description:"Action status"`
+	Hidden       bool               `json:"hidden,omitempty" bson:"hidden,omitempty" description:"Hidden"`
 }

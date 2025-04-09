@@ -9,7 +9,7 @@ type ChatMessage struct {
 	BaseModel      `bson:",inline"`
 	ConversationId primitive.ObjectID   `json:"conversation_id" bson:"conversation_id" description:"Conversation ID"`
 	Role           string               `json:"role" bson:"role" description:"Message role (user/assistant/system)"`
-	Content        string               `json:"content,omitempty" bson:"content,omitempty" description:"Message content"`
+	Content        string               `json:"content,omitempty" bson:"content,omitempty" description:"Message content for user/system only"`
 	IsAgent        bool                 `json:"is_agent,omitempty" bson:"is_agent,omitempty" description:"Is agent"`
 	ContentIds     []primitive.ObjectID `json:"content_ids,omitempty" bson:"content_ids,omitempty" description:"Content IDs"`
 	Contents       []ChatMessageContent `json:"contents,omitempty" bson:"-" description:"Contents"`
@@ -30,9 +30,9 @@ func (m *ChatMessage) GetContent() string {
 	var result string
 	for _, content := range m.Contents {
 		switch content.Type {
-		case ChatMessageContentTypeText:
+		case "text":
 			result += content.Content
-		case ChatMessageContentTypeAction:
+		case "action":
 			// Format action content with status
 			actionInfo := "[" + content.Action
 			if content.ActionStatus != "" {
