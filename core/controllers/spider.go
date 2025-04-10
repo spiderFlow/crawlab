@@ -746,12 +746,16 @@ func GetSpiderResults(c *gin.Context, params *GetSpiderResultsParams) (response 
 		return GetErrorListResponse[bson.M](err)
 	}
 
-	query := GetResultListQuery(c)
+	query := ConvertToBsonMFromContext(c)
+	if query == nil {
+		query = bson.M{}
+	}
+	query["_sid"] = s.Id
 
 	col := mongo2.GetMongoCol(s.ColName)
 
 	var results []bson.M
-	err = col.Find(mongo2.GetMongoQuery(query), mongo2.GetMongoOpts(&mongo2.ListOptions{
+	err = col.Find(query, mongo2.GetMongoOpts(&mongo2.ListOptions{
 		Sort:  []mongo2.ListSort{{"_id", mongo2.SortDirectionDesc}},
 		Skip:  params.Size * (params.Page - 1),
 		Limit: params.Size,
@@ -760,7 +764,7 @@ func GetSpiderResults(c *gin.Context, params *GetSpiderResultsParams) (response 
 		return GetErrorListResponse[bson.M](err)
 	}
 
-	total, err := mongo2.GetMongoCol(s.ColName).Count(mongo2.GetMongoQuery(query))
+	total, err := mongo2.GetMongoCol(s.ColName).Count(query)
 	if err != nil {
 		return GetErrorListResponse[bson.M](err)
 	}

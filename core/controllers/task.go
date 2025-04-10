@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,15 +10,16 @@ import (
 	"github.com/crawlab-team/crawlab/core/interfaces"
 	"github.com/crawlab-team/crawlab/core/models/models"
 	"github.com/crawlab-team/crawlab/core/models/service"
-	mongo3 "github.com/crawlab-team/crawlab/core/mongo"
+	mongo2 "github.com/crawlab-team/crawlab/core/mongo"
 	"github.com/crawlab-team/crawlab/core/spider/admin"
 	"github.com/crawlab-team/crawlab/core/task/log"
 	"github.com/crawlab-team/crawlab/core/task/scheduler"
 	"github.com/crawlab-team/crawlab/core/utils"
 	"github.com/gin-gonic/gin"
+	"github.com/juju/errors"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	mongo2 "go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type GetTaskByIdParams struct {
@@ -35,7 +35,7 @@ func GetTaskById(_ *gin.Context, params *GetTaskByIdParams) (response *Response[
 
 	// task
 	t, err := service.NewModelService[models.Task]().GetById(id)
-	if errors.Is(err, mongo2.ErrNoDocuments) {
+	if errors.Is(err, mongo.ErrNoDocuments) {
 		return GetErrorResponse[models.Task](err)
 	}
 	if err != nil {
@@ -87,13 +87,13 @@ func GetTaskList(c *gin.Context, params *GetTaskListParams) (response *ListRespo
 	}
 
 	// get tasks
-	tasks, err := service.NewModelService[models.Task]().GetMany(query, &mongo3.FindOptions{
+	tasks, err := service.NewModelService[models.Task]().GetMany(query, &mongo2.FindOptions{
 		Sort:  sort,
 		Skip:  params.Size * (params.Page - 1),
 		Limit: params.Size,
 	})
 	if err != nil {
-		if errors.Is(err, mongo2.ErrNoDocuments) {
+		if errors.Is(err, mongo.ErrNoDocuments) {
 			return GetErrorListResponse[models.Task](err)
 		}
 		return GetErrorListResponse[models.Task](err)
@@ -179,7 +179,7 @@ func DeleteTaskById(_ *gin.Context, params *DeleteTaskByIdParams) (response *Voi
 	}
 
 	// delete in db
-	if err := mongo3.RunTransaction(func(context mongo2.SessionContext) (err error) {
+	if err := mongo2.RunTransaction(func(context mongo.SessionContext) (err error) {
 		// delete task
 		_, err = service.NewModelService[models.Task]().GetById(id)
 		if err != nil {
@@ -230,7 +230,7 @@ func DeleteTaskList(_ *gin.Context, params *DeleteTaskListParams) (response *Voi
 		ids = append(ids, id)
 	}
 
-	if err := mongo3.RunTransaction(func(context mongo2.SessionContext) error {
+	if err := mongo2.RunTransaction(func(context mongo.SessionContext) error {
 		// delete tasks
 		if err := service.NewModelService[models.Task]().DeleteMany(bson.M{
 			"_id": bson.M{
@@ -439,4 +439,52 @@ func GetTaskLogs(_ *gin.Context, params *GetTaskLogsParams) (response *ListRespo
 	}
 
 	return GetListResponse(logs, total)
+}
+
+type GetTaskResultsParams struct {
+	Id   string `path:"id" description:"Task ID" format:"objectid" pattern:"^[0-9a-fA-F]{24}$"`
+	Page int    `query:"page" description:"Page" default:"1" minimum:"1"`
+	Size int    `query:"size" description:"Size" default:"10" minimum:"1"`
+}
+
+func GetTaskResults(c *gin.Context, params *GetSpiderResultsParams) (response *ListResponse[bson.M], err error) {
+	id, err := primitive.ObjectIDFromHex(params.Id)
+	if err != nil {
+		return GetErrorListResponse[bson.M](errors.BadRequestf("invalid id format"))
+	}
+
+	t, err := service.NewModelService[models.Task]().GetById(id)
+	if err != nil {
+		return GetErrorListResponse[bson.M](err)
+	}
+
+	s, err := service.NewModelService[models.Spider]().GetById(t.SpiderId)
+	if err != nil {
+		return GetErrorListResponse[bson.M](err)
+	}
+
+	query := ConvertToBsonMFromContext(c)
+	if query == nil {
+		query = bson.M{}
+	}
+	query["_tid"] = t.Id
+
+	col := mongo2.GetMongoCol(s.ColName)
+
+	var results []bson.M
+	err = col.Find(query, mongo2.GetMongoOpts(&mongo2.ListOptions{
+		Sort:  []mongo2.ListSort{{"_id", mongo2.SortDirectionDesc}},
+		Skip:  params.Size * (params.Page - 1),
+		Limit: params.Size,
+	})).All(&results)
+	if err != nil {
+		return GetErrorListResponse[bson.M](err)
+	}
+
+	total, err := mongo2.GetMongoCol(s.ColName).Count(query)
+	if err != nil {
+		return GetErrorListResponse[bson.M](err)
+	}
+
+	return GetListResponse(results, total)
 }

@@ -377,7 +377,7 @@ func InitRoutes(app *gin.Engine) (err error) {
 			Method:      http.MethodGet,
 			Path:        "/:id/results",
 			Name:        "Get Spider Results",
-			Description: "Get the results of a spider",
+			Description: "Get the scraped or crawled results data of a spider",
 			HandlerFunc: GetSpiderResults,
 		},
 	}...))
@@ -474,6 +474,13 @@ func InitRoutes(app *gin.Engine) (err error) {
 			Name:        "Get Task Logs",
 			Description: "Get the logs of a task",
 			HandlerFunc: GetTaskLogs,
+		},
+		{
+			Method:      http.MethodGet,
+			Path:        "/:id/results",
+			Name:        "Get Task Results",
+			Description: "Get the scraped or crawled results data of a task",
+			HandlerFunc: GetTaskResults,
 		},
 	}...))
 	RegisterController(groups.AuthGroup.Group("", "Users", "APIs for users management"), "/users", NewController[models.User]([]Action{

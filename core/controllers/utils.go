@@ -177,6 +177,9 @@ func ConvertToBsonMFromContext(c *gin.Context) (q bson.M) {
 
 func GetResultListQuery(c *gin.Context) (q mongo.ListQuery) {
 	f := GetFilterFromContext(c)
+	if f == nil {
+		return nil
+	}
 	for _, cond := range f.Conditions {
 		q = append(q, mongo.ListQueryCondition{
 			Key:   cond.Key,
