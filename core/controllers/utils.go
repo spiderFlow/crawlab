@@ -200,20 +200,14 @@ func GetSortsFromString(sortStr string) (sorts []entity.Sort, err error) {
 		if trimmed == "" {
 			continue
 		}
-		if !strings.HasPrefix(trimmed, "-") {
-			key := strings.TrimLeft(trimmed, "+")
+		if strings.HasPrefix(trimmed, "-") {
+			key := strings.TrimLeft(trimmed, "-")
 			sorts = append(sorts, entity.Sort{
 				Key:       key,
 				Direction: constants.DESCENDING,
 			})
-		} else if strings.HasPrefix(trimmed, "+") {
-			key := strings.TrimLeft(trimmed, "+")
-			sorts = append(sorts, entity.Sort{
-				Key:       key,
-				Direction: constants.ASCENDING,
-			})
 		} else {
-			key := strings.TrimLeft(trimmed, "-")
+			key := strings.TrimLeft(trimmed, "+")
 			sorts = append(sorts, entity.Sort{
 				Key:       key,
 				Direction: constants.ASCENDING,
