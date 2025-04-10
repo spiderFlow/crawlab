@@ -283,13 +283,14 @@ func SortsToOption(sorts []entity.Sort) (sort bson.D, err error) {
 type BaseResponse interface {
 	GetData() interface{}
 	GetDataString() string
+	ToJSON() string
 }
 
 type Response[T any] struct {
 	Status  string `json:"status"`
 	Message string `json:"message"`
-	Data    T      `json:"data"`
-	Error   string `json:"error"`
+	Data    T      `json:"data,omitempty"`
+	Error   string `json:"error,omitempty"`
 }
 
 func (r Response[T]) GetData() any {
@@ -304,12 +305,20 @@ func (r Response[T]) GetDataString() string {
 	return string(data)
 }
 
+func (r Response[T]) ToJSON() string {
+	data, err := json.Marshal(r)
+	if err != nil {
+		return ""
+	}
+	return string(data)
+}
+
 type ListResponse[T any] struct {
 	Status  string `json:"status"`
 	Message string `json:"message"`
 	Total   int    `json:"total"`
 	Data    []T    `json:"data"`
-	Error   string `json:"error"`
+	Error   string `json:"error,omitempty"`
 }
 
 func (r ListResponse[T]) GetData() any {
@@ -327,10 +336,18 @@ func (r ListResponse[T]) GetDataString() string {
 	return string(data)
 }
 
+func (r ListResponse[T]) ToJSON() string {
+	data, err := json.Marshal(r)
+	if err != nil {
+		return ""
+	}
+	return string(data)
+}
+
 type VoidResponse struct {
 	Status  string `json:"status"`
 	Message string `json:"message"`
-	Error   string `json:"error"`
+	Error   string `json:"error,omitempty"`
 }
 
 func (r VoidResponse) GetData() any {

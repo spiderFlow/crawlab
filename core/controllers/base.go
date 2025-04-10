@@ -61,7 +61,6 @@ type BaseController[T any] struct {
 	actions  []Action
 }
 
-// GetListParams represents parameters for GetList with pagination
 type GetListParams struct {
 	Filter string `query:"filter" description:"Filter query"`
 	Sort   string `query:"sort" description:"Sort options"`
