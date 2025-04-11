@@ -1,23 +1,23 @@
 package models
 
 import (
+	"github.com/crawlab-team/crawlab/core/entity"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type ChatMessage struct {
 	any            `collection:"chat_messages"`
 	BaseModel      `bson:",inline"`
-	ConversationId primitive.ObjectID   `json:"conversation_id" bson:"conversation_id" description:"Conversation ID"`
-	Role           string               `json:"role" bson:"role" description:"Message role (user/assistant/system)"`
-	Content        string               `json:"content,omitempty" bson:"content,omitempty" description:"Message content for user/system only"`
-	IsAgent        bool                 `json:"is_agent,omitempty" bson:"is_agent,omitempty" description:"Is agent"`
-	ContentIds     []primitive.ObjectID `json:"content_ids,omitempty" bson:"content_ids,omitempty" description:"Content IDs"`
-	Contents       []ChatMessageContent `json:"contents,omitempty" bson:"-" description:"Contents"`
-	Tokens         int                  `json:"tokens" bson:"tokens" description:"Number of tokens in the message"`
-	Model          string               `json:"model" bson:"model" description:"AI model used"`
-	Metadata       map[string]any       `json:"metadata,omitempty" bson:"metadata,omitempty" description:"Additional metadata"`
-	Status         string               `json:"status" bson:"status" description:"Message status (pending/completed/failed)"`
-	Error          string               `json:"error,omitempty" bson:"error,omitempty" description:"Error message if failed"`
+	ConversationId primitive.ObjectID       `json:"conversation_id" bson:"conversation_id" description:"Conversation ID"`
+	Role           string                   `json:"role" bson:"role" description:"Message role (user/assistant/system)"`
+	Content        string                   `json:"content,omitempty" bson:"content,omitempty" description:"Message content for user/system only"`
+	IsAgent        bool                     `json:"is_agent,omitempty" bson:"is_agent,omitempty" description:"Is agent"`
+	ContentIds     []primitive.ObjectID     `json:"content_ids,omitempty" bson:"content_ids,omitempty" description:"Content IDs"`
+	Contents       []ChatMessageContent     `json:"contents,omitempty" bson:"-" description:"Contents"`
+	Model          string                   `json:"model" bson:"model" description:"AI model used"`
+	Status         string                   `json:"status" bson:"status" description:"Message status (pending/completed/failed)"`
+	Error          string                   `json:"error,omitempty" bson:"error,omitempty" description:"Error message if failed"`
+	Usage          *entity.LLMResponseUsage `json:"usage,omitempty" bson:"usage,omitempty" description:"Usage"`
 }
 
 func (m *ChatMessage) GetContent() string {

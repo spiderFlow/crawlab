@@ -19,16 +19,20 @@
 
 package models
 
-import "go.mongodb.org/mongo-driver/bson/primitive"
+import (
+	"github.com/crawlab-team/crawlab/core/entity"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+)
 
 type ChatMessageContent struct {
 	any          `collection:"chat_message_contents"`
 	BaseModel    `bson:",inline"`
-	MessageId    primitive.ObjectID `json:"message_id" bson:"message_id" description:"Message ID"`
-	Key          string             `json:"key" bson:"key" description:"Message content key"`
-	Content      string             `json:"content" bson:"content" description:"Message content"`
-	Type         string             `json:"type" bson:"type" description:"Message type (text/action)"`
-	Action       string             `json:"action,omitempty" bson:"action,omitempty" description:"Action name"`
-	ActionStatus string             `json:"action_status,omitempty" bson:"action_status,omitempty" description:"Action status"`
-	Hidden       bool               `json:"hidden,omitempty" bson:"hidden,omitempty" description:"Hidden"`
+	MessageId    primitive.ObjectID       `json:"message_id" bson:"message_id" description:"Message ID"`
+	Key          string                   `json:"key" bson:"key" description:"Message content key"`
+	Content      string                   `json:"content" bson:"content" description:"Message content"`
+	Type         string                   `json:"type" bson:"type" description:"Message type (text/action)"`
+	Action       string                   `json:"action,omitempty" bson:"action,omitempty" description:"Action name"`
+	ActionStatus string                   `json:"action_status,omitempty" bson:"action_status,omitempty" description:"Action status"`
+	Hidden       bool                     `json:"hidden,omitempty" bson:"hidden,omitempty" description:"Hidden"`
+	Usage        *entity.LLMResponseUsage `json:"usage,omitempty" bson:"usage,omitempty" description:"Usage"`
 }
