@@ -17,7 +17,7 @@ type ChatMessage struct {
 	Model          string                   `json:"model" bson:"model" description:"AI model used"`
 	Status         string                   `json:"status" bson:"status" description:"Message status (pending/completed/failed)"`
 	Error          string                   `json:"error,omitempty" bson:"error,omitempty" description:"Error message if failed"`
-	Usage          *entity.LLMResponseUsage `json:"usage,omitempty" bson:"usage,omitempty" description:"Usage"`
+	Usage          *entity.LLMResponseUsage `json:"usage,omitempty" bson:"-" description:"Usage"`
 }
 
 func (m *ChatMessage) GetContent() string {
@@ -55,4 +55,20 @@ func (m *ChatMessage) GetContent() string {
 	}
 
 	return result
+}
+
+func (m *ChatMessage) GetUsage() *entity.LLMResponseUsage {
+	if len(m.Contents) == 0 {
+		return nil
+	}
+	var usage entity.LLMResponseUsage
+	for _, content := range m.Contents {
+		if content.Usage != nil {
+			// Accumulate usage
+			usage.InputTokens += content.Usage.InputTokens
+			usage.OutputTokens += content.Usage.OutputTokens
+			usage.TotalTokens += content.Usage.TotalTokens
+		}
+	}
+	return &usage
 }
