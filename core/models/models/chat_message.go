@@ -57,16 +57,19 @@ func (m *ChatMessage) GetContent() string {
 	return result
 }
 
-func (m *ChatMessage) GetUsage() *entity.LLMResponseUsage {
-	if len(m.Contents) == 0 {
+func (m *ChatMessage) GetUsage(contents []ChatMessageContent) *entity.LLMResponseUsage {
+	if contents == nil {
+		contents = m.Contents
+	}
+	if len(contents) == 0 {
 		return nil
 	}
 	var usage entity.LLMResponseUsage
-	for _, content := range m.Contents {
+	for _, content := range contents {
 		if content.Usage != nil {
 			// Accumulate usage
-			usage.InputTokens += content.Usage.InputTokens
-			usage.OutputTokens += content.Usage.OutputTokens
+			usage.PromptTokens += content.Usage.PromptTokens
+			usage.CompletionTokens += content.Usage.CompletionTokens
 			usage.TotalTokens += content.Usage.TotalTokens
 		}
 	}
