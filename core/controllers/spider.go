@@ -531,12 +531,12 @@ func DeleteSpiderList(_ *gin.Context, params *DeleteSpiderListParams) (response 
 	return GetDataResponse(models.Spider{})
 }
 
-type GetSpiderListDirParams struct {
+type GetSpiderFilesParams struct {
 	Id   string `path:"id" description:"Spider ID" format:"objectid" pattern:"^[0-9a-fA-F]{24}$"`
 	Path string `query:"path" description:"Directory path"`
 }
 
-func GetSpiderListDir(c *gin.Context, params *GetSpiderListDirParams) (response *Response[[]interfaces.FsFileInfo], err error) {
+func GetSpiderFiles(c *gin.Context, params *GetSpiderFilesParams) (response *Response[[]interfaces.FsFileInfo], err error) {
 	rootPath, err := getSpiderRootPathByContext(c)
 	if err != nil {
 		return GetErrorResponse[[]interfaces.FsFileInfo](err)
