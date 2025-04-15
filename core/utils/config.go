@@ -2,12 +2,13 @@ package utils
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/mitchellh/go-homedir"
-	"github.com/spf13/viper"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/gin-gonic/gin"
+	"github.com/mitchellh/go-homedir"
+	"github.com/spf13/viper"
 )
 
 const (
@@ -34,6 +35,7 @@ const (
 	MetadataConfigName         = "config.json"
 	DefaultPyenvPath           = "/root/.pyenv"
 	DefaultNodeModulesPath     = "/usr/lib/node_modules"
+	DefaultNodeBinPath         = "/usr/lib/node_bin"
 	DefaultGoPath              = "/root/go"
 	DefaultMCPServerHost       = "0.0.0.0"
 	DefaultMCPServerPort       = 9777
@@ -281,6 +283,13 @@ func GetNodeModulesPath() string {
 		return res
 	}
 	return DefaultNodeModulesPath
+}
+
+func GetNodeBinPath() string {
+	if res := viper.GetString("install.node.bin"); res != "" {
+		return res
+	}
+	return DefaultNodeBinPath
 }
 
 func GetGoPath() string {
