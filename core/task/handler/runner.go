@@ -340,91 +340,67 @@ func (r *Runner) startHealthCheck() {
 	}
 }
 
-// configurePythonPath sets up the Python environment paths, handling both pyenv and default installations
-func (r *Runner) configurePythonPath() {
-	// Get current PATH
-	envPath := os.Getenv("PATH")
-
-	// Configure global node_modules path
-	pyenvRoot := utils.GetPyenvPath()
-	pyenvShimsPath := pyenvRoot + "/shims"
-	pyenvBinPath := pyenvRoot + "/bin"
-
-	// Configure global pyenv path
-	err := os.Setenv("PYENV_ROOT", pyenvRoot)
-	if err != nil {
-		r.Errorf("error setting PYENV_ROOT environment variable: %v", err)
-	}
-	if !strings.Contains(envPath, pyenvShimsPath) {
-		envPath = pyenvShimsPath + ":" + envPath
-	}
-	if !strings.Contains(envPath, pyenvBinPath) {
-		envPath = pyenvBinPath + ":" + envPath
-	}
-
-	// Update PATH environment variable
-	err = os.Setenv("PATH", envPath)
-	if err != nil {
-		r.Errorf("error setting PATH environment variable: %v", err)
-	}
-}
-
-// configureNodePath sets up the Node.js environment paths, handling both nvm and default installations
-func (r *Runner) configureNodePath() {
-	// Get current PATH
-	envPath := os.Getenv("PATH")
-
-	// Configure global node_modules path
-	nodePath := utils.GetNodeModulesPath()
-	if !strings.Contains(envPath, nodePath) {
-		envPath = nodePath + ":" + envPath
-	}
-	err := os.Setenv("NODE_PATH", nodePath)
-	if err != nil {
-		r.Errorf("error setting NODE_PATH environment variable: %v", err)
-	}
-
-	// Configure global node_bin path
-	nodeBinPath := utils.GetNodeBinPath()
-	if !strings.Contains(envPath, nodeBinPath) {
-		envPath = nodeBinPath + ":" + envPath
-	}
-
-	// Update PATH environment variable
-	err = os.Setenv("PATH", envPath)
-	if err != nil {
-		r.Errorf("error setting PATH environment variable: %v", err)
-	}
-}
-
-func (r *Runner) configureGoPath() {
-	// Configure global go path
-	goPath := utils.GetGoPath()
-	if goPath != "" {
-		err := os.Setenv("GOPATH", goPath)
-		if err != nil {
-			r.Errorf("error setting GOPATH environment variable: %v", err)
-		}
-	}
-}
-
 // configureEnv sets up the environment variables for the task process, including:
+// - Python paths
 // - Node.js paths
+// - Go paths
 // - Crawlab-specific variables
 // - Global environment variables from the system
 func (r *Runner) configureEnv() {
+	// Start with the current environment
+	env := os.Environ()
+
+	// Create a map for easier manipulation and to avoid duplicates
+	envMap := make(map[string]string)
+	for _, e := range env {
+		parts := strings.SplitN(e, "=", 2)
+		if len(parts) == 2 {
+			envMap[parts[0]] = parts[1]
+		}
+	}
+
+	// Handle PATH non-existence
+	if _, exists := envMap["PATH"]; !exists {
+		envMap["PATH"] = ""
+	}
+
 	// Configure Python path
-	r.configurePythonPath()
+	pyenvRoot := utils.GetPyenvPath()
+	pyenvShimsPath := pyenvRoot + "/shims"
+	pyenvBinPath := pyenvRoot + "/bin"
+	envMap["PYENV_ROOT"] = pyenvRoot
+	if !strings.Contains(envMap["PATH"], pyenvShimsPath) {
+		envMap["PATH"] = pyenvShimsPath + ":" + envMap["PATH"]
+		r.Debugf("added pyenv shims path to PATH: %s", pyenvShimsPath)
+	}
+	if !strings.Contains(envMap["PATH"], pyenvBinPath) {
+		envMap["PATH"] = pyenvBinPath + ":" + envMap["PATH"]
+		r.Debugf("added pyenv bin path to PATH: %s", pyenvBinPath)
+	}
 
 	// Configure Node.js path
-	r.configureNodePath()
+	nodePath := utils.GetNodeModulesPath()
+	nodeBinPath := utils.GetNodeBinPath()
+	envMap["NODE_PATH"] = nodePath
+	if !strings.Contains(envMap["PATH"], nodePath) {
+		envMap["PATH"] = nodePath + ":" + envMap["PATH"]
+		r.Debugf("added node modules path to PATH: %s", nodePath)
+	}
+	if !strings.Contains(envMap["PATH"], nodeBinPath) {
+		envMap["PATH"] = nodeBinPath + ":" + envMap["PATH"]
+		r.Debugf("added node bin path to PATH: %s", nodeBinPath)
+	}
 
 	// Configure Go path
-	r.configureGoPath()
+	goPath := utils.GetGoPath()
+	if goPath != "" {
+		envMap["GOPATH"] = goPath
+		r.Debugf("set GOPATH: %s", goPath)
+	}
 
-	// Default envs
-	r.cmd.Env = os.Environ()
-	r.cmd.Env = append(r.cmd.Env, "CRAWLAB_TASK_ID="+r.tid.Hex())
+	// Crawlab-specific variables
+	envMap["CRAWLAB_TASK_ID"] = r.tid.Hex()
+	envMap["CRAWLAB_PARENT_PID"] = fmt.Sprint(os.Getpid())
 
 	// Global environment variables
 	envs, err := client.NewModelService[models.Environment]().GetMany(nil, nil)
@@ -433,11 +409,17 @@ func (r *Runner) configureEnv() {
 		return
 	}
 	for _, env := range envs {
-		r.cmd.Env = append(r.cmd.Env, env.Key+"="+env.Value)
+		envMap[env.Key] = env.Value
+		r.Debugf("set environment variable: %s", env.Key)
 	}
 
-	// Add environment variable for child processes to identify they're running under Crawlab
-	r.cmd.Env = append(r.cmd.Env, "CRAWLAB_PARENT_PID="+fmt.Sprint(os.Getpid()))
+	// Convert the map back to the []string format for r.cmd.Env
+	r.cmd.Env = make([]string, 0, len(envMap))
+	for key, value := range envMap {
+		r.cmd.Env = append(r.cmd.Env, key+"="+value)
+	}
+
+	r.Debugf("environment configuration completed with %d variables", len(r.cmd.Env))
 }
 
 func (r *Runner) createHttpRequest(method, path string) (*http.Response, error) {
