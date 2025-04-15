@@ -351,7 +351,10 @@ func (r *Runner) configurePythonPath() {
 	pyenvBinPath := pyenvRoot + "/bin"
 
 	// Configure global pyenv path
-	r.cmd.Env = append(r.cmd.Env, "PYENV_ROOT="+pyenvRoot)
+	err := os.Setenv("PYENV_ROOT", pyenvRoot)
+	if err != nil {
+		r.Errorf("error setting PYENV_ROOT environment variable: %v", err)
+	}
 	if !strings.Contains(envPath, pyenvShimsPath) {
 		envPath = pyenvShimsPath + ":" + envPath
 	}
@@ -360,7 +363,10 @@ func (r *Runner) configurePythonPath() {
 	}
 
 	// Update PATH environment variable
-	r.cmd.Env = append(r.cmd.Env, "PATH="+envPath)
+	err = os.Setenv("PATH", envPath)
+	if err != nil {
+		r.Errorf("error setting PATH environment variable: %v", err)
+	}
 }
 
 // configureNodePath sets up the Node.js environment paths, handling both nvm and default installations
@@ -373,7 +379,10 @@ func (r *Runner) configureNodePath() {
 	if !strings.Contains(envPath, nodePath) {
 		envPath = nodePath + ":" + envPath
 	}
-	r.cmd.Env = append(r.cmd.Env, "NODE_PATH="+nodePath)
+	err := os.Setenv("NODE_PATH", nodePath)
+	if err != nil {
+		r.Errorf("error setting NODE_PATH environment variable: %v", err)
+	}
 
 	// Configure global node_bin path
 	nodeBinPath := utils.GetNodeBinPath()
@@ -382,14 +391,20 @@ func (r *Runner) configureNodePath() {
 	}
 
 	// Update PATH environment variable
-	r.cmd.Env = append(r.cmd.Env, "PATH="+envPath)
+	err = os.Setenv("PATH", envPath)
+	if err != nil {
+		r.Errorf("error setting PATH environment variable: %v", err)
+	}
 }
 
 func (r *Runner) configureGoPath() {
 	// Configure global go path
 	goPath := utils.GetGoPath()
 	if goPath != "" {
-		r.cmd.Env = append(r.cmd.Env, "GOPATH="+goPath)
+		err := os.Setenv("GOPATH", goPath)
+		if err != nil {
+			r.Errorf("error setting GOPATH environment variable: %v", err)
+		}
 	}
 }
 
@@ -398,10 +413,6 @@ func (r *Runner) configureGoPath() {
 // - Crawlab-specific variables
 // - Global environment variables from the system
 func (r *Runner) configureEnv() {
-	// Default envs
-	r.cmd.Env = os.Environ()
-	r.cmd.Env = append(r.cmd.Env, "CRAWLAB_TASK_ID="+r.tid.Hex())
-
 	// Configure Python path
 	r.configurePythonPath()
 
@@ -410,6 +421,10 @@ func (r *Runner) configureEnv() {
 
 	// Configure Go path
 	r.configureGoPath()
+
+	// Default envs
+	r.cmd.Env = os.Environ()
+	r.cmd.Env = append(r.cmd.Env, "CRAWLAB_TASK_ID="+r.tid.Hex())
 
 	// Global environment variables
 	envs, err := client.NewModelService[models.Environment]().GetMany(nil, nil)
