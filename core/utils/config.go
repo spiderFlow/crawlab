@@ -33,6 +33,7 @@ const (
 	MetadataConfigName         = "config.json"
 	DefaultPyenvPath           = "/root/.pyenv"
 	DefaultNodeModulesPath     = "/usr/lib/node_modules"
+	DefaultNodeBinPath         = "/usr/lib/bin"
 	DefaultGoPath              = "/root/go"
 )
 
@@ -269,6 +270,13 @@ func GetNodeModulesPath() string {
 		return res
 	}
 	return DefaultNodeModulesPath
+}
+
+func GetNodeBinPath() string {
+	if res := viper.GetString("install.node.bin"); res != "" {
+		return res
+	}
+	return DefaultNodeBinPath
 }
 
 func GetGoPath() string {
