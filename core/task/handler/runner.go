@@ -361,15 +361,17 @@ func (r *Runner) configureNodePath() {
 	// Configure global node_modules path
 	nodePath := utils.GetNodeModulesPath()
 	if !strings.Contains(envPath, nodePath) {
-		_ = os.Setenv("PATH", nodePath+":"+envPath)
+		envPath = nodePath + ":" + envPath
 	}
 	_ = os.Setenv("NODE_PATH", nodePath)
 
 	// Configure global node_bin path
 	nodeBinPath := utils.GetNodeBinPath()
 	if !strings.Contains(envPath, nodeBinPath) {
-		_ = os.Setenv("PATH", nodeBinPath+":"+envPath)
+		envPath = nodeBinPath + ":" + envPath
 	}
+
+	_ = os.Setenv("PATH", envPath)
 }
 
 func (r *Runner) configureGoPath() {
