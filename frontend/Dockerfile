@@ -14,6 +14,10 @@ RUN npm install -g pnpm
 # Copy application code
 ADD ./crawlab-ui /app
 
+# Debug: List files to verify they're correctly copied
+RUN ls -la /app/src/components/ui/logs/
+RUN cat /app/src/components/ui/logs/LogsView.vue
+
 # Install project dependencies
 RUN pnpm install
 
