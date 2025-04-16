@@ -1,6 +1,7 @@
 import { resolve } from 'path';
 import { defineConfig, UserConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
+import vueJsx from '@vitejs/plugin-vue-jsx';
 import dynamicImport from 'vite-plugin-dynamic-import';
 import { visualizer } from 'rollup-plugin-visualizer';
 
@@ -26,14 +27,13 @@ export default defineConfig(({ mode }) => {
       include: ['element-plus', 'axios', 'monaco-editor'],
     },
     resolve: {
-      dedupe: ['vue', 'vue-router', 'vuex', 'axios', 'element-plus'],
       alias: {
         '@': resolve(__dirname, 'src'),
       },
       extensions: ['.js', '.ts', '.jsx', '.tsx', '.json', '.vue'],
     },
     // @ts-ignore
-    plugins: [vue(), dynamicImport()],
+    plugins: [vue(), vueJsx(), dynamicImport()],
     server: {
       cors: true,
     },

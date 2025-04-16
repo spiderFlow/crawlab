@@ -73,7 +73,7 @@ defineOptions({ name: 'ClCurrentMetrics' });
         :clickable="clickable"
         :icon="['fa', 'memory']"
         :type="getTagType(metric?.used_memory_percent)"
-        :label="`${formatBytes(metric?.used_memory)} / ${formatBytes(metric?.total_memory)} (${Math.round(metric?.used_memory_percent || 0)}%)`"
+        :label="`${Math.round(metric?.used_memory_percent || 0)}%`"
         @click="(event: MouseEvent) => emit('click', event)"
       >
         <template #tooltip>
@@ -103,7 +103,7 @@ defineOptions({ name: 'ClCurrentMetrics' });
         :clickable="clickable"
         :icon="['fa', 'hdd']"
         :type="getTagType(metric?.used_disk_percent)"
-        :label="`${formatBytes(metric?.used_disk)} / ${formatBytes(metric?.total_disk)} (${Math.round(metric?.used_disk_percent || 0)}%)`"
+        :label="`${Math.round(metric?.used_disk_percent || 0)}%`"
         @click="(event: MouseEvent) => emit('click', event)"
       >
         <template #tooltip>
@@ -188,6 +188,7 @@ defineOptions({ name: 'ClCurrentMetrics' });
 .current-metrics {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  gap: 5px;
 }
 </style>

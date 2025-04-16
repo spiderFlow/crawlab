@@ -1,5 +1,5 @@
 <script setup lang="tsx">
-import { computed, h } from 'vue';
+import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { useStore } from 'vuex';
 import { ClButtonGroup, ClFaIconButton } from '@/components';

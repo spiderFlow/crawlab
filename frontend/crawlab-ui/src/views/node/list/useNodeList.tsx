@@ -6,12 +6,9 @@ import {
   setupListComponent,
 } from '@/utils/list';
 import useList from '@/layouts/content/list/useList';
-import NodeType from '@/components/core/node/NodeType.vue';
+import { ClNodeType } from '@/components';
 import {
   TABLE_COLUMN_NAME_ACTIONS,
-  TABLE_ACTION_EDIT,
-  TABLE_ACTION_CUSTOMIZE_COLUMNS,
-  TABLE_ACTION_EXPORT,
 } from '@/constants/table';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import useNodeService from '@/services/node/nodeService';
@@ -123,7 +120,7 @@ const useNodeList = () => {
             store,
             ns,
             'name',
-            FILTER_OP_CONTAINS
+            FILTER_OP_CONTAINS,
           ),
         },
         {
@@ -139,7 +136,7 @@ const useNodeList = () => {
             store,
             ns,
             'is_master',
-            FILTER_OP_EQUAL
+            FILTER_OP_EQUAL,
           ),
         },
         {
@@ -161,7 +158,7 @@ const useNodeList = () => {
             store,
             ns,
             'status',
-            FILTER_OP_EQUAL
+            FILTER_OP_EQUAL,
           ),
         },
         {
@@ -177,7 +174,7 @@ const useNodeList = () => {
             store,
             ns,
             'enabled',
-            FILTER_OP_EQUAL
+            FILTER_OP_EQUAL,
           ),
         },
       ],
@@ -208,7 +205,7 @@ const useNodeList = () => {
           icon: ['fa', 'list'],
           width: '150',
           value: (row: Node) => {
-            return <NodeType isMaster={row.is_master} />;
+            return <ClNodeType isMaster={row.is_master} />;
           },
           hasFilter: true,
           allowFilterItems: true,
@@ -275,7 +272,7 @@ const useNodeList = () => {
                 disabled={
                   !isAllowedAction(
                     router.currentRoute.value.path,
-                    ACTION_ENABLE
+                    ACTION_ENABLE,
                   )
                 }
                 onUpdate:modelValue={async (value: boolean) => {
@@ -305,7 +302,7 @@ const useNodeList = () => {
           className: 'current-metric',
           label: t('views.nodes.table.columns.currentMetrics'),
           icon: ['fa', 'chart-line'],
-          width: '200',
+          width: '240',
           value: (row: Node) => {
             if (!row._id) return;
             const currentMetrics = state.nodeMetricsMap[row._id];
@@ -372,7 +369,7 @@ const useNodeList = () => {
                     {
                       type: 'warning',
                       confirmButtonClass: 'el-button--danger',
-                    }
+                    },
                   );
                   if (res) {
                     await deleteById(row._id as string);
@@ -397,7 +394,7 @@ const useNodeList = () => {
         return !['current-metric'].includes(col.key);
       }
       return true;
-    })
+    }),
   );
 
   // options
