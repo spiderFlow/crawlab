@@ -33,7 +33,7 @@ const (
 	MetadataConfigName         = "config.json"
 	DefaultPyenvPath           = "/root/.pyenv"
 	DefaultNodeModulesPath     = "/usr/lib/node_modules"
-	DefaultNodeBinPath         = "/usr/lib/bin"
+	DefaultNodeBinPath         = "/usr/lib/node_bin"
 	DefaultGoPath              = "/root/go"
 )
 
