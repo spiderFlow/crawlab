@@ -10,11 +10,19 @@ interface LViewsSystem {
     enabled: string;
     apiKey: string;
     apiBaseUrl: string;
+    deploymentName: string;
     apiVersion: string;
-    model: string;
+    models: string;
+    defaultModels: string;
+    customModels: string;
+    addCustomModel: string;
+    noCustomModels: string;
+    modelAlreadyExists: string;
     temperature: string;
     maxTokens: string;
     topP: string;
+    unset: string;
+    disabled: string;
   };
   customize: {
     customTitle: string;

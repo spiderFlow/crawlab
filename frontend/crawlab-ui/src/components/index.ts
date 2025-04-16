@@ -216,6 +216,7 @@ import TransferPanel from './ui/transfer/TransferPanel.vue';
 import UploadFilesDialog from './ui/file/UploadFilesDialog.vue';
 import UploadGitFilesDialog from './core/git/UploadGitFilesDialog.vue';
 import UploadSpiderFilesDialog from './core/spider/UploadSpiderFilesDialog.vue';
+import useAssistantConsole from './core/ai/useAssistantConsole';
 import useCanShowPlaceholder from './ui/lexical/composables/useCanShowPlaceholder';
 import useDatabase from './core/database/useDatabase';
 import useDecorators from './ui/lexical/composables/useDecorators';
@@ -460,6 +461,7 @@ export {
   UploadFilesDialog as ClUploadFilesDialog,
   UploadGitFilesDialog as ClUploadGitFilesDialog,
   UploadSpiderFilesDialog as ClUploadSpiderFilesDialog,
+  useAssistantConsole as useAssistantConsole,
   useCanShowPlaceholder as useCanShowPlaceholder,
   useDatabase as useDatabase,
   useDecorators as useDecorators,

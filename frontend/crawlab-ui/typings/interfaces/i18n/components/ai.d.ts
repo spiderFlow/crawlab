@@ -19,9 +19,22 @@ export declare global {
         maxTokens: string;
       };
       history: string;
-      add: string;
+      new: string;
       enterHint: string;
       poweredBy: string;
+      cancel: string;
+      generating: string;
+      searchHistory: string;
+      noConversations: string;
+      newChat: string;
+      addModel: {
+        label: string;
+        tooltip: string;
+      };
+      tokens: string;
+      promptTokens: string;
+      completionTokens: string;
+      totalTokens: string;
     };
   }
-} 
+}
