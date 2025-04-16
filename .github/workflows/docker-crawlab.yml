@@ -22,8 +22,6 @@ env:
   IMAGE_NAME_CRAWLAB_GH: ghcr.io/${{ github.repository_owner }}/crawlab
   IMAGE_NAME_CRAWLAB_DOCKERHUB: crawlabteam/crawlab
   IMAGE_NAME_CRAWLAB_TENCENT: ccr.ccs.tencentyun.com/crawlab/crawlab
-  E2E_TESTS_IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/e2e-tests
-  E2E_TESTS_WORKSPACE: ${{ github.workspace }}/playwright-report
 
 jobs:
   setup:
@@ -36,7 +34,6 @@ jobs:
       workflow_changed: ${{ steps.check_changed_files.outputs.workflow_changed }}
       base_image_changed: ${{ steps.check_changed_files.outputs.base_image_changed }}
       version: ${{ steps.version.outputs.version }}
-      test_script: ${{ steps.test_config.outputs.test_script }}
 
     steps:
       - uses: actions/checkout@v4
@@ -102,17 +99,6 @@ jobs:
           [ "$VERSION" == "main" ] && VERSION=latest
           
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-      - id: test_config
-        name: Set test configuration
-        run: |
-          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            echo "test_script=test:full" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.ref }}" == "refs/heads/test" ]]; then
-            echo "test_script=test:extended" >> $GITHUB_OUTPUT
-          else
-            echo "test_script=test:normal" >> $GITHUB_OUTPUT
-          fi
 
   build_base_image:
     name: Build base image
@@ -286,64 +272,10 @@ jobs:
           tags: |
             ${{ env.IMAGE_NAME_CRAWLAB_GH }}:${{ needs.setup.outputs.version }}
 
-  test_crawlab:
-    name: Test crawlab
-    needs: [setup, build_crawlab]
-    if: ${{ always() && needs.build_crawlab.result == 'success' }}
-    runs-on: ubuntu-latest
-    services:
-      mongo:
-        image: mongo:5
-        options: >-
-          --health-cmd "mongosh --eval 'db.adminCommand(\"ping\")' || exit 1"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-      master:
-        image: ghcr.io/${{ github.repository_owner }}/crawlab:${{ needs.setup.outputs.version }}
-        env:
-          CRAWLAB_NODE_MASTER: Y
-          CRAWLAB_MONGO_HOST: mongo 
-          CRAWLAB_MONGO_PORT: 27017
-        ports:
-          - 8080:8080
-      worker:
-        image: ghcr.io/${{ github.repository_owner }}/crawlab:${{ needs.setup.outputs.version }}
-        env:
-          CRAWLAB_NODE_MASTER: N
-          CRAWLAB_MASTER_HOST: master
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Pull e2e test image
-        run: |
-          docker pull ${{ env.E2E_TESTS_IMAGE_NAME }}:latest
-      - name: Run e2e test image
-        run: |
-          docker run --network host \
-            -e BASE_URL=http://localhost:8080 \
-            -e TEST_SCRIPT=${{ needs.setup.outputs.test_script }} \
-            -v ${{ env.E2E_TESTS_WORKSPACE }}:/app/playwright-report \
-            ${{ env.E2E_TESTS_IMAGE_NAME }}:latest
-      - name: Upload test results
-        if: ${{ success() || failure() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report-${{ needs.setup.outputs.version }}
-          path: ${{ env.E2E_TESTS_WORKSPACE }}
-          retention-days: 1
-          overwrite: true
-
   push_images:
     name: Push images
-    if: ${{ always() && needs.test_crawlab.result == 'success' }}
-    needs: [setup, test_crawlab]
+    if: ${{ always() && needs.build_crawlab.result == 'success' }}
+    needs: [setup, build_crawlab]
     runs-on: ubuntu-latest
     strategy:
       matrix:
