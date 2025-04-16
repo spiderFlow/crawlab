@@ -12,7 +12,7 @@ WORKDIR /app
 RUN npm install -g pnpm
 
 # Copy application code
-ADD . .
+ADD crawlab-ui/* .
 
 # Install project dependencies
 RUN pnpm install
