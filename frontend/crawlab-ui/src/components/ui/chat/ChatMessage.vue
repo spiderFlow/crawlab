@@ -4,6 +4,7 @@ import markdownit from 'markdown-it';
 import hljs from 'highlight.js';
 import { computed, ref, watch } from 'vue';
 import 'highlight.js/styles/github.css';
+import ClChatMessageAction from '@/components/ui/chat/ChatMessageAction.vue';
 
 const { t } = useI18n();
 
@@ -69,9 +70,9 @@ const filteredContents = computed<ChatMessageContent[]>(() => {
 // Compute token usage display
 const hasTokenUsage = computed(() => {
   const { message } = props;
-  return message.usage && 
-    (message.usage.total_tokens || 
-     message.usage.prompt_tokens || 
+  return message.usage &&
+    (message.usage.total_tokens ||
+     message.usage.prompt_tokens ||
      message.usage.completion_tokens);
 });
 
@@ -98,6 +99,7 @@ defineOptions({ name: 'ClChatMessage' });
             v-if="content.type === 'action'"
             :action="content.action!"
             :action-status="content.action_status!"
+            :parameters="content.parameters"
             :content="content.content"
           />
 

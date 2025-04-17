@@ -38,7 +38,6 @@ const actions = {
     if (!setting.value) {
       setting.value = {};
     }
-    console.debug(setting)
     commit('setSetting', { key, value: setting });
   },
   saveSetting: async (

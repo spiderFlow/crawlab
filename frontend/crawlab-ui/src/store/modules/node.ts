@@ -49,7 +49,7 @@ const actions = {
       page,
       size,
       conditions: JSON.stringify(state.tableListFilter),
-      sort: JSON.stringify(state.tableListSort),
+      // sort: JSON.stringify(state.tableListSort),
     } as ListRequestParams);
     commit('setNodeMetricsMap', res.data);
     return res;

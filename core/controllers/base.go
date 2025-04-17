@@ -63,7 +63,7 @@ type BaseController[T any] struct {
 
 type GetListParams struct {
 	Filter string `query:"filter" description:"Filter query"`
-	Sort   string `query:"sort" description:"Sort options"`
+	Sort   string `query:"sort" default:"-_id" description:"Sort options"`
 	Page   int    `query:"page" default:"1" description:"Page number" minimum:"1"`
 	Size   int    `query:"size" default:"10" description:"Page size" minimum:"1"`
 	All    bool   `query:"all" default:"false" description:"Whether to get all items"`

@@ -674,7 +674,7 @@ func PostSpiderExport(c *gin.Context, _ *PostSpiderExportParams) (err error) {
 
 type PostSpiderRunParams struct {
 	Id         string   `path:"id" description:"Spider ID" format:"objectid" pattern:"^[0-9a-fA-F]{24}$"`
-	Mode       string   `json:"mode" description:"Run mode" enum:"random,all,selected-nodes"`
+	Mode       string   `json:"mode" description:"Run mode: random,all,selected-nodes" default:"random" enum:"random,all,selected-nodes"`
 	NodeIds    []string `json:"node_ids" description:"Node IDs, used in selected-nodes mode"`
 	Cmd        string   `json:"cmd" description:"Command"`
 	Param      string   `json:"param" description:"Parameters"`
@@ -686,6 +686,12 @@ func PostSpiderRun(c *gin.Context, params *PostSpiderRunParams) (response *Respo
 	id, err := primitive.ObjectIDFromHex(params.Id)
 	if err != nil {
 		return GetErrorResponse[[]primitive.ObjectID](errors.BadRequestf("invalid id format"))
+	}
+
+	// get spider
+	s, err := service.NewModelService[models.Spider]().GetById(id)
+	if err != nil {
+		return GetErrorResponse[[]primitive.ObjectID](errors.NotFoundf("spider not found"))
 	}
 
 	// options
@@ -713,6 +719,18 @@ func PostSpiderRun(c *gin.Context, params *PostSpiderRunParams) (response *Respo
 		Param:      params.Param,
 		ScheduleId: scheduleId,
 		Priority:   params.Priority,
+	}
+	if opts.Mode == "" {
+		opts.Mode = s.Mode
+	}
+	if opts.Cmd == "" {
+		opts.Cmd = s.Cmd
+	}
+	if opts.Param == "" {
+		opts.Param = s.Param
+	}
+	if opts.Priority == 0 {
+		opts.Priority = s.Priority
 	}
 
 	// user

@@ -29,6 +29,7 @@ type ChatMessageContent struct {
 	BaseModel    `bson:",inline"`
 	MessageId    primitive.ObjectID       `json:"message_id" bson:"message_id" description:"Message ID"`
 	Key          string                   `json:"key" bson:"key" description:"Message content key"`
+	Parameters   map[string]interface{}   `json:"parameters" bson:"parameters" description:"Message content parameters"`
 	Content      string                   `json:"content" bson:"content" description:"Message content"`
 	Type         string                   `json:"type" bson:"type" description:"Message type (text/action)"`
 	Action       string                   `json:"action,omitempty" bson:"action,omitempty" description:"Action name"`

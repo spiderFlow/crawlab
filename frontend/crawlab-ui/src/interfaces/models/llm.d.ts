@@ -56,6 +56,7 @@ export declare global {
   interface ChatMessageContent extends BaseModel {
     message_id?: string;
     key?: string;
+    parameters?: Record<string, any>;
     content?: string;
     type: ChatMessageContentType;
     action?: string;
@@ -114,6 +115,7 @@ export declare global {
     conversation_title?: string;
     message_id?: string;
     key?: string;
+    parameters?: Record<string, any>;
     content?: string;
     type: 'text' | 'action'; // Message type
     action_id?: string;

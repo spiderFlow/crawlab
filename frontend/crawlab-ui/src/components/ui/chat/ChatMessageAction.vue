@@ -5,11 +5,14 @@ import JsonEditorVue from 'json-editor-vue';
 const props = defineProps<{
   action: string;
   actionStatus: ChatMessageActionStatus;
+  parameters?: Record<string, any>;
   content?: string;
 }>();
 
 const isExpanded = ref(false);
 const isFullScreen = ref(false);
+const isParamsExpanded = ref(true);
+const isResponseExpanded = ref(true);
 
 const actionStatusIcon = computed<Icon>(() => {
   switch (props.actionStatus) {
@@ -33,8 +36,16 @@ const parsedContent = computed<Record<string, any> | Record<string, any>[] | nul
   }
 });
 
+const hasParameters = computed(() => {
+  return props.parameters && Object.keys(props.parameters).length > 0;
+});
+
 const isJsonContent = computed(() => {
-  return parsedContent.value !== null;
+  return parsedContent.value !== null || hasParameters.value;
+});
+
+const hasContent = computed(() => {
+  return props.content || hasParameters.value;
 });
 
 defineOptions({ name: 'ClChatMessageAction' });
@@ -69,7 +80,7 @@ defineOptions({ name: 'ClChatMessageAction' });
           @click.stop="isFullScreen = true"
         />
         <cl-icon
-          v-if="content"
+          v-if="hasContent"
           class="action-button"
           :icon="['fas', isExpanded ? 'chevron-up' : 'chevron-down']"
           @click.stop="isExpanded = !isExpanded"
@@ -77,23 +88,53 @@ defineOptions({ name: 'ClChatMessageAction' });
       </div>
     </div>
     <div
-      v-if="content"
+      v-if="hasContent"
       class="action-content"
       :class="{ expanded: isExpanded }"
     >
       <el-scrollbar max-height="500px">
-        <template v-if="isJsonContent">
-          <div class="json-content">
+        <!-- Parameters Section -->
+        <div v-if="hasParameters" class="content-section">
+          <div class="section-header" @click="isParamsExpanded = !isParamsExpanded">
+            <span class="section-title">Parameters</span>
+            <cl-icon
+              class="action-button"
+              :icon="['fas', isParamsExpanded ? 'chevron-up' : 'chevron-down']"
+            />
+          </div>
+          <div v-show="isParamsExpanded" class="json-content">
             <json-editor-vue
-              v-model="parsedContent"
+              :model-value="parameters"
               expanded-on-start
               read-only
             />
           </div>
-        </template>
-        <template v-else>
-          {{ content }}
-        </template>
+        </div>
+
+        <!-- Response Section -->
+        <div v-if="content" class="content-section">
+          <div class="section-header" @click="isResponseExpanded = !isResponseExpanded">
+            <span class="section-title">Response</span>
+            <cl-icon
+              class="action-button"
+              :icon="['fas', isResponseExpanded ? 'chevron-up' : 'chevron-down']"
+            />
+          </div>
+          <div v-show="isResponseExpanded">
+            <template v-if="parsedContent">
+              <div class="json-content">
+                <json-editor-vue
+                  :model-value="parsedContent"
+                  expanded-on-start
+                  read-only
+                />
+              </div>
+            </template>
+            <template v-else>
+              <div class="text-content">{{ content }}</div>
+            </template>
+          </div>
+        </div>
       </el-scrollbar>
     </div>
   </div>
@@ -107,11 +148,50 @@ defineOptions({ name: 'ClChatMessageAction' });
     fullscreen
     append-to-body
   >
-    <json-editor-vue
-      v-model="parsedContent"
-      expanded-on-start
-      read-only
-    />
+    <div class="fullscreen-content">
+      <!-- Parameters Section -->
+      <div v-if="hasParameters" class="content-section">
+        <div class="section-header" @click="isParamsExpanded = !isParamsExpanded">
+          <span class="section-title">Parameters</span>
+          <cl-icon
+            class="action-button"
+            :icon="['fas', isParamsExpanded ? 'chevron-up' : 'chevron-down']"
+          />
+        </div>
+        <div v-show="isParamsExpanded" class="json-content">
+          <json-editor-vue
+            :model-value="parameters"
+            expanded-on-start
+            read-only
+          />
+        </div>
+      </div>
+
+      <!-- Response Section -->
+      <div v-if="content" class="content-section">
+        <div class="section-header" @click="isResponseExpanded = !isResponseExpanded">
+          <span class="section-title">Response</span>
+          <cl-icon
+            class="action-button"
+            :icon="['fas', isResponseExpanded ? 'chevron-up' : 'chevron-down']"
+          />
+        </div>
+        <div v-show="isResponseExpanded">
+          <template v-if="parsedContent">
+            <div class="json-content">
+              <json-editor-vue
+                :model-value="parsedContent"
+                expanded-on-start
+                read-only
+              />
+            </div>
+          </template>
+          <template v-else>
+            <div class="text-content">{{ content }}</div>
+          </template>
+        </div>
+      </div>
+    </div>
   </el-dialog>
 </template>
 
@@ -221,8 +301,36 @@ defineOptions({ name: 'ClChatMessageAction' });
   transition: max-height 0.3s ease-in;
 }
 
+.content-section {
+  margin-bottom: 4px;
+}
+
+.content-section:last-child {
+  margin-bottom: 0;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px 0 0;
+  margin-bottom: 0;
+  cursor: pointer;
+}
+
+.section-title {
+  font-weight: 500;
+  color: var(--el-text-color-primary);
+}
+
 .json-content {
+  padding: 0 10px 0 0;
+}
+
+.text-content {
   padding: 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .action-content :deep(.jse-main) {
@@ -246,10 +354,22 @@ defineOptions({ name: 'ClChatMessageAction' });
   max-width: 100%;
   overflow-x: auto;
 }
+
+.fullscreen-content {
+  height: calc(100vh - 80px);
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.fullscreen-content .content-section {
+  background: var(--el-bg-color);
+  border-radius: 4px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
 </style>
 <style>
 .el-dialog.is-fullscreen .jse-main {
-  height: calc(100vh - 80px) !important;
   background: var(--el-bg-color);
   padding: 16px;
   border-radius: 4px;
