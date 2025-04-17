@@ -411,11 +411,12 @@ const useAssistantConsole = () => {
     }
   });
 
-  onMounted(() => {
+  const focusInput = () => {
     setTimeout(() => {
       chatInputRef.value?.focus();
-    }, 200);
-  });
+    }, 500);
+  };
+  onMounted(focusInput);
 
   return {
     // Refs

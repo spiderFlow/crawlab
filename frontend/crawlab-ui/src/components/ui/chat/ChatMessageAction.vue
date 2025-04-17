@@ -24,28 +24,13 @@ const actionStatusIcon = computed<Icon>(() => {
   }
 });
 
-const parsedContent = computed<ParsedResourceContent[] | null>(() => {
+const parsedContent = computed<Record<string, any> | Record<string, any>[] | null>(() => {
   if (!props.content) return null;
-  let resourceContents: ResourceContent[];
   try {
-    resourceContents = JSON.parse(props.content);
+    return JSON.parse(props.content);
   } catch (e) {
     return null;
   }
-  if (!resourceContents) return null;
-  return resourceContents.map(resourceContent => {
-    const parsedResourceContent: ParsedResourceContent = {
-      ...resourceContent,
-    };
-    if (typeof parsedResourceContent.text === 'string') {
-      try {
-        parsedResourceContent.text = JSON.parse(parsedResourceContent.text);
-      } catch (e) {
-        // do nothing
-      }
-    }
-    return parsedResourceContent;
-  });
 });
 
 const isJsonContent = computed(() => {
@@ -101,7 +86,6 @@ defineOptions({ name: 'ClChatMessageAction' });
           <div class="json-content">
             <json-editor-vue
               v-model="parsedContent"
-              mode="view"
               expanded-on-start
               read-only
             />
@@ -125,7 +109,6 @@ defineOptions({ name: 'ClChatMessageAction' });
   >
     <json-editor-vue
       v-model="parsedContent"
-      mode="view"
       expanded-on-start
       read-only
     />

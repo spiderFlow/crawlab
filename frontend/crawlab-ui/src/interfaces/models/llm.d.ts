@@ -126,13 +126,4 @@ export declare global {
     is_text_done?: boolean;
     usage?: ChatMessageUsage;
   }
-
-  interface ResourceContent {
-    uri?: string;
-    text?: string;
-  }
-
-  interface ParsedResourceContent extends ResourceContent {
-    text?: string | boolean | number | Record<string, any> | Array<any>;
-  }
 }
