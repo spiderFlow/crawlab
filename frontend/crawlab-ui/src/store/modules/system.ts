@@ -34,8 +34,12 @@ const actions = {
     { key }: { key: string }
   ) => {
     const res = await get(`/settings/${key}`);
-    const resData = res.data || getDefaultSetting(key);
-    commit('setSetting', { key, value: resData });
+    const setting = res.data || getDefaultSetting(key);
+    if (!setting.value) {
+      setting.value = {};
+    }
+    console.debug(setting)
+    commit('setSetting', { key, value: setting });
   },
   saveSetting: async (
     _: StoreActionContext<SystemStoreState>,
@@ -48,9 +52,9 @@ const actions = {
     }
   ) => {
     if (!value._id) {
-      await post(`/settings/${key}`, value);
+      await post(`/settings/${key}`, {data: value});
     } else {
-      await put(`/settings/${key}`, value);
+      await put(`/settings/${key}`, {data: value});
     }
   },
 } as SystemStoreActions;

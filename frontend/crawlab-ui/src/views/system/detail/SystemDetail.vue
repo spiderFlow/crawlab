@@ -59,13 +59,6 @@ defineOptions({ name: 'ClSystemDetail' });
 
 <template>
   <div class="system-detail">
-    <cl-nav-actions>
-      <cl-nav-action-group-detail-common
-        :show-back-button="false"
-        :show-save-button="true"
-        @save="onSave"
-      />
-    </cl-nav-actions>
     <div class="system-detail-content-wrapper">
       <el-menu
         :default-active="activeItemKey"

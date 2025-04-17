@@ -43,7 +43,7 @@ defineOptions({ name: 'ClSystemDetailTabDependency' });
 </script>
 
 <template>
-  <cl-form v-if="form" ref="formRef" :model="form.value" label-width="200px">
+  <cl-form v-if="form?.value" ref="formRef" :model="form.value" label-width="200px">
     <cl-form-item
       :span="4"
       :label="t('views.system.dependency.autoInstall')"

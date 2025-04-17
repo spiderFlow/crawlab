@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"errors"
 	"github.com/crawlab-team/crawlab/core/models/models"
 	"github.com/crawlab-team/crawlab/core/models/service"
 	"github.com/gin-gonic/gin"
@@ -16,7 +17,7 @@ func GetSetting(_ *gin.Context, params *GetSettingParams) (response *Response[mo
 	// setting
 	s, err := service.NewModelService[models.Setting]().GetOne(bson.M{"key": params.Key}, nil)
 	if err != nil {
-		if err == mongo.ErrNoDocuments {
+		if errors.Is(err, mongo.ErrNoDocuments) {
 			return GetDataResponse(models.Setting{})
 		}
 		return GetErrorResponse[models.Setting](err)

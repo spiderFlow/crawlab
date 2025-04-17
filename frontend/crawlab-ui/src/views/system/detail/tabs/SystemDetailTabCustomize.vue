@@ -94,10 +94,11 @@ defineOptions({ name: 'ClSystemDetailTabCustomize' });
       prop="custom_title"
       :required="form.value.show_custom_title"
     >
-      <el-input
+      <cl-edit-input
         v-model="form.value.custom_title"
         :disabled="!form.value.show_custom_title"
         :placeholder="t('views.system.customize.customTitle')"
+        @change="onSave"
       />
     </cl-form-item>
 
