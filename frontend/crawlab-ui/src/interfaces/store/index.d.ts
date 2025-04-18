@@ -174,6 +174,7 @@ export declare global {
     | 'database'
     | 'dependency'
     | 'environment'
+    | 'dataCollection'
     | 'llmProvider';
   type StoreNamespace = ListStoreNamespace | 'layout' | 'common';
 
