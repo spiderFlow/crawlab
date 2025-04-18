@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, nextTick, onMounted, watch, computed, onUnmounted } from 'vue';
+import { ref, nextTick, onMounted, watch, computed, onUnmounted, onBeforeMount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { getLLMProviderIcon, getLLMProviderName } from '@/utils/ai';
 import ClLabelButton from '@/components/ui/button/LabelButton.vue';
@@ -38,6 +38,7 @@ watch(
   () => `${props.selectedProvider}:${props.selectedModel}`,
   updateSelectedProviderModel
 );
+onBeforeMount(updateSelectedProviderModel);
 
 const onModelChange = (value: string) => {
   const [provider, model] = value.split(':');

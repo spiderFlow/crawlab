@@ -15,7 +15,7 @@ const visible = computed(() => state.activeDialogKey === 'logs');
 const activeTargetName = computed(() => state.activeTargetName);
 const activeTargetStatus = computed(() => state.activeTargetStatus);
 
-const content = computed(() => {
+const logs = computed(() => {
   const data: string[] = [];
   state.activeTargetLogs?.forEach(l => {
     l.content
@@ -25,7 +25,7 @@ const content = computed(() => {
         data.push(line.trim());
       });
   });
-  return data.join('\n');
+  return data;
 });
 
 const logsViewRef = ref<HTMLDivElement>();
@@ -86,9 +86,7 @@ defineOptions({ name: 'ClDependencyLogsDialog' });
         <span>{{ t('common.tabs.logs') }} - {{ activeTargetName }}</span>
       </div>
     </template>
-    <div class="logs-view" ref="logsViewRef">
-      <pre>{{ content }}</pre>
-    </div>
+    <cl-logs-view ref="logsViewRef" :logs="logs" />
   </cl-dialog>
 </template>
 

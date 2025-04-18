@@ -1,31 +1,28 @@
+export const DEFAULT_OPENAI_MODELS = [
+  'gpt-4o',
+  'gpt-4o-mini',
+  'gpt-4.1',
+  'gpt-4.1-mini',
+  'gpt-4.1-nano',
+  'o1-mini',
+  'o1',
+  'o3-mini',
+  'o3',
+];
+
 export const getLLMProviderItems = (): LLMProviderItem[] => {
   return [
     {
       key: 'openai',
       name: 'OpenAI',
       icon: ['svg', 'openai'],
-      defaultModels: [
-        'gpt-4o',
-        'gpt-4o-mini',
-        'o1-mini',
-        'o1',
-        'o3-mini',
-        'o3',
-      ],
+      defaultModels: DEFAULT_OPENAI_MODELS,
     },
     {
       key: 'azure-openai',
       name: 'Azure OpenAI',
       icon: ['svg', 'azure'],
-      defaultModels: [
-        'gpt-4o',
-        'gpt-4o-mini',
-        'o1',
-        'o1-mini',
-        'o1-pro',
-        'o3-mini',
-        'gpt-4.5-preview',
-      ],
+      defaultModels: DEFAULT_OPENAI_MODELS,
       defaultApiVersions: ['2025-02-01-preview'],
     },
     {

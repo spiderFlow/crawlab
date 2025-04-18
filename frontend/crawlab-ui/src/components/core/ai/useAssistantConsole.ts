@@ -418,6 +418,19 @@ const useAssistantConsole = () => {
   };
   onMounted(focusInput);
 
+  const initializeConversation = async () => {
+    loadChatbotConfig();
+    await loadLLMProviders();
+
+    // Load saved conversation ID from localStorage
+    const savedConversationId = localStorage.getItem('currentConversationId');
+    if (savedConversationId) {
+      await loadConversationMessages(savedConversationId);
+      await loadCurrentConversation(savedConversationId);
+      currentConversationId.value = savedConversationId;
+    }
+  };
+
   return {
     // Refs
     messageListRef,
@@ -451,6 +464,7 @@ const useAssistantConsole = () => {
     createNewConversation,
     sendStreamingRequest,
     extractErrorMessage,
+    initializeConversation,
   };
 };
 

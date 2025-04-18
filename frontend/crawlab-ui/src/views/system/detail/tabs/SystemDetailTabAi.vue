@@ -233,9 +233,9 @@ defineOptions({ name: 'ClSystemDetailTabAi' });
         <span class="info">
           {{
             op.unset
-              ? ' (' + $t('views.system.ai.unset') + ')'
+              ? ' (' + t('views.system.ai.unset') + ')'
               : op.disabled
-                ? ' (' + $t('views.system.ai.disabled') + ')'
+                ? ' (' + t('views.system.ai.disabled') + ')'
                 : ''
           }}
         </span>
@@ -247,15 +247,15 @@ defineOptions({ name: 'ClSystemDetailTabAi' });
       :model="form"
       :key="activeLLMProviderKey"
     >
-      <cl-form-item :label="$t('views.system.ai.llmProvider')" :span="4">
+      <cl-form-item :label="t('views.system.ai.llmProvider')" :span="4">
         <cl-icon :icon="activeLLMProvider?.icon" />
         {{ activeLLMProvider?.name }}
       </cl-form-item>
-      <cl-form-item :label="$t('views.system.ai.enabled')" :span="4">
+      <cl-form-item :label="t('views.system.ai.enabled')" :span="4">
         <cl-switch v-model="form.enabled" @change="saveLLMProvider" />
       </cl-form-item>
       <cl-form-item
-        :label="$t('views.system.ai.apiKey')"
+        :label="t('views.system.ai.apiKey')"
         :span="4"
         prop="api_key"
         required
@@ -263,14 +263,14 @@ defineOptions({ name: 'ClSystemDetailTabAi' });
         <cl-edit-input
           v-model="form.api_key"
           :display-value="
-            form.api_key ? '*'.repeat(Math.min(form.api_key.length, 10)) : ''
+            form.api_key ? '*'.repeat(Math.min(form.api_key.length, 32)) : ''
           "
           @change="saveLLMProvider"
         />
       </cl-form-item>
       <cl-form-item
         v-if="showApiBaseUrl"
-        :label="$t('views.system.ai.apiBaseUrl')"
+        :label="t('views.system.ai.apiBaseUrl')"
         :span="4"
         prop="api_base_url"
         required
@@ -279,14 +279,14 @@ defineOptions({ name: 'ClSystemDetailTabAi' });
       </cl-form-item>
       <cl-form-item
         v-if="showApiVersion"
-        :label="$t('views.system.ai.apiVersion')"
+        :label="t('views.system.ai.apiVersion')"
         :span="4"
         prop="api_version"
       >
         <cl-edit-input v-model="form.api_version" @change="saveLLMProvider" />
       </cl-form-item>
       <cl-form-item
-        :label="$t('views.system.ai.models')"
+        :label="t('views.system.ai.models')"
         :span="4"
         prop="models"
       >
@@ -294,7 +294,7 @@ defineOptions({ name: 'ClSystemDetailTabAi' });
           <!-- Default models from provider -->
           <div v-if="defaultModels.length > 0" class="default-models">
             <div class="section-title">
-              {{ $t('views.system.ai.defaultModels') }}
+              {{ t('views.system.ai.defaultModels') }}
             </div>
             <div class="model-list">
               <el-checkbox
@@ -312,14 +312,14 @@ defineOptions({ name: 'ClSystemDetailTabAi' });
           <!-- Custom models -->
           <div class="custom-models">
             <div class="section-title">
-              {{ $t('views.system.ai.customModels') }}
+              {{ t('views.system.ai.customModels') }}
             </div>
 
             <!-- Add custom model input -->
             <div class="add-model">
               <el-input
                 v-model="customModelInput"
-                :placeholder="$t('views.system.ai.addCustomModel')"
+                :placeholder="t('views.system.ai.addCustomModel')"
                 @keyup.enter.prevent="addCustomModel"
               >
                 <template #append>
@@ -350,7 +350,7 @@ defineOptions({ name: 'ClSystemDetailTabAi' });
               </div>
             </div>
             <div v-else class="no-custom-models">
-              {{ $t('views.system.ai.noCustomModels') }}
+              {{ t('views.system.ai.noCustomModels') }}
             </div>
           </div>
         </div>
@@ -415,7 +415,7 @@ defineOptions({ name: 'ClSystemDetailTabAi' });
       gap: 8px;
 
       .model-checkbox {
-        min-width: 200px;
+        min-width: 120px;
       }
     }
 

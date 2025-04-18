@@ -6,7 +6,7 @@ import { debounce } from 'lodash';
 import { useRouter } from 'vue-router';
 import useAssistantConsole from './useAssistantConsole';
 
-defineProps<{
+const props = defineProps<{
   visible: boolean;
 }>();
 
@@ -35,15 +35,12 @@ const {
   chatbotConfig,
   currentConversationTitle,
   loadConversations,
-  loadConversationMessages,
-  loadCurrentConversation,
-  loadLLMProviders,
-  loadChatbotConfig,
   saveChatbotConfig,
   selectConversation,
   createNewConversation,
   sendStreamingRequest,
   extractErrorMessage,
+  initializeConversation,
 } = useAssistantConsole();
 
 // Message handling
@@ -105,7 +102,9 @@ const cancelMessage = () => {
     abortController.value = null;
     isGenerating.value = false;
 
-    const streamingMessageIndex = chatHistory.findIndex((msg: ChatMessage) => msg.isStreaming);
+    const streamingMessageIndex = chatHistory.findIndex(
+      (msg: ChatMessage) => msg.isStreaming
+    );
     if (streamingMessageIndex >= 0) {
       chatHistory.splice(streamingMessageIndex, 1);
     }
@@ -156,19 +155,15 @@ watch(isGenerating, () => {
 });
 
 // Initialize
-onBeforeMount(async () => {
-  await loadConversations();
-  loadChatbotConfig();
-  await loadLLMProviders();
-
-  // Load saved conversation ID from localStorage
-  const savedConversationId = localStorage.getItem('currentConversationId');
-  if (savedConversationId) {
-    await loadConversationMessages(savedConversationId);
-    await loadCurrentConversation(savedConversationId);
-    currentConversationId.value = savedConversationId;
+onBeforeMount(initializeConversation);
+watch(
+  () => props.visible,
+  async () => {
+    if (props.visible) {
+      await initializeConversation();
+    }
   }
-});
+);
 
 defineOptions({ name: 'ClAssistantConsole' });
 </script>

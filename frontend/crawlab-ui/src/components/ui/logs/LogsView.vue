@@ -31,16 +31,18 @@ defineOptions({ name: 'ClLogsView' });
 </script>
 
 <template>
-  <div class="logs-view" ref="logsViewRef">
-    <pre>{{ content }}</pre>
-  </div>
+  <el-scrollbar max-height="560px">
+    <div class="logs-view" ref="logsViewRef">
+      <pre>{{ content }}</pre>
+    </div>
+  </el-scrollbar>
 </template>
 
 <style scoped>
 .logs-view {
   border: 1px solid rgb(244, 244, 245);
   padding: 10px;
-  overflow: auto;
+  width: 100%;
   min-height: 480px;
   max-height: 560px;
 }
