@@ -12,9 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/crawlab-team/crawlab/core/entity"
-
 	"github.com/crawlab-team/crawlab/core/controllers"
+	"github.com/crawlab-team/crawlab/core/entity"
 	"github.com/crawlab-team/crawlab/core/middlewares"
 	"github.com/crawlab-team/crawlab/core/models/models"
 	"github.com/crawlab-team/crawlab/core/models/service"
@@ -413,7 +412,7 @@ func TestBaseController_PatchList(t *testing.T) {
 			// Verify updated_by is set to the current user's ID
 			assert.Equal(t, userId, result.UpdatedBy)
 
-			// Verify updated_ts is set to a recent timestamp
+			// Verify updated_at is set to a recent timestamp
 			assert.GreaterOrEqual(t, result.UpdatedAt.UnixMilli(), beforeUpdate.UnixMilli())
 			assert.LessOrEqual(t, result.UpdatedAt.UnixMilli(), afterUpdate.UnixMilli())
 		}
@@ -501,4 +500,249 @@ func TestBaseController_DeleteList(t *testing.T) {
 
 	// Check the response
 	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestBaseController_PatchById(t *testing.T) {
+	SetupTestDB()
+	defer CleanupTestDB()
+
+	// Insert a test document
+	id, err := service.NewModelService[TestModel]().InsertOne(TestModel{Name: "test"})
+	assert.NoError(t, err)
+
+	// Initialize the controller
+	ctr := controllers.NewController[TestModel]()
+
+	// Set up the router
+	router := SetupRouter()
+	router.Use(middlewares.AuthorizationMiddleware())
+	router.PATCH("/testmodels/:id", nil, tonic.Handler(ctr.PatchById, 200))
+
+	// Test case 1: Successful patch
+	t.Run("test_patch_success", func(t *testing.T) {
+		// Create update data
+		updateData := TestModel{
+			Name: "patched",
+		}
+
+		requestBody := controllers.PatchByIdParams[TestModel]{
+			Id:   id.Hex(),
+			Data: updateData,
+		}
+
+		jsonValue, _ := json.Marshal(requestBody)
+		req, _ := http.NewRequest("PATCH", "/testmodels/"+id.Hex(), bytes.NewBuffer(jsonValue))
+		req.Header.Set("Authorization", TestToken)
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		// Get the user ID
+		userId := TestUserId
+
+		// Record time before the update
+		beforeUpdate := time.Now()
+
+		time.Sleep(time.Millisecond) // Ensure time difference
+
+		// Serve the request
+		router.ServeHTTP(w, req)
+
+		// Check the response
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		// Check if the document was updated in the database
+		result, err := service.NewModelService[TestModel]().GetById(id)
+		assert.NoError(t, err)
+		assert.Equal(t, "patched", result.Name)
+		assert.Equal(t, userId, result.UpdatedBy)
+		assert.True(t, result.UpdatedAt.After(beforeUpdate))
+	})
+
+	// Test case 2: Invalid ID
+	t.Run("test_patch_invalid_id", func(t *testing.T) {
+		updateData := TestModel{
+			Name: "patched",
+		}
+
+		requestBody := controllers.PatchByIdParams[TestModel]{
+			Id:   "invalid-id",
+			Data: updateData,
+		}
+
+		jsonValue, _ := json.Marshal(requestBody)
+		req, _ := http.NewRequest("PATCH", "/testmodels/invalid-id", bytes.NewBuffer(jsonValue))
+		req.Header.Set("Authorization", TestToken)
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		// Serve the request
+		router.ServeHTTP(w, req)
+
+		// Check the response
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+}
+
+func TestBaseController_Post_Validation(t *testing.T) {
+	SetupTestDB()
+	defer CleanupTestDB()
+
+	// Initialize the controller
+	ctr := controllers.NewController[TestModel]()
+
+	// Set up the router
+	router := SetupRouter()
+	router.Use(middlewares.AuthorizationMiddleware())
+	router.POST("/testmodels", nil, tonic.Handler(ctr.Post, 200))
+
+	// Test case: Empty data
+	t.Run("test_post_empty_data", func(t *testing.T) {
+		requestBody := controllers.PostParams[TestModel]{
+			Data: TestModel{},
+		}
+		jsonValue, _ := json.Marshal(requestBody)
+		req, _ := http.NewRequest("POST", "/testmodels", bytes.NewBuffer(jsonValue))
+		req.Header.Set("Authorization", TestToken)
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		// Serve the request
+		router.ServeHTTP(w, req)
+
+		// Check the response
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		var response controllers.Response[TestModel]
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		assert.NotEmpty(t, response.Data.Id)
+		assert.Equal(t, TestUserId, response.Data.CreatedBy)
+		assert.Equal(t, TestUserId, response.Data.UpdatedBy)
+	})
+}
+
+func TestBaseController_GetList_Sort(t *testing.T) {
+	SetupTestDB()
+	defer CleanupTestDB()
+
+	// Insert test documents
+	modelSvc := service.NewModelService[TestModel]()
+	for i := 0; i < 3; i++ {
+		_, err := modelSvc.InsertOne(TestModel{Name: fmt.Sprintf("test%d", i)})
+		assert.NoError(t, err)
+	}
+
+	// Initialize the controller
+	ctr := controllers.NewController[TestModel]()
+
+	// Set up the router
+	router := SetupRouter()
+	router.Use(middlewares.AuthorizationMiddleware())
+	router.GET("/testmodels/list", nil, tonic.Handler(ctr.GetList, 200))
+
+	t.Run("test_get_list_valid_sort", func(t *testing.T) {
+		params := url.Values{}
+		params.Add("sort", "-name") // Sort by name descending
+		requestUrl := url.URL{Path: "/testmodels/list", RawQuery: params.Encode()}
+		req, _ := http.NewRequest("GET", requestUrl.String(), nil)
+		req.Header.Set("Authorization", TestToken)
+		w := httptest.NewRecorder()
+
+		// Serve the request
+		router.ServeHTTP(w, req)
+
+		// Check the response
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		var response controllers.ListResponse[TestModel]
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		assert.Equal(t, 3, len(response.Data))
+
+		// Verify descending order
+		for i := 0; i < len(response.Data)-1; i++ {
+			assert.True(t, response.Data[i].Name > response.Data[i+1].Name)
+		}
+	})
+
+	// Test case: Invalid sort format
+	t.Run("test_get_list_invalid_sort", func(t *testing.T) {
+		// Use an invalid sort format (missing field name)
+		params := url.Values{}
+		params.Add("sort", "-") // Invalid: hyphen without field name
+		requestUrl := url.URL{Path: "/testmodels/list", RawQuery: params.Encode()}
+		req, _ := http.NewRequest("GET", requestUrl.String(), nil)
+		req.Header.Set("Authorization", TestToken)
+		w := httptest.NewRecorder()
+
+		// Serve the request
+		router.ServeHTTP(w, req)
+
+		// Check the response
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+
+		var response map[string]interface{}
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		assert.Contains(t, response, "error")
+		assert.Contains(t, response["error"].(string), "invalid sort format")
+	})
+}
+
+func TestBaseController_GetList_Pagination_Edge_Cases(t *testing.T) {
+	SetupTestDB()
+	defer CleanupTestDB()
+
+	// Insert test documents
+	modelSvc := service.NewModelService[TestModel]()
+	for i := 0; i < 5; i++ {
+		_, err := modelSvc.InsertOne(TestModel{Name: fmt.Sprintf("test%d", i)})
+		assert.NoError(t, err)
+	}
+
+	// Initialize the controller
+	ctr := controllers.NewController[TestModel]()
+
+	// Set up the router
+	router := SetupRouter()
+	router.Use(middlewares.AuthorizationMiddleware())
+	router.GET("/testmodels/list", nil, tonic.Handler(ctr.GetList, 200))
+
+	// Test cases
+	testCases := []struct {
+		name          string
+		page          int
+		size          int
+		expectedCount int
+		expectedTotal int
+	}{
+		{"test_empty_page", 10, 10, 0, 5},      // Page beyond data
+		{"test_large_page_size", 1, 100, 5, 5}, // Page size larger than data
+		{"test_exact_page_size", 1, 5, 5, 5},   // Page size equals data size
+		{"test_last_page_partial", 2, 3, 2, 5}, // Last page with partial data
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			params := url.Values{}
+			params.Add("page", strconv.Itoa(tc.page))
+			params.Add("size", strconv.Itoa(tc.size))
+			requestUrl := url.URL{Path: "/testmodels/list", RawQuery: params.Encode()}
+			req, _ := http.NewRequest("GET", requestUrl.String(), nil)
+			req.Header.Set("Authorization", TestToken)
+			w := httptest.NewRecorder()
+
+			// Serve the request
+			router.ServeHTTP(w, req)
+
+			// Check the response
+			assert.Equal(t, http.StatusOK, w.Code)
+
+			var response controllers.ListResponse[TestModel]
+			err := json.Unmarshal(w.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, tc.expectedCount, len(response.Data))
+			assert.Equal(t, tc.expectedTotal, response.Total)
+		})
+	}
 }

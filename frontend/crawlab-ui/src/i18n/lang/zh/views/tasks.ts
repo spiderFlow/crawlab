@@ -9,8 +9,8 @@ const tasks: LViewsTasks = {
       cmd: '执行命令',
       stat: {
         create_ts: '创建时间',
-        start_ts: '开始时间',
-        end_ts: '结束时间',
+        started_at: '开始时间',
+        ended_at: '结束时间',
         wait_duration: '等待时间',
         runtime_duration: '运行时间',
         total_duration: '总时间',

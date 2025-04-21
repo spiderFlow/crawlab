@@ -1,16 +1,17 @@
 package controllers
 
 import (
+	"encoding/json"
 	"net/http"
 	"time"
-
-	"github.com/loopfz/gadgeto/tonic"
 
 	"github.com/crawlab-team/crawlab/core/interfaces"
 	"github.com/crawlab-team/crawlab/core/models/service"
 	"github.com/crawlab-team/crawlab/core/mongo"
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 	"github.com/juju/errors"
+	"github.com/loopfz/gadgeto/tonic"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	mongo2 "go.mongodb.org/mongo-driver/mongo"
@@ -141,7 +142,51 @@ func (ctr *BaseController[T]) PutById(c *gin.Context, params *PutByIdParams[T]) 
 		m.SetId(id)
 	}
 
+	// Validate
+	if err := validator.New().Struct(params.Data); err != nil {
+		return GetErrorResponse[T](errors.BadRequestf("invalid data: %v", err))
+	}
+
 	if err := ctr.modelSvc.ReplaceById(id, params.Data); err != nil {
+		return GetErrorResponse[T](err)
+	}
+
+	result, err := ctr.modelSvc.GetById(id)
+	if err != nil {
+		return GetErrorResponse[T](err)
+	}
+
+	return GetDataResponse(*result)
+}
+
+type PatchByIdParams[T any] struct {
+	Id   string `path:"id" description:"The ID of the item to update" format:"objectid" pattern:"^[0-9a-fA-F]{24}$"`
+	Data T      `json:"data" description:"The data to update" validate:"required"`
+}
+
+func (ctr *BaseController[T]) PatchById(c *gin.Context, params *PatchByIdParams[T]) (response *Response[T], err error) {
+	id, err := primitive.ObjectIDFromHex(params.Id)
+	if err != nil {
+		return GetErrorResponse[T](errors.BadRequestf("invalid id format: %v", err))
+	}
+
+	u := GetUserFromContext(c)
+
+	// Convert the data to bson.M
+	dataJSON, _ := json.Marshal(params.Data)
+	var update bson.M
+	if err := json.Unmarshal(dataJSON, &update); err != nil {
+		return GetErrorResponse[T](errors.BadRequestf("invalid data: %v", err))
+	}
+
+	// Remove _id field if present to prevent immutable field error
+	delete(update, "_id")
+
+	// Add updated_by and updated_at
+	update["updated_by"] = u.Id
+	update["updated_at"] = time.Now()
+
+	if err := ctr.modelSvc.UpdateById(id, bson.M{"$set": update}); err != nil {
 		return GetErrorResponse[T](err)
 	}
 
@@ -178,10 +223,10 @@ func (ctr *BaseController[T]) PatchList(c *gin.Context, params *PatchParams) (re
 		},
 	}
 
-	// Add updated_by and updated_ts to the update object
+	// Add updated_by and updated_at to the update object
 	updateObj := params.Update
 	updateObj["updated_by"] = u.Id
-	updateObj["updated_ts"] = time.Now()
+	updateObj["updated_at"] = time.Now()
 
 	// update
 	if err := ctr.modelSvc.UpdateMany(query, bson.M{"$set": updateObj}); err != nil {

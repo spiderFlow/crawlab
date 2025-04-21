@@ -412,9 +412,10 @@ func PostTaskCancel(c *gin.Context, params *PostTaskCancelParams) (response *Voi
 }
 
 type GetTaskLogsParams struct {
-	Id   string `path:"id" description:"Task ID" format:"objectid" pattern:"^[0-9a-fA-F]{24}$"`
-	Page int    `query:"page" description:"Page" default:"1" minimum:"1"`
-	Size int    `query:"size" description:"Size" default:"10" minimum:"1"`
+	Id     string `path:"id" description:"Task ID" format:"objectid" pattern:"^[0-9a-fA-F]{24}$"`
+	Page   int    `query:"page" description:"Page (default: 1)" default:"1" minimum:"1"`
+	Size   int    `query:"size" description:"Size (default: 10000)" default:"10000" minimum:"1"`
+	Latest bool   `query:"latest" description:"Whether to get latest logs (default: true)" default:"true"`
 }
 
 func GetTaskLogs(_ *gin.Context, params *GetTaskLogsParams) (response *ListResponse[string], err error) {
@@ -424,17 +425,29 @@ func GetTaskLogs(_ *gin.Context, params *GetTaskLogsParams) (response *ListRespo
 		return GetErrorListResponse[string](err)
 	}
 
-	// logs
+	// Get total count first for pagination
 	logDriver := log.GetFileLogDriver()
-	logs, err := logDriver.Find(id.Hex(), "", (params.Page-1)*params.Size, params.Size)
+	total, err := logDriver.Count(id.Hex(), "")
+	if err != nil {
+		return GetErrorListResponse[string](err)
+	}
+
+	// Skip calculation depends on whether we're getting latest logs or not
+	skip := (params.Page - 1) * params.Size
+	if params.Latest {
+		// For latest logs (tail mode), skip is from the end
+		// No adjustment needed as our implementation handles it correctly
+	} else {
+		// For oldest logs (normal mode), skip is from the beginning
+		// No adjustment needed as it's already the default behavior
+	}
+
+	// Get logs
+	logs, err := logDriver.Find(id.Hex(), "", skip, params.Size, params.Latest)
 	if err != nil {
 		if strings.HasSuffix(err.Error(), "Status:404 Not Found") {
 			return GetListResponse[string](nil, 0)
 		}
-		return GetErrorListResponse[string](err)
-	}
-	total, err := logDriver.Count(id.Hex(), "")
-	if err != nil {
 		return GetErrorListResponse[string](err)
 	}
 

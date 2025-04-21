@@ -98,6 +98,7 @@ defineOptions({ name: 'ClChatMessage' });
           <cl-chat-message-action
             v-if="content.type === 'action'"
             :action="content.action!"
+            :action-target="content.action_target"
             :action-status="content.action_status!"
             :parameters="content.parameters"
             :content="content.content"

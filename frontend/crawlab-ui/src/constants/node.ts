@@ -1,2 +1,2 @@
-export const NODE_STATUS_ONLINE = 'on';
-export const NODE_STATUS_OFFLINE = 'off';
+export const NODE_STATUS_ONLINE = 'online';
+export const NODE_STATUS_OFFLINE = 'offline';

@@ -50,7 +50,7 @@ func (svc *CsvService) Export(exportType, target string, query bson.M) (exportId
 		Target:       target,
 		Query:        query,
 		Status:       constants.TaskStatusRunning,
-		StartTs:      time.Now(),
+		StartedAt:    time.Now(),
 		FileName:     svc.getFileName(exportId),
 		DownloadPath: svc.getDownloadPath(exportId),
 		Limit:        100,
@@ -81,7 +81,7 @@ func (svc *CsvService) export(export *entity.Export) {
 	if export.Target == "" {
 		err := errors.New("empty target")
 		export.Status = constants.TaskStatusError
-		export.EndTs = time.Now()
+		export.EndedAt = time.Now()
 		svc.Errorf("export error (id: %s): %v", export.Id, err)
 		svc.cache.Set(export.Id, export)
 		return
@@ -101,7 +101,7 @@ func (svc *CsvService) export(export *entity.Export) {
 	}()
 	if err != nil {
 		export.Status = constants.TaskStatusError
-		export.EndTs = time.Now()
+		export.EndedAt = time.Now()
 		svc.Errorf("export error (id: %s): %v", export.Id, err)
 		svc.cache.Set(export.Id, export)
 		return
@@ -120,7 +120,7 @@ func (svc *CsvService) export(export *entity.Export) {
 	err = csvWriter.Write(columns)
 	if err != nil {
 		export.Status = constants.TaskStatusError
-		export.EndTs = time.Now()
+		export.EndedAt = time.Now()
 		svc.Errorf("export error (id: %s): %v", export.Id, err)
 		svc.cache.Set(export.Id, export)
 		return
@@ -139,12 +139,12 @@ func (svc *CsvService) export(export *entity.Export) {
 			if !errors.Is(err, mongo2.ErrNoDocuments) {
 				// error
 				export.Status = constants.TaskStatusError
-				export.EndTs = time.Now()
+				export.EndedAt = time.Now()
 				svc.Errorf("export error (id: %s): %v", export.Id, err)
 			} else {
 				// no more data
 				export.Status = constants.TaskStatusFinished
-				export.EndTs = time.Now()
+				export.EndedAt = time.Now()
 				svc.Infof("export finished (id: %s)", export.Id)
 			}
 			svc.cache.Set(export.Id, export)
@@ -155,7 +155,7 @@ func (svc *CsvService) export(export *entity.Export) {
 		if !cur.Next(context.Background()) {
 			// no more data
 			export.Status = constants.TaskStatusFinished
-			export.EndTs = time.Now()
+			export.EndedAt = time.Now()
 			svc.Infof("export finished (id: %s)", export.Id)
 			svc.cache.Set(export.Id, export)
 			return
@@ -167,7 +167,7 @@ func (svc *CsvService) export(export *entity.Export) {
 		if err != nil {
 			// error
 			export.Status = constants.TaskStatusError
-			export.EndTs = time.Now()
+			export.EndedAt = time.Now()
 			svc.Errorf("export error (id: %s): %v", export.Id, err)
 			svc.cache.Set(export.Id, export)
 			return
@@ -179,7 +179,7 @@ func (svc *CsvService) export(export *entity.Export) {
 		if err != nil {
 			// error
 			export.Status = constants.TaskStatusError
-			export.EndTs = time.Now()
+			export.EndedAt = time.Now()
 			svc.Errorf("export error (id: %s): %v", export.Id, err)
 			svc.cache.Set(export.Id, export)
 			return

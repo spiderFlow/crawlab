@@ -11,8 +11,8 @@ type Export struct {
 	Target       string    `json:"target"`
 	Query        bson.M    `json:"query"`
 	Status       string    `json:"status"`
-	StartTs      time.Time `json:"start_ts"`
-	EndTs        time.Time `json:"end_ts"`
+	StartedAt    time.Time `json:"started_at"`
+	EndedAt      time.Time `json:"ended_at"`
 	FileName     string    `json:"file_name"`
 	DownloadPath string    `json:"-"`
 	Limit        int       `json:"-"`
@@ -39,11 +39,11 @@ func (e *Export) GetStatus() string {
 }
 
 func (e *Export) GetStartTs() time.Time {
-	return e.StartTs
+	return e.StartedAt
 }
 
 func (e *Export) GetEndTs() time.Time {
-	return e.EndTs
+	return e.EndedAt
 }
 
 func (e *Export) GetDownloadPath() string {

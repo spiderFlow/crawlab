@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"encoding/json"
+	"github.com/juju/errors"
 	"net/http"
 	"reflect"
 	"strings"
@@ -198,16 +199,22 @@ func GetSortsFromString(sortStr string) (sorts []entity.Sort, err error) {
 	for _, part := range parts {
 		trimmed := strings.TrimSpace(part)
 		if trimmed == "" {
-			continue
+			return nil, errors.BadRequestf("invalid sort string: %s", sortStr)
 		}
 		if strings.HasPrefix(trimmed, "-") {
 			key := strings.TrimLeft(trimmed, "-")
+			if key == "" {
+				return nil, errors.BadRequestf("invalid sort string: %s", sortStr)
+			}
 			sorts = append(sorts, entity.Sort{
 				Key:       key,
 				Direction: constants.DESCENDING,
 			})
 		} else {
 			key := strings.TrimLeft(trimmed, "+")
+			if key == "" {
+				return nil, errors.BadRequestf("invalid sort string: %s", sortStr)
+			}
 			sorts = append(sorts, entity.Sort{
 				Key:       key,
 				Direction: constants.ASCENDING,

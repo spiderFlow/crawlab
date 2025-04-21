@@ -287,26 +287,26 @@ const useTaskList = () => {
         },
         {
           key: 'stat_start_ts',
-          label: t('views.tasks.table.columns.stat.start_ts'),
+          label: t('views.tasks.table.columns.stat.started_at'),
           icon: ['fa', 'clock'],
           width: '120',
           value: (row: Task) => {
-            if (!row.stat?.start_ts || row.stat?.start_ts.startsWith('000')) {
+            if (!row.stat?.started_at || row.stat?.started_at.startsWith('000')) {
               return;
             }
-            return <ClTime time={row.stat?.start_ts} />;
+            return <ClTime time={row.stat?.started_at} />;
           },
         },
         {
           key: 'stat_end_ts',
-          label: t('views.tasks.table.columns.stat.end_ts'),
+          label: t('views.tasks.table.columns.stat.ended_at'),
           icon: ['fa', 'clock'],
           width: '120',
           value: (row: Task) => {
-            if (!row.stat?.end_ts || row.stat?.end_ts.startsWith('000')) {
+            if (!row.stat?.ended_at || row.stat?.ended_at.startsWith('000')) {
               return;
             }
-            return <ClTime time={row.stat?.end_ts} />;
+            return <ClTime time={row.stat?.ended_at} />;
           },
         },
         {

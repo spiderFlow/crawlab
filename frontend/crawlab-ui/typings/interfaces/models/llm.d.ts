@@ -85,8 +85,8 @@ export declare global {
     settings?: Record<string, any>;
     tags?: string[];
     messages?: ChatMessage[];
-    created_ts?: string;
-    updated_ts?: string;
+    created_at?: string;
+    updated_at?: string;
   }
 
   interface ChatRequest {

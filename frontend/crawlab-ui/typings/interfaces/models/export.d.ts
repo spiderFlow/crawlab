@@ -5,8 +5,8 @@ export declare global {
     target?: string;
     // filter?: any;
     status?: string;
-    start_ts?: string;
-    end_ts?: string;
+    started_at?: string;
+    ended_at?: string;
     file_name?: string;
     download_path?: string;
   }

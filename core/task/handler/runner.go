@@ -786,16 +786,16 @@ func (r *Runner) _updateTaskStat(status string) {
 	case constants.TaskStatusPending:
 		// do nothing
 	case constants.TaskStatusRunning:
-		ts.StartTs = time.Now()
-		ts.WaitDuration = ts.StartTs.Sub(ts.CreatedAt).Milliseconds()
+		ts.StartedAt = time.Now()
+		ts.WaitDuration = ts.StartedAt.Sub(ts.CreatedAt).Milliseconds()
 	case constants.TaskStatusFinished, constants.TaskStatusError, constants.TaskStatusCancelled:
-		if ts.StartTs.IsZero() {
-			ts.StartTs = time.Now()
-			ts.WaitDuration = ts.StartTs.Sub(ts.CreatedAt).Milliseconds()
+		if ts.StartedAt.IsZero() {
+			ts.StartedAt = time.Now()
+			ts.WaitDuration = ts.StartedAt.Sub(ts.CreatedAt).Milliseconds()
 		}
-		ts.EndTs = time.Now()
-		ts.RuntimeDuration = ts.EndTs.Sub(ts.StartTs).Milliseconds()
-		ts.TotalDuration = ts.EndTs.Sub(ts.CreatedAt).Milliseconds()
+		ts.EndedAt = time.Now()
+		ts.RuntimeDuration = ts.EndedAt.Sub(ts.StartedAt).Milliseconds()
+		ts.TotalDuration = ts.EndedAt.Sub(ts.CreatedAt).Milliseconds()
 	}
 	if utils.IsMaster() {
 		err = service.NewModelService[models.TaskStat]().ReplaceById(ts.Id, *ts)

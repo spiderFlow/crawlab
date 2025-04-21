@@ -86,7 +86,7 @@ defineOptions({ name: 'ClChatHistory' });
           <div class="chat-history-item-meta">
             <span class="chat-history-item-date">
               <cl-time
-                :time="conversation.last_message_at || conversation.created_ts"
+                :time="conversation.last_message_at || conversation.created_at"
                 ago
                 :ago-format-style="{ flavour: 'narrow' }"
               />
@@ -174,4 +174,4 @@ defineOptions({ name: 'ClChatHistory' });
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-</style> 
+</style>

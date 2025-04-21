@@ -4,6 +4,7 @@ import JsonEditorVue from 'json-editor-vue';
 
 const props = defineProps<{
   action: string;
+  actionTarget?: string;
   actionStatus: ChatMessageActionStatus;
   parameters?: Record<string, any>;
   content?: string;
@@ -27,7 +28,9 @@ const actionStatusIcon = computed<Icon>(() => {
   }
 });
 
-const parsedContent = computed<Record<string, any> | Record<string, any>[] | null>(() => {
+const parsedContent = computed<
+  Record<string, any> | Record<string, any>[] | null
+>(() => {
   if (!props.content) return null;
   try {
     return JSON.parse(props.content);
@@ -48,6 +51,14 @@ const hasContent = computed(() => {
   return props.content || hasParameters.value;
 });
 
+const actionLabel = computed<string>(() => {
+  const { action, actionTarget } = props;
+  if (actionTarget) {
+    return `${action}: ${actionTarget}`;
+  }
+  return action;
+});
+
 defineOptions({ name: 'ClChatMessageAction' });
 </script>
 
@@ -65,7 +76,7 @@ defineOptions({ name: 'ClChatMessageAction' });
         :class="{ 'flash-text': actionStatus === 'pending' }"
         @click="isExpanded = !isExpanded"
       >
-        {{ action }}
+        {{ actionLabel }}
         <span
           v-if="actionStatus === 'pending'"
           class="flash-overlay"
@@ -95,7 +106,10 @@ defineOptions({ name: 'ClChatMessageAction' });
       <el-scrollbar max-height="500px">
         <!-- Parameters Section -->
         <div v-if="hasParameters" class="content-section">
-          <div class="section-header" @click="isParamsExpanded = !isParamsExpanded">
+          <div
+            class="section-header"
+            @click="isParamsExpanded = !isParamsExpanded"
+          >
             <span class="section-title">Parameters</span>
             <cl-icon
               class="action-button"
@@ -113,11 +127,17 @@ defineOptions({ name: 'ClChatMessageAction' });
 
         <!-- Response Section -->
         <div v-if="content" class="content-section">
-          <div class="section-header" @click="isResponseExpanded = !isResponseExpanded">
+          <div
+            class="section-header"
+            @click="isResponseExpanded = !isResponseExpanded"
+          >
             <span class="section-title">Response</span>
             <cl-icon
               class="action-button"
-              :icon="['fas', isResponseExpanded ? 'chevron-up' : 'chevron-down']"
+              :icon="[
+                'fas',
+                isResponseExpanded ? 'chevron-up' : 'chevron-down',
+              ]"
             />
           </div>
           <div v-show="isResponseExpanded">
@@ -151,7 +171,10 @@ defineOptions({ name: 'ClChatMessageAction' });
     <div class="fullscreen-content">
       <!-- Parameters Section -->
       <div v-if="hasParameters" class="content-section">
-        <div class="section-header" @click="isParamsExpanded = !isParamsExpanded">
+        <div
+          class="section-header"
+          @click="isParamsExpanded = !isParamsExpanded"
+        >
           <span class="section-title">Parameters</span>
           <cl-icon
             class="action-button"
@@ -169,7 +192,10 @@ defineOptions({ name: 'ClChatMessageAction' });
 
       <!-- Response Section -->
       <div v-if="content" class="content-section">
-        <div class="section-header" @click="isResponseExpanded = !isResponseExpanded">
+        <div
+          class="section-header"
+          @click="isResponseExpanded = !isResponseExpanded"
+        >
           <span class="section-title">Response</span>
           <cl-icon
             class="action-button"

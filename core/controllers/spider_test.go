@@ -88,56 +88,6 @@ func TestGetSpiderById(t *testing.T) {
 	assert.Equal(t, model.Name, response.Data.Name)
 }
 
-func TestUpdateSpiderById(t *testing.T) {
-	SetupTestDB()
-	defer CleanupTestDB()
-
-	gin.SetMode(gin.TestMode)
-
-	router := SetupRouter()
-	router.Use(middlewares.AuthorizationMiddleware())
-	router.PUT("/spiders/:id", nil, tonic.Handler(controllers.PutSpiderById, 200))
-
-	model := models.Spider{
-		Name:    "Test Spider",
-		ColName: "test_spiders",
-	}
-	id, err := service.NewModelService[models.Spider]().InsertOne(model)
-	require.Nil(t, err)
-	ts := models.SpiderStat{}
-	ts.SetId(id)
-	_, err = service.NewModelService[models.SpiderStat]().InsertOne(ts)
-	require.Nil(t, err)
-
-	spiderId := id.Hex()
-	payload := models.Spider{
-		Name:    "Updated Spider",
-		ColName: "test_spider",
-	}
-	payload.SetId(id)
-	requestBody := controllers.PutByIdParams[models.Spider]{
-		Data: payload,
-	}
-	jsonValue, _ := json.Marshal(requestBody)
-	req, _ := http.NewRequest("PUT", "/spiders/"+spiderId, bytes.NewBuffer(jsonValue))
-	req.Header.Set("Authorization", TestToken)
-	resp := httptest.NewRecorder()
-
-	router.ServeHTTP(resp, req)
-
-	assert.Equal(t, http.StatusOK, resp.Code)
-
-	var response controllers.Response[models.Spider]
-	err = json.Unmarshal(resp.Body.Bytes(), &response)
-	require.Nil(t, err)
-	assert.Equal(t, payload.Name, response.Data.Name)
-
-	svc := service.NewModelService[models.Spider]()
-	resModel, err := svc.GetById(id)
-	require.Nil(t, err)
-	assert.Equal(t, payload.Name, resModel.Name)
-}
-
 func TestDeleteSpiderById(t *testing.T) {
 	SetupTestDB()
 	defer CleanupTestDB()

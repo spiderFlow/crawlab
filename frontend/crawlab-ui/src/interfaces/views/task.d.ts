@@ -31,8 +31,8 @@ export declare global {
 
   interface TaskStat {
     create_ts?: string;
-    start_ts?: string;
-    end_ts?: string;
+    started_at?: string;
+    ended_at?: string;
     result_count?: number;
     error_log_count?: number;
     wait_duration?: number;

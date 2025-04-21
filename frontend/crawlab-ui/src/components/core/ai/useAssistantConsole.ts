@@ -75,7 +75,7 @@ const useAssistantConsole = () => {
       const messages = (res.data || []).map((msg: any) => {
         const message: ChatMessage = {
           ...msg,
-          timestamp: new Date(msg.created_ts || Date.now()),
+          timestamp: new Date(msg.created_at || Date.now()),
         };
         return message;
       });

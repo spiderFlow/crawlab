@@ -147,9 +147,9 @@ const notification: LComponentsNotification = {
 - Task Parameter: \${task:param}
 - Task Priority: \${task:priority}
 - Task Created By: \${task:created_by}
-- Task Created At: \${task:created_ts}
-- Task Started At: \${task_stat:start_ts}
-- Task Ended At: \${task_stat:ended_ts}
+- Task Created At: \${task:created_at}
+- Task Started At: \${task_stat:started_at}
+- Task Ended At: \${task_stat:ended_at}
 - Task Wait Duration: \${task_stat:wait_duration}
 - Task Runtime Duration: \${task_stat:runtime_duration}
 - Task Total Duration: \${task_stat:total_duration}
@@ -171,9 +171,9 @@ const notification: LComponentsNotification = {
 - Task Parameter: \${task:param}
 - Task Priority: \${task:priority}
 - Task Created By: \${task:created_by}
-- Task Created At: \${task:created_ts}
-- Task Started At: \${task_stat:start_ts}
-- Task Ended At: \${task_stat:end_ts}
+- Task Created At: \${task:created_at}
+- Task Started At: \${task_stat:started_at}
+- Task Ended At: \${task_stat:ended_at}
 - Task Wait Duration: \${task_stat:wait_duration}
 - Task Runtime Duration: \${task_stat:runtime_duration}
 - Task Total Duration: \${task_stat:total_duration}

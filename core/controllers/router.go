@@ -71,8 +71,9 @@ func RegisterController[T any](group *fizz.RouterGroup, basePath string, ctr *Ba
 	registerBuiltinHandler(group, globalWrapper, basePath, http.MethodGet, "", ctr.GetList, actionPaths, fmt.Sprintf("Get %s List", resource), "Get a list of items")
 	registerBuiltinHandler(group, globalWrapper, basePath, http.MethodGet, "/:id", ctr.GetById, actionPaths, fmt.Sprintf("Get %s by ID", resource), "Get a single item by ID")
 	registerBuiltinHandler(group, globalWrapper, basePath, http.MethodPost, "", ctr.Post, actionPaths, fmt.Sprintf("Create %s", resource), "Create a new item")
-	registerBuiltinHandler(group, globalWrapper, basePath, http.MethodPut, "/:id", ctr.PutById, actionPaths, fmt.Sprintf("Update %s by ID", resource), "Update an item by ID")
-	registerBuiltinHandler(group, globalWrapper, basePath, http.MethodPatch, "", ctr.PatchList, actionPaths, fmt.Sprintf("Patch %s List", resource), "Patch multiple items")
+	registerBuiltinHandler(group, globalWrapper, basePath, http.MethodPut, "/:id", ctr.PutById, actionPaths, fmt.Sprintf("Replace %s by ID", resource), "Replace an item by ID with (full update)")
+	registerBuiltinHandler(group, globalWrapper, basePath, http.MethodPatch, "/:id", ctr.PatchById, actionPaths, fmt.Sprintf("Update %s by ID", resource), "Update an item by ID with (partial update)")
+	registerBuiltinHandler(group, globalWrapper, basePath, http.MethodPatch, "", ctr.PatchList, actionPaths, fmt.Sprintf("Batch Update %s List", resource), "Batch update multiple items with partial fields")
 	registerBuiltinHandler(group, globalWrapper, basePath, http.MethodDelete, "/:id", ctr.DeleteById, actionPaths, fmt.Sprintf("Delete %s by ID", resource), "Delete an item by ID")
 	registerBuiltinHandler(group, globalWrapper, basePath, http.MethodDelete, "", ctr.DeleteList, actionPaths, fmt.Sprintf("Delete %s List", resource), "Delete multiple items")
 }
@@ -276,13 +277,6 @@ func InitRoutes(app *gin.Engine) (err error) {
 			HandlerFunc: PostSpider,
 		},
 		{
-			Method:      http.MethodPut,
-			Path:        "/:id",
-			Name:        "Update Spider by ID",
-			Description: "Update a spider by ID",
-			HandlerFunc: PutSpiderById,
-		},
-		{
 			Method:      http.MethodDelete,
 			Path:        "/:id",
 			Name:        "Delete Spider by ID",
@@ -392,8 +386,8 @@ func InitRoutes(app *gin.Engine) (err error) {
 		{
 			Method:      http.MethodPut,
 			Path:        "/:id",
-			Name:        "Update Schedule by ID",
-			Description: "Update a schedule by ID",
+			Name:        "Replace Schedule by ID",
+			Description: "Replace a schedule by ID (full update)",
 			HandlerFunc: PutScheduleById,
 		},
 		{
@@ -430,7 +424,7 @@ func InitRoutes(app *gin.Engine) (err error) {
 			Method:      http.MethodGet,
 			Path:        "",
 			Name:        "Get Task List",
-			Description: "Get a list of tasks",
+			Description: "Get a list of tasks (default sorted in descending order)",
 			HandlerFunc: GetTaskList,
 		},
 		{
@@ -508,8 +502,8 @@ func InitRoutes(app *gin.Engine) (err error) {
 		{
 			Method:      http.MethodPut,
 			Path:        "/:id",
-			Name:        "Update User by ID",
-			Description: "Update a user by ID",
+			Name:        "Replace User by ID",
+			Description: "Replace a user by ID (full update)",
 			HandlerFunc: PutUserById,
 		},
 		{
@@ -543,8 +537,8 @@ func InitRoutes(app *gin.Engine) (err error) {
 		{
 			Method:      http.MethodPut,
 			Path:        "/me",
-			Name:        "Update Me",
-			Description: "Update the current user",
+			Name:        "Replace Me",
+			Description: "Update the current user (full update)",
 			HandlerFunc: PutUserMe,
 		},
 		{
@@ -639,8 +633,8 @@ func InitRoutes(app *gin.Engine) (err error) {
 		{
 			Method:      http.MethodPut,
 			Path:        "/:key",
-			Name:        "Update Setting",
-			Description: "Update a setting",
+			Name:        "Replace Setting by Key",
+			Description: "Replace a setting by key (full update)",
 			HandlerFunc: PutSetting,
 		},
 	})

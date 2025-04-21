@@ -22,10 +22,10 @@ declare const _default: import('vue').DefineComponent<
         upgrade?: boolean | undefined;
         update_ts?: string | undefined;
         _id?: string | undefined;
-        created_ts?: string | undefined;
+        created_at?: string | undefined;
         created_by?: string | undefined;
         updated_at?: string | undefined;
-        updated_ts?: string | undefined;
+        updated_at?: string | undefined;
       }[]
     >;
     tablePagination: import('vue').Ref<{
@@ -42,10 +42,10 @@ declare const _default: import('vue').DefineComponent<
         content?: string | undefined;
         update_ts?: string | undefined;
         _id?: string | undefined;
-        created_ts?: string | undefined;
+        created_at?: string | undefined;
         created_by?: string | undefined;
         updated_at?: string | undefined;
-        updated_ts?: string | undefined;
+        updated_at?: string | undefined;
       }[]
     >;
     onLogsClose: () => void;

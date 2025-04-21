@@ -130,7 +130,7 @@ const useNotificationRequestList = () => {
           label: t('views.notification.requests.form.createdAt'),
           icon: ['fa', 'clock'],
           width: '150',
-          value: (row: NotificationRequest) => <ClTime time={row.created_ts} />,
+          value: (row: NotificationRequest) => <ClTime time={row.created_at} />,
         },
         getPlaceholderColumn(),
         {

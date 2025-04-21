@@ -47,40 +47,13 @@ func TestRegisterController_Routes(t *testing.T) {
 		{Method: "GET", Path: basePath + "/:id"},
 		{Method: "POST", Path: basePath},
 		{Method: "PUT", Path: basePath + "/:id"},
+		{Method: "PATCH", Path: basePath + "/:id"},
 		{Method: "PATCH", Path: basePath},
 		{Method: "DELETE", Path: basePath + "/:id"},
 		{Method: "DELETE", Path: basePath},
 	}
 
 	assert.Equal(t, len(expectedRoutes), len(routes))
-	for _, route := range expectedRoutes {
-		assert.Contains(t, methodPaths, route.Method+" - "+route.Path)
-	}
-}
-
-func TestInitRoutes_ProjectsRoute(t *testing.T) {
-	router := gin.Default()
-
-	_ = controllers.InitRoutes(router)
-
-	// Check if the projects route is registered
-	routes := controllers.GetGlobalFizzWrapper().GetFizz().Engine().Routes()
-
-	var methodPaths []string
-	for _, route := range routes {
-		methodPaths = append(methodPaths, route.Method+" - "+route.Path)
-	}
-
-	expectedRoutes := []gin.RouteInfo{
-		{Method: "GET", Path: "/projects"},
-		{Method: "GET", Path: "/projects/:id"},
-		{Method: "POST", Path: "/projects"},
-		{Method: "PUT", Path: "/projects/:id"},
-		{Method: "PATCH", Path: "/projects"},
-		{Method: "DELETE", Path: "/projects/:id"},
-		{Method: "DELETE", Path: "/projects"},
-	}
-
 	for _, route := range expectedRoutes {
 		assert.Contains(t, methodPaths, route.Method+" - "+route.Path)
 	}

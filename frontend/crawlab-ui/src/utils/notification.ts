@@ -53,7 +53,7 @@ export const allVariables: NotificationVariable[] = [
   },
   {
     category: 'task',
-    name: 'created_ts',
+    name: 'created_at',
     label: t('components.notification.variables.common.createdAt'),
     icon: ['fa', 'clock'],
   },
@@ -65,7 +65,7 @@ export const allVariables: NotificationVariable[] = [
   },
   {
     category: 'task',
-    name: 'updated_ts',
+    name: 'updated_at',
     label: t('components.notification.variables.common.updatedAt'),
     icon: ['fa', 'clock'],
   },
@@ -77,13 +77,13 @@ export const allVariables: NotificationVariable[] = [
   },
   {
     category: 'task_stat',
-    name: 'start_ts',
+    name: 'started_at',
     label: t('components.notification.variables.taskStat.startTs'),
     icon: ['fa', 'clock'],
   },
   {
     category: 'task_stat',
-    name: 'end_ts',
+    name: 'ended_at',
     label: t('components.notification.variables.taskStat.endTs'),
     icon: ['fa', 'clock'],
   },
@@ -155,7 +155,7 @@ export const allVariables: NotificationVariable[] = [
   },
   {
     category: 'spider',
-    name: 'created_ts',
+    name: 'created_at',
     label: t('components.notification.variables.common.createdAt'),
     icon: ['fa', 'clock'],
   },
@@ -167,7 +167,7 @@ export const allVariables: NotificationVariable[] = [
   },
   {
     category: 'spider',
-    name: 'updated_ts',
+    name: 'updated_at',
     label: t('components.notification.variables.common.updatedAt'),
     icon: ['fa', 'clock'],
   },
@@ -273,7 +273,7 @@ export const allVariables: NotificationVariable[] = [
   },
   {
     category: 'schedule',
-    name: 'created_ts',
+    name: 'created_at',
     label: t('components.notification.variables.common.createdAt'),
     icon: ['fa', 'clock'],
   },
@@ -285,7 +285,7 @@ export const allVariables: NotificationVariable[] = [
   },
   {
     category: 'schedule',
-    name: 'updated_ts',
+    name: 'updated_at',
     label: t('components.notification.variables.common.updatedAt'),
     icon: ['fa', 'clock'],
   },
@@ -327,7 +327,7 @@ export const allVariables: NotificationVariable[] = [
   },
   {
     category: 'node',
-    name: 'created_ts',
+    name: 'created_at',
     label: t('components.notification.variables.common.createdAt'),
     icon: ['fa', 'clock'],
   },
@@ -339,7 +339,7 @@ export const allVariables: NotificationVariable[] = [
   },
   {
     category: 'node',
-    name: 'updated_ts',
+    name: 'updated_at',
     label: t('components.notification.variables.common.updatedAt'),
     icon: ['fa', 'clock'],
   },
@@ -399,7 +399,7 @@ export const allVariables: NotificationVariable[] = [
   },
   {
     category: 'alert',
-    name: 'created_ts',
+    name: 'created_at',
     label: t('components.notification.variables.common.createdAt'),
     icon: ['fa', 'clock'],
   },
@@ -411,7 +411,7 @@ export const allVariables: NotificationVariable[] = [
   },
   {
     category: 'alert',
-    name: 'updated_ts',
+    name: 'updated_at',
     label: t('components.notification.variables.common.updatedAt'),
     icon: ['fa', 'clock'],
   },

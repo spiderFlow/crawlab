@@ -197,7 +197,7 @@ const useSpiderList = () => {
           icon: ['fa', 'clock'],
           width: '160',
           value: (row: Spider) => {
-            const time = row.stat?.last_task?.stat?.start_ts;
+            const time = row.stat?.last_task?.stat?.started_at;
             if (!time) return;
             return <ClTime time={time} />;
           },

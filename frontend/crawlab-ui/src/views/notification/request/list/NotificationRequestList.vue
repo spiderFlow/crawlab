@@ -93,7 +93,7 @@ defineOptions({ name: 'ClNotificationRequestList' });
           <cl-icon :icon="['fa', 'clock']" />
           {{ t('views.notification.requests.form.createdAt') }}
         </template>
-        <cl-time :time="state.form?.created_ts" />
+        <cl-time :time="state.form?.created_at" />
       </el-descriptions-item>
       <template v-if="hasMail">
         <el-descriptions-item>

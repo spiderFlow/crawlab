@@ -60,6 +60,7 @@ export declare global {
     content?: string;
     type: ChatMessageContentType;
     action?: string;
+    action_target?: string;
     action_status?: ChatMessageActionStatus;
     hidden?: boolean;
     usage?: ChatMessageUsage;
@@ -86,8 +87,8 @@ export declare global {
     settings?: Record<string, any>;
     tags?: string[];
     messages?: ChatMessage[];
-    created_ts?: string;
-    updated_ts?: string;
+    created_at?: string;
+    updated_at?: string;
   }
 
   interface ChatRequest {
@@ -120,6 +121,7 @@ export declare global {
     type: 'text' | 'action'; // Message type
     action_id?: string;
     action?: string;
+    action_target?: string;
     action_status?: ChatMessageActionStatus;
     is_done?: boolean;
     is_initial?: boolean;

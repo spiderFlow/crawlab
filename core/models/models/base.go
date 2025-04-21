@@ -9,9 +9,9 @@ import (
 
 type BaseModel struct {
 	Id        primitive.ObjectID `json:"_id" bson:"_id" description:"ID"`
-	CreatedAt time.Time          `json:"created_ts,omitempty" bson:"created_ts,omitempty" description:"Created timestamp"`
+	CreatedAt time.Time          `json:"created_at,omitempty" bson:"created_at,omitempty" description:"Created timestamp"`
 	CreatedBy primitive.ObjectID `json:"created_by,omitempty" bson:"created_by,omitempty" description:"Created by"`
-	UpdatedAt time.Time          `json:"updated_ts,omitempty" bson:"updated_ts,omitempty" description:"Updated timestamp"`
+	UpdatedAt time.Time          `json:"updated_at,omitempty" bson:"updated_at,omitempty" description:"Updated timestamp"`
 	UpdatedBy primitive.ObjectID `json:"updated_by,omitempty" bson:"updated_by,omitempty" description:"Updated by"`
 }
 

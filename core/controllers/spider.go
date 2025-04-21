@@ -289,34 +289,6 @@ func PostSpider(c *gin.Context, params *PostParams[models.Spider]) (response *Re
 	return GetDataResponse(s)
 }
 
-// PutSpiderById handles updating a spider by ID
-func PutSpiderById(c *gin.Context, params *PutByIdParams[models.Spider]) (response *Response[models.Spider], err error) {
-	id, err := primitive.ObjectIDFromHex(params.Id)
-	if err != nil {
-		return GetErrorResponse[models.Spider](errors.BadRequestf("invalid id format"))
-	}
-
-	u := GetUserFromContext(c)
-	modelSvc := service.NewModelService[models.Spider]()
-
-	params.Data.SetUpdated(u.Id)
-	if params.Data.Id.IsZero() {
-		params.Data.SetId(id)
-	}
-
-	err = modelSvc.ReplaceById(id, params.Data)
-	if err != nil {
-		return GetErrorResponse[models.Spider](err)
-	}
-
-	s, err := modelSvc.GetById(id)
-	if err != nil {
-		return GetErrorResponse[models.Spider](err)
-	}
-
-	return GetDataResponse(*s)
-}
-
 // DeleteSpiderById handles deleting a spider by ID
 func DeleteSpiderById(_ *gin.Context, params *DeleteByIdParams) (response *Response[models.Spider], err error) {
 	id, err := primitive.ObjectIDFromHex(params.Id)

@@ -175,17 +175,15 @@ func (svc *Service) geContentWithVariables(template string, variables []entity.N
 				content = strings.ReplaceAll(content, v.GetKey(), vd.Task.Error)
 			case "pid":
 				content = strings.ReplaceAll(content, v.GetKey(), fmt.Sprintf("%d", vd.Task.Pid))
-			case "type":
-				content = strings.ReplaceAll(content, v.GetKey(), vd.Task.Type)
 			case "mode":
 				content = strings.ReplaceAll(content, v.GetKey(), vd.Task.Mode)
 			case "priority":
 				content = strings.ReplaceAll(content, v.GetKey(), fmt.Sprintf("%d", vd.Task.Priority))
-			case "created_ts":
+			case "created_at":
 				content = strings.ReplaceAll(content, v.GetKey(), svc.getFormattedTime(vd.Task.CreatedAt))
 			case "created_by":
 				content = strings.ReplaceAll(content, v.GetKey(), svc.getUsernameById(vd.Task.CreatedBy))
-			case "updated_ts":
+			case "updated_at":
 				content = strings.ReplaceAll(content, v.GetKey(), svc.getFormattedTime(vd.Task.UpdatedAt))
 			case "updated_by":
 				content = strings.ReplaceAll(content, v.GetKey(), svc.getUsernameById(vd.Task.UpdatedBy))
@@ -197,10 +195,10 @@ func (svc *Service) geContentWithVariables(template string, variables []entity.N
 				continue
 			}
 			switch v.Name {
-			case "start_ts":
-				content = strings.ReplaceAll(content, v.GetKey(), svc.getFormattedTime(vd.TaskStat.StartTs))
-			case "end_ts":
-				content = strings.ReplaceAll(content, v.GetKey(), svc.getFormattedTime(vd.TaskStat.EndTs))
+			case "started_at":
+				content = strings.ReplaceAll(content, v.GetKey(), svc.getFormattedTime(vd.TaskStat.StartedAt))
+			case "ended_at":
+				content = strings.ReplaceAll(content, v.GetKey(), svc.getFormattedTime(vd.TaskStat.EndedAt))
 			case "wait_duration":
 				content = strings.ReplaceAll(content, v.GetKey(), fmt.Sprintf("%ds", vd.TaskStat.WaitDuration/1000))
 			case "runtime_duration":
@@ -231,11 +229,11 @@ func (svc *Service) geContentWithVariables(template string, variables []entity.N
 				content = strings.ReplaceAll(content, v.GetKey(), vd.Spider.Param)
 			case "priority":
 				content = strings.ReplaceAll(content, v.GetKey(), fmt.Sprintf("%d", vd.Spider.Priority))
-			case "created_ts":
+			case "created_at":
 				content = strings.ReplaceAll(content, v.GetKey(), svc.getFormattedTime(vd.Spider.CreatedAt))
 			case "created_by":
 				content = strings.ReplaceAll(content, v.GetKey(), svc.getUsernameById(vd.Spider.CreatedBy))
-			case "updated_ts":
+			case "updated_at":
 				content = strings.ReplaceAll(content, v.GetKey(), svc.getFormattedTime(vd.Spider.UpdatedAt))
 			case "updated_by":
 				content = strings.ReplaceAll(content, v.GetKey(), svc.getUsernameById(vd.Spider.UpdatedBy))
@@ -275,11 +273,11 @@ func (svc *Service) geContentWithVariables(template string, variables []entity.N
 				content = strings.ReplaceAll(content, v.GetKey(), fmt.Sprintf("%d", vd.Node.CurrentRunners))
 			case "max_runners":
 				content = strings.ReplaceAll(content, v.GetKey(), fmt.Sprintf("%d", vd.Node.MaxRunners))
-			case "created_ts":
+			case "created_at":
 				content = strings.ReplaceAll(content, v.GetKey(), svc.getFormattedTime(vd.Node.CreatedAt))
 			case "created_by":
 				content = strings.ReplaceAll(content, v.GetKey(), svc.getUsernameById(vd.Node.CreatedBy))
-			case "updated_ts":
+			case "updated_at":
 				content = strings.ReplaceAll(content, v.GetKey(), svc.getFormattedTime(vd.Node.UpdatedAt))
 			case "updated_by":
 				content = strings.ReplaceAll(content, v.GetKey(), svc.getUsernameById(vd.Node.UpdatedBy))
@@ -309,11 +307,11 @@ func (svc *Service) geContentWithVariables(template string, variables []entity.N
 				content = strings.ReplaceAll(content, v.GetKey(), fmt.Sprintf("%d", vd.Schedule.Priority))
 			case "enabled":
 				content = strings.ReplaceAll(content, v.GetKey(), fmt.Sprintf("%t", vd.Schedule.Enabled))
-			case "created_ts":
+			case "created_at":
 				content = strings.ReplaceAll(content, v.GetKey(), svc.getFormattedTime(vd.Schedule.CreatedAt))
 			case "created_by":
 				content = strings.ReplaceAll(content, v.GetKey(), svc.getUsernameById(vd.Schedule.CreatedBy))
-			case "updated_ts":
+			case "updated_at":
 				content = strings.ReplaceAll(content, v.GetKey(), svc.getFormattedTime(vd.Schedule.UpdatedAt))
 			case "updated_by":
 				content = strings.ReplaceAll(content, v.GetKey(), svc.getUsernameById(vd.Schedule.UpdatedBy))

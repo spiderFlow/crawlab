@@ -147,9 +147,9 @@ const notification: LComponentsNotification = {
 - 任务参数: \${task:param}
 - 任务优先级: \${task:priority}
 - 任务创建者: \${task:created_by}
-- 任务创建时间: \${task:created_ts}
-- 任务开始时间: \${task_stat:start_ts}
-- 任务结束时间: \${task_stat:end_ts}
+- 任务创建时间: \${task:created_at}
+- 任务开始时间: \${task_stat:started_at}
+- 任务结束时间: \${task_stat:ended_at}
 - 任务等待时长: \${task_stat:wait_duration}
 - 任务运行时长: \${task_stat:runtime_duration}
 - 任务总时长: \${task_stat:total_duration}
@@ -171,9 +171,9 @@ const notification: LComponentsNotification = {
 - 任务参数: \${task:param}
 - 任务优先级: \${task:priority}
 - 任务创建者: \${task:created_by}
-- 任务创建时间: \${task:created_ts}
-- 任务开始时间: \${task_stat:start_ts}
-- 任务结束时间: \${task_stat:end_ts}
+- 任务创建时间: \${task:created_at}
+- 任务开始时间: \${task_stat:started_at}
+- 任务结束时间: \${task_stat:ended_at}
 - 任务等待时长 (秒): \${task_stat:wait_duration}
 - 任务运行时长 (秒): \${task_stat:runtime_duration}
 - 任务总时长 (秒): \${task_stat:total_duration}
