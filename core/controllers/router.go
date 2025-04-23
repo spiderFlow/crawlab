@@ -293,8 +293,8 @@ func InitRoutes(app *gin.Engine) (err error) {
 		{
 			Method:      http.MethodGet,
 			Path:        "/:id/files/list",
-			Name:        "Get Spider Files",
-			Description: "Get a list of files in a spider directory",
+			Name:        "List Spider Files",
+			Description: "List the files given a directory path in the spider project",
 			HandlerFunc: GetSpiderFiles,
 		},
 		{
