@@ -113,21 +113,18 @@ func convertFilterValue(value interface{}) interface{} {
 		}
 	case reflect.Float64:
 		// JSON numbers are decoded as float64 by default
-		switch value.(type) {
+		switch typed := value.(type) {
 		case float64:
-			num := value.(float64)
 			// Check if it's a whole number
-			if num == float64(int64(num)) {
-				return int64(num)
+			if typed == float64(int64(typed)) {
+				return int64(typed)
 			} else {
-				return num
+				return typed
 			}
 		case int:
-			num := value.(int)
-			return int64(num)
+			return int64(typed)
 		case int64:
-			num := value.(int64)
-			return num
+			return typed
 		}
 	case reflect.Bool:
 		return value.(bool)
@@ -229,7 +226,7 @@ func GetSortOptionFromString(sortStr string) (sort bson.D, err error) {
 	if err != nil {
 		return nil, err
 	}
-	if sorts == nil || len(sorts) == 0 {
+	if len(sorts) == 0 {
 		return bson.D{{"_id", -1}}, nil
 	}
 	return SortsToOption(sorts)
@@ -252,7 +249,7 @@ func GetSortsOption(c *gin.Context) (sort bson.D, err error) {
 		return nil, err
 	}
 
-	if sorts == nil || len(sorts) == 0 {
+	if len(sorts) == 0 {
 		return bson.D{{"_id", -1}}, nil
 	}
 
