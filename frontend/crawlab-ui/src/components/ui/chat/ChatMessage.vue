@@ -5,6 +5,7 @@ import hljs from 'highlight.js';
 import { computed, ref, watch } from 'vue';
 import 'highlight.js/styles/github.css';
 import ClChatMessageAction from '@/components/ui/chat/ChatMessageAction.vue';
+import { Document } from '@element-plus/icons-vue';
 
 const { t } = useI18n();
 
@@ -119,7 +120,20 @@ defineOptions({ name: 'ClChatMessage' });
     </div>
 
     <div class="message-footer">
-      <!-- Token usage display -->
+      <!-- Show 'Generating...' for streaming messages -->
+      <template v-if="message.isStreaming">
+        <cl-loading-text
+          class="typing-text"
+          :text="t('components.ai.chatbot.generating')"
+        />
+      </template>
+      <template v-else>
+        <span class="message-time">
+          {{ formatTime(message.timestamp) }}
+        </span>
+      </template>
+
+      <!-- Token usage display as icon -->
       <el-popover
         v-if="hasTokenUsage && !message.isStreaming && message.role === 'assistant'"
         placement="top"
@@ -128,9 +142,9 @@ defineOptions({ name: 'ClChatMessage' });
         popper-class="token-usage-popover"
       >
         <template #reference>
-          <span class="token-usage">
-            {{ formatTokenCount(message.usage?.total_tokens) }} {{ t('components.ai.chatbot.tokens') }}
-          </span>
+          <div class="token-usage-icon" :title="formatTokenCount(message.usage?.total_tokens) + ' ' + t('components.ai.chatbot.tokens')">
+            <cl-icon :icon="['fa', 'calculator']" />
+          </div>
         </template>
         <div class="token-usage-details">
           <div class="token-usage-row">
@@ -147,19 +161,6 @@ defineOptions({ name: 'ClChatMessage' });
           </div>
         </div>
       </el-popover>
-
-      <!-- Show 'Generating...' for streaming messages -->
-      <template v-if="message.isStreaming">
-        <cl-loading-text
-          class="typing-text"
-          :text="t('components.ai.chatbot.generating')"
-        />
-      </template>
-      <template v-else>
-        <span class="message-time">
-          {{ formatTime(message.timestamp) }}
-        </span>
-      </template>
     </div>
   </div>
 </template>
@@ -171,6 +172,12 @@ defineOptions({ name: 'ClChatMessage' });
   margin: 0 12px;
   padding: 12px;
   position: relative;
+
+  &:hover {
+    .token-usage-icon {
+      visibility: visible;
+    }
+  }
 }
 
 .message-container:first-child.user {
@@ -371,6 +378,7 @@ defineOptions({ name: 'ClChatMessage' });
 }
 
 .message-footer {
+  height: 16px;
   font-size: 10px;
   opacity: 0.7;
   margin-top: 6px;
@@ -406,12 +414,22 @@ defineOptions({ name: 'ClChatMessage' });
   color: var(--el-color-primary);
 }
 
-/* Token usage styles */
-.token-usage {
-  font-size: 10px;
+.token-usage-icon {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
   cursor: pointer;
+  gap: 4px;
   color: var(--el-color-info);
-  margin-right: 8px;
+  visibility: hidden;
+
+  &:hover {
+    color: var(--el-color-primary);
+  }
+}
+
+.token-count {
+  font-size: 10px;
 }
 
 .token-usage-details {
