@@ -5,12 +5,13 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
-	"github.com/crawlab-team/crawlab/core/entity"
 	"io"
 	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
+
+	"github.com/crawlab-team/crawlab/core/entity"
 )
 
 func OpenFile(fileName string) *os.File {
@@ -180,6 +181,8 @@ func GetFileHash(filePath string) (res string, err error) {
 
 	return hex.EncodeToString(hash.Sum(nil)), nil
 }
+
+const IgnoreFileRegexPattern = "^(node_modules)/"
 
 func ScanDirectory(dir string) (res map[string]entity.FsFileInfo, err error) {
 	files := make(map[string]entity.FsFileInfo)
