@@ -72,7 +72,6 @@ const useNodeList = () => {
           label: t('views.nodes.navActions.new.label'),
           tooltip: t('views.nodes.navActions.new.tooltip'),
           icon: getIconByAction(ACTION_ADD),
-          type: 'success',
           onClick: async () => {
             const message = (
               <div>

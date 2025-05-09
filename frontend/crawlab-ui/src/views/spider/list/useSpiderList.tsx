@@ -62,7 +62,6 @@ const useSpiderList = () => {
   // nav actions
   const navActions = computed<ListActionGroup[]>(() => [
     {
-      action: ACTION_ADD,
       name: 'common',
       children: [
         {
@@ -73,7 +72,6 @@ const useSpiderList = () => {
           label: t('views.spiders.navActions.new.label'),
           tooltip: t('views.spiders.navActions.new.tooltip'),
           icon: getIconByAction(ACTION_ADD),
-          type: 'success',
           onClick: () => {
             commit(`${ns}/showDialog`, 'create');
           },

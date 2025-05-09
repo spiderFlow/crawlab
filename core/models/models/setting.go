@@ -7,6 +7,6 @@ import (
 type Setting struct {
 	any       `collection:"settings"`
 	BaseModel `bson:",inline"`
-	Key       string `json:"key" bson:"key" description:"Key"`
+	Key       string `json:"key" bson:"key" description:"Type"`
 	Value     bson.M `json:"value" bson:"value" description:"Value"`
 }

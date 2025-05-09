@@ -71,7 +71,6 @@ const useScheduleList = () => {
           label: t('views.schedules.navActions.new.label'),
           tooltip: t('views.schedules.navActions.new.tooltip'),
           icon: getIconByAction(ACTION_ADD),
-          type: 'success',
           onClick: () => {
             commit(`${ns}/showDialog`, 'create');
           },

@@ -4,9 +4,11 @@ const system: LViewsSystem = {
     dependency: '依赖管理',
     environment: '环境变量',
     ai: 'AI 助手',
+    models: 'AI 模型',
   },
   ai: {
     llmProvider: 'LLM 提供商',
+    name: '名称',
     enabled: '是否启用',
     apiKey: 'API 密钥',
     deploymentName: '部署名称',
@@ -23,6 +25,14 @@ const system: LViewsSystem = {
     topP: 'Top P',
     unset: '未设置',
     disabled: '已禁用',
+    actions: {
+      new: {
+        llmProvider: '新建 LLM 提供商',
+      },
+      edit: {
+        llmProvider: '编辑 LLM 提供商',
+      },
+    },
   },
   customize: {
     customTitle: '自定义网站标题',

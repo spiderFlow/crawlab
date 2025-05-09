@@ -633,7 +633,7 @@ func InitRoutes(app *gin.Engine) (err error) {
 		{
 			Method:      http.MethodPut,
 			Path:        "/:key",
-			Name:        "Replace Setting by Key",
+			Name:        "Replace Setting by Type",
 			Description: "Replace a setting by key (full update)",
 			HandlerFunc: PutSetting,
 		},

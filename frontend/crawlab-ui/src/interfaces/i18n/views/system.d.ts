@@ -4,9 +4,11 @@ interface LViewsSystem {
     dependency: string;
     environment: string;
     ai: string;
+    models: string;
   };
   ai: {
     llmProvider: string;
+    name: string;
     enabled: string;
     apiKey: string;
     apiBaseUrl: string;
@@ -23,6 +25,14 @@ interface LViewsSystem {
     topP: string;
     unset: string;
     disabled: string;
+    actions: {
+      new: {
+        llmProvider: string;
+      };
+      edit: {
+        llmProvider: string;
+      };
+    };
   };
   customize: {
     customTitle: string;

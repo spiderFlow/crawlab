@@ -4,9 +4,11 @@ const system: LViewsSystem = {
     dependency: 'Dependencies',
     environment: 'Environment',
     ai: 'AI Assistant',
+    models: 'AI Models',
   },
   ai: {
     llmProvider: 'LLM Provider',
+    name: 'Name',
     enabled: 'Enabled',
     apiKey: 'API Key',
     deploymentName: 'Deployment Name',
@@ -23,6 +25,14 @@ const system: LViewsSystem = {
     topP: 'Top P',
     unset: 'Unset',
     disabled: 'Disabled',
+    actions: {
+      new: {
+        llmProvider: 'New LLM Provider',
+      },
+      edit: {
+        llmProvider: 'Edit LLM Provider',
+      },
+    },
   },
   customize: {
     customTitle: 'Custom Site Title',

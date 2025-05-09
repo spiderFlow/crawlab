@@ -38,9 +38,9 @@ const menuItems = computed<NavItem[]>(() => [
     label: t('views.system.menuItems.customize'),
   },
   {
-    id: 'ai',
-    icon: getIconByRouteConcept('ai'),
-    label: t('views.system.menuItems.ai'),
+    id: 'models',
+    icon: getIconByRouteConcept('models'),
+    label: t('views.system.menuItems.models'),
   },
   {
     id: 'dependency',
@@ -59,16 +59,16 @@ defineOptions({ name: 'ClSystemDetail' });
 
 <template>
   <div class="system-detail">
-    <div class="system-detail-content-wrapper">
-      <el-menu
-        :default-active="activeItemKey"
-        @select="(value: string) => router.push(`/system/${value}`)"
-      >
-        <el-menu-item v-for="item in menuItems" :key="item.id" :index="item.id">
-          <cl-icon :icon="item.icon" />
-          {{ item.label }}
-        </el-menu-item>
-      </el-menu>
+    <el-menu
+      :default-active="activeItemKey"
+      @select="(value: string) => router.push(`/system/${value}`)"
+    >
+      <el-menu-item v-for="item in menuItems" :key="item.id" :index="item.id">
+        <cl-icon :icon="item.icon" />
+        {{ item.label }}
+      </el-menu-item>
+    </el-menu>
+    <div class="system-detail-content">
       <router-view />
     </div>
   </div>
@@ -79,37 +79,32 @@ defineOptions({ name: 'ClSystemDetail' });
   background-color: #ffffff;
   min-height: 100%;
   display: flex;
-  flex-direction: column;
+  overflow: hidden;
 
   &:deep(.form) {
     display: block;
     width: 100%;
   }
 
-  .system-detail-content-wrapper {
-    flex: 1;
-    display: flex;
-    height: 100%;
+  &:deep(.el-menu) {
+    flex: 0 0 180px;
+    width: 180px;
 
-    &:deep(.el-menu) {
-      flex: 0 0 180px;
+    .el-menu-item {
+      &:hover {
+        background-color: inherit !important;
+        color: var(--cl-primary-color);
+      }
 
-      .el-menu-item {
-        &:hover {
-          background-color: inherit !important;
-          color: var(--cl-primary-color);
-        }
-
-        &:deep(.icon) {
-          width: 24px;
-        }
+      &:deep(.icon) {
+        width: 24px;
       }
     }
+  }
 
-    .system-detail-content {
-      padding: 20px;
-      width: 100%;
-    }
+  .system-detail-content {
+    flex: 1;
+    width: calc(100% - 180px);
   }
 }
 </style>

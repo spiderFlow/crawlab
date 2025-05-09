@@ -49,7 +49,6 @@ const useRoleList = () => {
           label: t('views.roles.navActions.new.label'),
           tooltip: t('views.roles.navActions.new.tooltip'),
           icon: getIconByAction(ACTION_ADD),
-          type: 'success',
           onClick: () => {
             commit(`${ns}/showDialog`, 'create');
           },

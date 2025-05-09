@@ -23,6 +23,7 @@ export declare global {
     | 'notification'
     | 'permission'
     | 'ai'
+    | 'models'
     | 'system'
     | 'misc'
     | 'myAccount'

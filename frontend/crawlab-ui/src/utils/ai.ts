@@ -13,20 +13,20 @@ export const DEFAULT_OPENAI_MODELS = [
 export const getLLMProviderItems = (): LLMProviderItem[] => {
   return [
     {
-      key: 'openai',
+      type: 'openai',
       name: 'OpenAI',
       icon: ['svg', 'openai'],
       defaultModels: DEFAULT_OPENAI_MODELS,
     },
     {
-      key: 'azure-openai',
+      type: 'azure-openai',
       name: 'Azure OpenAI',
       icon: ['svg', 'azure'],
       defaultModels: DEFAULT_OPENAI_MODELS,
       defaultApiVersions: ['2025-02-01-preview'],
     },
     {
-      key: 'anthropic',
+      type: 'anthropic',
       name: 'Anthropic',
       icon: ['svg', 'anthropic'],
       defaultModels: [
@@ -37,7 +37,7 @@ export const getLLMProviderItems = (): LLMProviderItem[] => {
       ],
     },
     {
-      key: 'gemini',
+      type: 'gemini',
       name: 'Gemini',
       icon: ['svg', 'gemini'],
       defaultModels: [
@@ -50,7 +50,7 @@ export const getLLMProviderItems = (): LLMProviderItem[] => {
       ],
     },
     {
-      key: 'grok',
+      type: 'grok',
       name: 'Grok',
       icon: ['svg', 'grok'],
       defaultModels: [
@@ -61,7 +61,7 @@ export const getLLMProviderItems = (): LLMProviderItem[] => {
       ],
     },
     {
-      key: 'qwen',
+      type: 'qwen',
       name: 'Qwen',
       icon: ['svg', 'qwen'],
       defaultModels: [
@@ -74,7 +74,7 @@ export const getLLMProviderItems = (): LLMProviderItem[] => {
       ],
     },
     {
-      key: 'mistral',
+      type: 'mistral',
       name: 'Mistral',
       icon: ['svg', 'mistral'],
       defaultModels: [
@@ -87,34 +87,15 @@ export const getLLMProviderItems = (): LLMProviderItem[] => {
       ],
     },
     {
-      key: 'deepseek',
+      type: 'deepseek',
       name: 'DeepSeek',
       icon: ['svg', 'deepseek'],
       defaultModels: ['deepseek-chat', 'deepseek-reasoner'],
     },
     {
-      key: 'openai-compatible',
+      type: 'openai-compatible',
       name: 'OpenAI Compatible',
       icon: ['svg', 'openai'],
     },
   ];
-};
-
-export const getLLMProviderItem = (
-  providerKey: LLMProviderKey
-): LLMProviderItem | undefined => {
-  const providerItems = getLLMProviderItems();
-  return providerItems.find(item => item.key === providerKey);
-};
-
-export const getLLMProviderName = (
-  providerKey: LLMProviderKey
-): string | undefined => {
-  return getLLMProviderItem(providerKey)?.name;
-};
-
-export const getLLMProviderIcon = (
-  providerKey: LLMProviderKey
-): Icon | undefined => {
-  return getLLMProviderItem(providerKey)?.icon;
 };

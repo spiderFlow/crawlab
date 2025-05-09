@@ -55,7 +55,6 @@ const useUserList = () => {
           label: t('views.users.navActions.new.label'),
           tooltip: t('views.users.navActions.new.tooltip'),
           icon: getIconByAction(ACTION_ADD),
-          type: 'success',
           onClick: () => {
             commit(`${ns}/showDialog`, 'create');
           },

@@ -11,7 +11,7 @@ import {
   ACTION_VIEW,
   FILTER_OP_CONTAINS,
 } from '@/constants';
-import { onListFilterChangeByKey, translate } from '@/utils';
+import { getIconByAction, onListFilterChangeByKey, translate } from '@/utils';
 import useList from '@/layouts/content/list/useList';
 import { ClTag, ClNavLink, useNotificationChannel } from '@/components';
 
@@ -48,8 +48,7 @@ const useNotificationChannelList = () => {
           buttonType: 'label',
           label: t('views.notification.channels.navActions.new.label'),
           tooltip: t('views.notification.channels.navActions.new.tooltip'),
-          icon: ['fa', 'plus'],
-          type: 'success',
+          icon: getIconByAction(ACTION_ADD),
           onClick: () => {
             commit(`${ns}/showDialog`, 'create');
           },

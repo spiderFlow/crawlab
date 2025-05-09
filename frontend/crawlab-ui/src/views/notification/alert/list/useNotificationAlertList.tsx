@@ -13,6 +13,7 @@ import {
   TABLE_COLUMN_NAME_ACTIONS,
 } from '@/constants';
 import {
+  getIconByAction,
   onListFilterChangeByKey,
   setupListComponent,
   translate,
@@ -50,8 +51,7 @@ const useNotificationAlertList = () => {
           buttonType: 'label',
           label: t('views.notification.alerts.navActions.new.label'),
           tooltip: t('views.notification.alerts.navActions.new.tooltip'),
-          icon: ['fa', 'plus'],
-          type: 'success',
+          icon: getIconByAction(ACTION_ADD),
           onClick: () => {
             commit(`${ns}/showDialog`, 'create');
           },

@@ -112,19 +112,19 @@ const cancelMessage = () => {
 };
 
 const selectProviderModel = ({
-  provider,
+  providerId,
   model,
 }: {
-  provider: string;
+  providerId: string;
   model: string;
 }) => {
-  chatbotConfig.value.provider = provider as LLMProviderKey;
+  chatbotConfig.value.providerId = providerId;
   chatbotConfig.value.model = model;
   localStorage.setItem('chatbotConfig', JSON.stringify(chatbotConfig.value));
 };
 
 const addProviderModel = () => {
-  router.push('/system/ai');
+  router.push('/system/models');
 };
 
 const openConfig = () => {
@@ -230,7 +230,10 @@ defineOptions({ name: 'ClAssistantConsole' });
           ref="chatInputRef"
           :is-loading="isGenerating"
           :providers="availableProviders"
-          :selected-provider="chatbotConfig.provider"
+          :selected-provider-model="{
+            providerId: chatbotConfig.providerId,
+            model: chatbotConfig.model,
+          }"
           :selected-model="chatbotConfig.model"
           @send="sendMessage"
           @cancel="cancelMessage"

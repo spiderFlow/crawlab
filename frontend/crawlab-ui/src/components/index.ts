@@ -144,6 +144,7 @@ import LexicalTablePlugin from './ui/lexical/plugins/LexicalTablePlugin.vue';
 import LexicalToolbarPlugin from './ui/lexical/plugins/LexicalToolbarPlugin.vue';
 import LexicalVariablePlugin from './ui/lexical/plugins/LexicalVariablePlugin.vue';
 import LinkTag from './ui/tag/LinkTag.vue';
+import LlmProviderForm from './core/ai/LlmProviderForm.vue';
 import LoadingText from './ui/loading/LoadingText.vue';
 import LogsView from './ui/logs/LogsView.vue';
 import MarkdownEditor from './ui/markdown/MarkdownEditor.vue';
@@ -389,6 +390,7 @@ export {
   LexicalToolbarPlugin as ClLexicalToolbarPlugin,
   LexicalVariablePlugin as ClLexicalVariablePlugin,
   LinkTag as ClLinkTag,
+  LlmProviderForm as ClLlmProviderForm,
   LoadingText as ClLoadingText,
   LogsView as ClLogsView,
   MarkdownEditor as ClMarkdownEditor,

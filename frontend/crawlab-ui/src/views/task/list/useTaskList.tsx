@@ -101,7 +101,6 @@ const useTaskList = () => {
           label: t('views.tasks.navActions.new.label'),
           tooltip: t('views.tasks.navActions.new.tooltip'),
           icon: getIconByAction(ACTION_ADD),
-          type: 'success',
           onClick: () => {
             commit(`${ns}/showDialog`, 'create');
           },

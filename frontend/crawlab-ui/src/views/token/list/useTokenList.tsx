@@ -45,7 +45,6 @@ const useTokenList = () => {
           label: t('views.tokens.navActions.new.label'),
           tooltip: t('views.tokens.navActions.new.tooltip'),
           icon: getIconByAction(ACTION_ADD),
-          type: 'success',
           onClick: async () => {
             const res = await ElMessageBox.prompt(
               t('views.tokens.messageBox.prompt.create.title'),

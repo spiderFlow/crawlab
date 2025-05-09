@@ -13,7 +13,7 @@ import {
   ACTION_VIEW_TEMPLATE,
   FILTER_OP_CONTAINS,
 } from '@/constants';
-import { onListFilterChangeByKey, translate } from '@/utils';
+import { getIconByAction, onListFilterChangeByKey, translate } from '@/utils';
 import useRequest from '@/services/request';
 import useList from '@/layouts/content/list/useList';
 import NavLink from '@/components/ui/nav/NavLink.vue';
@@ -50,8 +50,7 @@ const useNotificationSettingList = () => {
           buttonType: 'label',
           label: t('views.notification.settings.navActions.new.label'),
           tooltip: t('views.notification.settings.navActions.new.tooltip'),
-          icon: ['fa', 'plus'],
-          type: 'success',
+          icon: getIconByAction(ACTION_ADD),
           onClick: () => {
             commit(`${ns}/showDialog`, 'create');
           },

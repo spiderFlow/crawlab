@@ -47,7 +47,6 @@ const useProjectList = () => {
           label: t('views.projects.navActions.new.label'),
           tooltip: t('views.projects.navActions.new.tooltip'),
           icon: getIconByAction(ACTION_ADD),
-          type: 'success',
           onClick: () => {
             commit(`${ns}/showDialog`, 'create');
           },

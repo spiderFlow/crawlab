@@ -1,5 +1,5 @@
 export declare global {
-  type LLMProviderKey =
+  type LLMProviderType =
     | 'openai'
     | 'azure-openai'
     | 'anthropic'
@@ -11,7 +11,7 @@ export declare global {
     | 'openai-compatible';
 
   interface LLMProvider extends BaseModel {
-    key?: LLMProviderKey;
+    type?: LLMProviderType;
     name?: string;
     enabled?: boolean;
     api_key?: string;
@@ -21,11 +21,16 @@ export declare global {
   }
 
   interface LLMProviderItem {
-    key: LLMProviderKey;
+    type: LLMProviderType;
     name: string;
     icon?: Icon;
     defaultModels?: string[];
     defaultApiVersions?: string[];
+  }
+
+  interface LLMProviderModel {
+    providerId?: string;
+    model?: string;
   }
 
   type ChatMessageRole = 'system' | 'user' | 'assistant';
@@ -92,7 +97,7 @@ export declare global {
   }
 
   interface ChatRequest {
-    provider: string;
+    provider_id: string;
     model: string;
     query: string;
     system_prompt?: string;
@@ -104,7 +109,7 @@ export declare global {
   }
 
   interface ChatbotConfig {
-    provider?: LLMProviderKey;
+    providerId?: string;
     model?: string;
     systemPrompt?: string;
     temperature?: number;

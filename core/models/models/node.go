@@ -7,7 +7,7 @@ import (
 type Node struct {
 	any            `collection:"nodes"`
 	BaseModel      `bson:",inline"`
-	Key            string    `json:"key" bson:"key" description:"Key"`
+	Key            string    `json:"key" bson:"key" description:"Type"`
 	Name           string    `json:"name" bson:"name" description:"Name"`
 	Ip             string    `json:"ip" bson:"ip" description:"IP"`
 	Mac            string    `json:"mac" bson:"mac" description:"MAC"`

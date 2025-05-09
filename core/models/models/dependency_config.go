@@ -3,7 +3,7 @@ package models
 type DependencyConfig struct {
 	any               `collection:"dependency_configs"`
 	BaseModel         `bson:",inline"`
-	Key               string `json:"key" bson:"key" description:"Key"`
+	Key               string `json:"key" bson:"key" description:"Type"`
 	Name              string `json:"name" bson:"name" description:"Name"`
 	ExecCmd           string `json:"exec_cmd" bson:"exec_cmd" description:"Exec cmd"`
 	PkgCmd            string `json:"pkg_cmd" bson:"pkg_cmd" description:"Pkg cmd"`

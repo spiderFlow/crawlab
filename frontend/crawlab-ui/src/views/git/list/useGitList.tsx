@@ -17,6 +17,7 @@ import {
 } from '@/constants';
 import { useList } from '@/layouts';
 import {
+  getIconByAction,
   getPlaceholderColumn,
   onListFilterChangeByKey,
   setupListComponent,
@@ -58,8 +59,7 @@ const useGitList = () => {
           buttonType: 'label',
           label: t('views.gits.navActions.new.label'),
           tooltip: t('views.gits.navActions.new.tooltip'),
-          icon: ['fa', 'plus'],
-          type: 'success',
+          icon: getIconByAction(ACTION_ADD),
           onClick: () => {
             commit(`${ns}/showDialog`, 'create');
           },

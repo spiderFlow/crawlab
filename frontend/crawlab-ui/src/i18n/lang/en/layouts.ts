@@ -216,6 +216,7 @@ const layouts: LLayouts = {
         dependency: 'Dependency',
         environment: 'Environment',
         ai: 'AI Assistant',
+        models: 'AI Models',
       },
     },
     misc: {

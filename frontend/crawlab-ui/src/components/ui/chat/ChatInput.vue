@@ -1,13 +1,21 @@
 <script setup lang="ts">
-import { ref, nextTick, onMounted, watch, computed, onUnmounted, onBeforeMount } from 'vue';
+import {
+  ref,
+  nextTick,
+  onMounted,
+  watch,
+  computed,
+  onUnmounted,
+} from 'vue';
 import { useI18n } from 'vue-i18n';
-import { getLLMProviderIcon, getLLMProviderName } from '@/utils/ai';
-import ClLabelButton from '@/components/ui/button/LabelButton.vue';
+import {
+  getLLMProviderItems,
+} from '@/utils/ai';
 
 // Add TypeScript interface for tree node
 interface TreeNode {
   label: string;
-  value: string;
+  value: LLMProviderModel;
   children?: TreeNode[];
 }
 
@@ -19,46 +27,49 @@ const textareaRef = ref<HTMLTextAreaElement | null>(null);
 const props = defineProps<{
   isLoading?: boolean;
   providers?: LLMProvider[];
-  selectedProvider?: LLMProviderKey;
-  selectedModel?: string;
+  selectedProviderModel?: LLMProviderModel;
 }>();
 
 const emit = defineEmits<{
   (e: 'send', message: string): void;
-  (e: 'model-change', value: { provider: string; model: string }): void;
+  (e: 'model-change', value: LLMProviderModel): void;
   (e: 'cancel'): void;
   (e: 'add-model'): void;
 }>();
 
-const selectedProviderModel = ref<string>();
-const updateSelectedProviderModel = () => {
-  selectedProviderModel.value = `${props.selectedProvider}:${props.selectedModel}`;
-};
-watch(
-  () => `${props.selectedProvider}:${props.selectedModel}`,
-  updateSelectedProviderModel
-);
-onBeforeMount(updateSelectedProviderModel);
-
-const onModelChange = (value: string) => {
-  const [provider, model] = value.split(':');
-  emit('model-change', { provider, model });
+const onModelChange = (value: LLMProviderModel) => {
+  emit('model-change', value);
 };
 
 const providerSelectOptions = computed<SelectOption[]>(() => {
   return (
     props.providers?.map(provider => {
-      const providerName = getLLMProviderName(provider.key!);
       return {
-        label: providerName,
-        value: provider.key,
+        label: provider.name,
+        value: provider._id,
         children:
           provider.models?.map(model => ({
             label: model,
-            value: `${provider.key}:${model}`,
+            value: {
+              providerId: provider._id,
+              model,
+            },
           })) || [],
       };
     }) || []
+  );
+});
+
+const activeProvider = computed(() => {
+  const { providers, selectedProviderModel } = props;
+  if (!providers || !selectedProviderModel) return;
+  const { providerId } = selectedProviderModel;
+  return providers.find(provider => provider._id === providerId);
+});
+
+const activeProviderItem = computed(() => {
+  return getLLMProviderItems().find(
+    item => item.type === activeProvider.value?.type
   );
 });
 
@@ -133,12 +144,12 @@ const popoverVisible = ref(false);
 
 // Get current model display name
 const currentModelDisplay = computed(() => {
-  if (!selectedProviderModel.value)
+  const { selectedProviderModel } = props;
+  if (!selectedProviderModel) {
     return t('components.ai.chatbot.selectModel');
-
-  const [_, modelName] = selectedProviderModel.value.split(':');
-
-  return modelName || '';
+  }
+  const { model } = selectedProviderModel;
+  return model || '';
 });
 
 // Add focus method
@@ -187,7 +198,7 @@ defineOptions({ name: 'ClChatInput' });
           >
             <template #reference>
               <div class="model-select-trigger">
-                <cl-icon :icon="getLLMProviderIcon(selectedProvider!)" />
+                <cl-icon :icon="activeProviderItem?.icon" />
                 <span class="model-name">{{ currentModelDisplay }}</span>
                 <cl-icon
                   :icon="['fa', 'angle-down']"
@@ -206,8 +217,7 @@ defineOptions({ name: 'ClChatInput' });
                 @node-click="
                   (data: TreeNode) => {
                     if (data.children?.length) return;
-                    selectedProviderModel = data.value;
-                    onModelChange(data.value);
+                    emit('model-change', data.value);
                     popoverVisible = false;
                   }
                 "

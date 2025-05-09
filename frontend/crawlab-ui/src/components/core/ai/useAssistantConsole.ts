@@ -123,9 +123,9 @@ const useAssistantConsole = () => {
         resetChatbotConfig();
       }
 
-      if (!chatbotConfig.value.provider || !chatbotConfig.value.model) {
+      if (!chatbotConfig.value.providerId || !chatbotConfig.value.model) {
         if (availableProviders.value.length > 0) {
-          chatbotConfig.value.provider = availableProviders.value[0].key!;
+          chatbotConfig.value.providerId = availableProviders.value[0]._id;
           chatbotConfig.value.model = availableProviders.value[0].models![0];
           localStorage.setItem(
             'chatbotConfig',
@@ -182,17 +182,17 @@ const useAssistantConsole = () => {
 
   // Message stream handling
   const createChatRequest = (message: string): ChatRequest => {
-    const { provider, model, systemPrompt, temperature, maxTokens } =
+    const { providerId, model, systemPrompt, temperature, maxTokens } =
       chatbotConfig.value;
 
-    if (!provider || !model) {
+    if (!providerId || !model) {
       throw new Error(
         'Please select a provider and model before sending a message'
       );
     }
 
     return {
-      provider,
+      provider_id: providerId,
       model,
       query: message,
       system_prompt: systemPrompt,
