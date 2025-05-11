@@ -34,3 +34,5 @@ dist_local/
 
 stats.html
 .turbo
+
+*.local
