@@ -1,4 +1,10 @@
 export declare global {
+  interface LLMResponseUsage {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    total_tokens?: number;
+  }
+
   type LLMProviderType =
     | 'openai'
     | 'azure-openai'
@@ -48,7 +54,7 @@ export declare global {
     metadata?: Record<string, any>;
     status: ChatMessageStatus;
     error?: string;
-    usage?: ChatMessageUsage;
+    usage?: LLMResponseUsage;
 
     // Frontend UI-specific properties
     timestamp?: Date;
@@ -68,16 +74,10 @@ export declare global {
     action_target?: string;
     action_status?: ChatMessageActionStatus;
     hidden?: boolean;
-    usage?: ChatMessageUsage;
+    usage?: LLMResponseUsage;
 
     // Frontend UI-specific properties
     isStreaming?: boolean;
-  }
-
-  interface ChatMessageUsage {
-    prompt_tokens?: number;
-    completion_tokens?: number;
-    total_tokens?: number;
   }
 
   type ChatConversationStatus = 'active' | 'archived' | 'deleted';
@@ -133,6 +133,6 @@ export declare global {
     error?: string;
     hidden?: boolean;
     is_text_done?: boolean;
-    usage?: ChatMessageUsage;
+    usage?: LLMResponseUsage;
   }
 }

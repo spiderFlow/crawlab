@@ -29,15 +29,15 @@ export declare global {
     database: DatabaseStoreState;
     dependency: DependencyStoreState;
     environment: EnvironmentStoreState;
-    ai: AiStoreState;
     system: SystemStoreState;
+    autoprobe: AutoProbeStoreState;
   }
 
   type StoreGetter<S, T, R = RootStoreState> = (
     state: S,
     getters?: GetterTree<S, R>,
     rootState?: R,
-    rootGetters?: any
+    rootGetters?: any,
   ) => T;
 
   type StoreMutation<S, P> = (state: S, payload: P) => void;
@@ -45,7 +45,7 @@ export declare global {
   type StoreActionHandler<S, P, T, R = RootStoreState> = (
     this: Store<R>,
     ctx: ActionContext<S, R>,
-    payload?: P
+    payload?: P,
   ) => T;
 
   interface StoreActionObject<S, P, T> {
@@ -175,7 +175,7 @@ export declare global {
     | 'dependency'
     | 'environment'
     | 'dataCollection'
-    | 'llmProvider';
+    | 'autoprobe';
   type StoreNamespace = ListStoreNamespace | 'layout' | 'common';
 
   interface StoreContext<T, R = RootStoreState> {

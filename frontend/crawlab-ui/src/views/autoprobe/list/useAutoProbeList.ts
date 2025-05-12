@@ -2,11 +2,11 @@ import { useStore } from 'vuex';
 import { useList } from '@/layouts';
 
 const useAutoProbeList = () => {
-  const ns: ListStoreNamespace = 'extract';
+  const ns: ListStoreNamespace = 'autoprobe';
   const store = useStore();
 
   return {
-    ...useList<ExtractPattern>(ns),
+    ...useList<AutoProbe>(ns, store),
   };
 };
 
