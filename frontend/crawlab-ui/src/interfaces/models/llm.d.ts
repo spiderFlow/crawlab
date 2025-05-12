@@ -19,11 +19,11 @@ export declare global {
   interface LLMProvider extends BaseModel {
     type?: LLMProviderType;
     name?: string;
-    enabled?: boolean;
     api_key?: string;
     api_base_url?: string;
     api_version?: string;
     models?: string[];
+    default_model?: string;
   }
 
   interface LLMProviderItem {

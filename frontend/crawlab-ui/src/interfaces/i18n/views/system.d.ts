@@ -15,8 +15,7 @@ interface LViewsSystem {
     deploymentName: string;
     apiVersion: string;
     models: string;
-    defaultModels: string;
-    customModels: string;
+    defaultModel: string;
     addCustomModel: string;
     noCustomModels: string;
     modelAlreadyExists: string;

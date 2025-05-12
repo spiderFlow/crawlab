@@ -1,25 +1,52 @@
 <script setup lang="tsx">
 import { ref, computed, onBeforeMount } from 'vue';
-import { ElSpace, ElMessage, ElMessageBox } from 'element-plus';
-import { ClSwitch, ClTag, ClNavLink, ClIcon } from '@/components';
+import { ElSpace, ElMessage, ElMessageBox, ElCheckbox } from 'element-plus';
+import { ClTag, ClNavLink, ClIcon } from '@/components';
 import useRequest from '@/services/request';
 import { getDefaultPagination, plainClone, translate } from '@/utils';
 import {
   ACTION_DELETE,
   ACTION_EDIT,
-  ACTION_VIEW,
   TABLE_COLUMN_NAME_ACTIONS,
 } from '@/constants';
 import { getLLMProviderItems } from '@/utils/ai';
 
 const t = translate;
 
-const { getList, put, post, del } = useRequest();
+const { get, getList, put, post, del } = useRequest();
 
 const llmProviders = ref<LLMProvider[]>([]);
 const llmProvidersTotal = ref(0);
 const form = ref<LLMProvider>();
 const formRef = ref();
+
+const settingAI = ref<Setting<SettingAI>>();
+const defaultProviderId = computed(
+  () => settingAI.value?.value?.default_provider_id
+);
+const getSettingAI = async () => {
+  const res = await get('/settings/ai');
+  settingAI.value = res.data;
+};
+const updateDefaultProviderId = async (id: string) => {
+  try {
+    const data = {
+      ...settingAI.value,
+      value: {
+        ...settingAI.value?.value,
+        default_provider_id: id,
+      },
+    };
+    if (!settingAI.value) {
+      await post('/settings/ai', { data });
+    } else {
+      await put('/settings/ai', { data });
+    }
+    await getSettingAI();
+  } catch (e) {
+    ElMessage.error((e as Error).message);
+  }
+};
 
 const getLlmProviderItem = (type: LLMProviderType) => {
   return getLLMProviderItems().find(item => item.type === type);
@@ -54,9 +81,15 @@ const onConfirm = async () => {
         data: form.value,
       });
     } else {
-      await post('/ai/llm/providers', {
-        data: form.value,
-      });
+      const res = await post<any, ResponseWithData<LLMProvider>>(
+        '/ai/llm/providers',
+        {
+          data: form.value,
+        }
+      );
+      if (!settingAI.value?.value?.default_provider_id) {
+        await updateDefaultProviderId(res.data?._id!);
+      }
     }
     dialogVisible.value = false;
     form.value = undefined;
@@ -108,29 +141,24 @@ const tableColumns = computed<TableColumns<LLMProvider>>(() => {
       },
     },
     {
-      key: 'enabled',
-      label: t('views.system.ai.enabled'),
+      key: 'default',
+      label: t('common.mode.default'),
       width: '90px',
       value: (row: LLMProvider) => {
+        const isDefault = row._id === defaultProviderId.value;
         return (
-          <ClSwitch
-            modelValue={row.enabled}
-            onChange={async (enabled: boolean) => {
-              const originalEnabled = row.enabled;
-              row.enabled = enabled;
-              try {
-                await put(`/ai/llm/providers/${row._id}`, {
-                  data: { ...row, enabled },
-                });
-                ElMessage.success(
-                  t(
-                    `common.message.success.${enabled ? 'enabled' : 'disabled'}`
-                  )
-                );
-              } catch (e) {
-                ElMessage.error((e as Error).message);
-                row.enabled = originalEnabled;
-              }
+          <ElCheckbox
+            modelValue={isDefault}
+            disabled={row._id === defaultProviderId.value}
+            onChange={async () => {
+              await ElMessageBox.confirm(
+                t('common.messageBox.confirm.setDefault'),
+                {
+                  type: 'warning',
+                }
+              );
+              await updateDefaultProviderId(row._id!);
+              ElMessage.success(t('common.message.success.action'));
             }}
           />
         );
@@ -145,7 +173,15 @@ const tableColumns = computed<TableColumns<LLMProvider>>(() => {
         return (
           <ElSpace direction="horizontal" gap={8} wrap>
             {row.models?.map(model => {
-              return <ClTag label={model} />;
+              if (row.default_model === model) {
+                return (
+                  <ClTag
+                    label={`${model} (${t('common.mode.default')})`}
+                    type="warning"
+                  />
+                );
+              }
+              return <ClTag label={model} type="primary" />;
             })}
           </ElSpace>
         );
@@ -194,7 +230,9 @@ const dialogTitle = computed(() => {
 });
 const dialogConfirmLoading = ref(false);
 
-onBeforeMount(getLLMProviderList);
+onBeforeMount(async () => {
+  await Promise.all([getSettingAI(), getLLMProviderList()]);
+});
 
 defineOptions({ name: 'ClSystemDetailTabModels' });
 </script>

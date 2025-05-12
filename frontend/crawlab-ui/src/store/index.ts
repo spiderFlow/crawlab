@@ -20,6 +20,7 @@ import database from '@/store/modules/database';
 import dependency from '@/store/modules/dependency';
 import environment from '@/store/modules/environment';
 import system from '@/store/modules/system';
+import autoprobe from '@/store/modules/autoprobe';
 
 let _store: Store<RootStoreState>;
 
@@ -47,6 +48,7 @@ export const createStore = (): Store<RootStoreState> => {
       dependency,
       environment,
       system,
+      autoprobe,
     },
   });
 };

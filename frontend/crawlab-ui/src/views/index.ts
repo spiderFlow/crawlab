@@ -1,3 +1,7 @@
+import AutoProbeDetail from './autoprobe/detail/AutoProbeDetail.vue';
+import AutoProbeDetailTabOverview from './autoprobe/detail/tabs/AutoProbeDetailTabOverview.vue';
+import AutoProbeDetailTabTasks from './autoprobe/detail/tabs/AutoProbeDetailTabTasks.vue';
+import AutoProbeList from './autoprobe/list/AutoProbeList.vue';
 import DatabaseDetail from './database/detail/DatabaseDetail.vue';
 import DatabaseDetailActionsCommon from './database/detail/actions/DatabaseDetailActionsCommon.vue';
 import DatabaseDetailActionsConsole from './database/detail/actions/DatabaseDetailActionsConsole.vue';
@@ -87,6 +91,7 @@ import TaskDetailTabLogs from './task/detail/tabs/TaskDetailTabLogs.vue';
 import TaskDetailTabOverview from './task/detail/tabs/TaskDetailTabOverview.vue';
 import TaskList from './task/list/TaskList.vue';
 import TokenList from './token/list/TokenList.vue';
+import useAutoProbeList from './autoprobe/list/useAutoProbeList';
 import useDatabaseDetail from './database/detail/useDatabaseDetail';
 import useDatabaseList from './database/list/useDatabaseList';
 import useDependencyList from './dependency/list/useDependencyList';
@@ -118,6 +123,10 @@ import useUserDetail from './user/detail/useUserDetail';
 import useUserList from './user/list/useUserList';
 
 export {
+  AutoProbeDetail as ClAutoProbeDetail,
+  AutoProbeDetailTabOverview as ClAutoProbeDetailTabOverview,
+  AutoProbeDetailTabTasks as ClAutoProbeDetailTabTasks,
+  AutoProbeList as ClAutoProbeList,
   DatabaseDetail as ClDatabaseDetail,
   DatabaseDetailActionsCommon as ClDatabaseDetailActionsCommon,
   DatabaseDetailActionsConsole as ClDatabaseDetailActionsConsole,
@@ -207,6 +216,7 @@ export {
   TaskDetailTabOverview as ClTaskDetailTabOverview,
   TaskList as ClTaskList,
   TokenList as ClTokenList,
+  useAutoProbeList as useAutoProbeList,
   useDatabaseDetail as useDatabaseDetail,
   useDatabaseList as useDatabaseList,
   useDependencyList as useDependencyList,

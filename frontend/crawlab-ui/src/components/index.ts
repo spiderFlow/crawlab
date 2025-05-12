@@ -19,6 +19,8 @@ import * as theme from './ui/lexical/utils/theme';
 import * as VariableNode from './ui/lexical/nodes/VariableNode';
 import AssistantConsole from './core/ai/AssistantConsole.vue';
 import AtomMaterialIcon from './ui/icon/AtomMaterialIcon.vue';
+import AutoProbeForm from './core/autoprobe/AutoProbeForm.vue';
+import AutoProbeTaskStatus from './core/autoprobe/AutoProbeTaskStatus.vue';
 import BlockOptionsDropdownList from './ui/lexical/components/BlockOptionsDropdownList.vue';
 import Box from './ui/box/Box.vue';
 import Button from './ui/button/Button.vue';
@@ -38,6 +40,7 @@ import CheckTagGroup from './ui/tag/CheckTagGroup.vue';
 import ConfirmDialog from './ui/dialog/ConfirmDialog.vue';
 import ContextMenu from './ui/context-menu/ContextMenu.vue';
 import ContextMenuList from './ui/context-menu/ContextMenuList.vue';
+import CreateEditAutoProbeDialog from './core/autoprobe/CreateEditAutoProbeDialog.vue';
 import CreateEditDatabaseDialog from './core/database/CreateEditDatabaseDialog.vue';
 import CreateEditDatabaseTableDialog from './core/database/CreateEditDatabaseTableDialog.vue';
 import CreateEditDialog from './ui/dialog/CreateEditDialog.vue';
@@ -218,6 +221,7 @@ import UploadFilesDialog from './ui/file/UploadFilesDialog.vue';
 import UploadGitFilesDialog from './core/git/UploadGitFilesDialog.vue';
 import UploadSpiderFilesDialog from './core/spider/UploadSpiderFilesDialog.vue';
 import useAssistantConsole from './core/ai/useAssistantConsole';
+import useAutoProbe from './core/autoprobe/useAutoProbe';
 import useCanShowPlaceholder from './ui/lexical/composables/useCanShowPlaceholder';
 import useDatabase from './core/database/useDatabase';
 import useDecorators from './ui/lexical/composables/useDecorators';
@@ -265,6 +269,8 @@ export {
   VariableNode as VariableNode,
   AssistantConsole as ClAssistantConsole,
   AtomMaterialIcon as ClAtomMaterialIcon,
+  AutoProbeForm as ClAutoProbeForm,
+  AutoProbeTaskStatus as ClAutoProbeTaskStatus,
   BlockOptionsDropdownList as ClBlockOptionsDropdownList,
   Box as ClBox,
   Button as ClButton,
@@ -284,6 +290,7 @@ export {
   ConfirmDialog as ClConfirmDialog,
   ContextMenu as ClContextMenu,
   ContextMenuList as ClContextMenuList,
+  CreateEditAutoProbeDialog as ClCreateEditAutoProbeDialog,
   CreateEditDatabaseDialog as ClCreateEditDatabaseDialog,
   CreateEditDatabaseTableDialog as ClCreateEditDatabaseTableDialog,
   CreateEditDialog as ClCreateEditDialog,
@@ -464,6 +471,7 @@ export {
   UploadGitFilesDialog as ClUploadGitFilesDialog,
   UploadSpiderFilesDialog as ClUploadSpiderFilesDialog,
   useAssistantConsole as useAssistantConsole,
+  useAutoProbe as useAutoProbe,
   useCanShowPlaceholder as useCanShowPlaceholder,
   useDatabase as useDatabase,
   useDecorators as useDecorators,

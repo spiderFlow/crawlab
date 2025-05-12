@@ -5,7 +5,7 @@ export declare global {
     query?: string;
   }
 
-  type AutoProbeTaskStatus = 'pending' | 'running' | 'completed' | 'failed';
+  type AutoProbeTaskStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
 
   type SelectorType = 'css' | 'xpath' | 'regex';
   type ExtractType = 'text' | 'attribute' | 'html';
@@ -59,6 +59,7 @@ export declare global {
     url?: string;
     query?: string;
     status: AutoProbeTaskStatus;
+    error?: string;
     page_pattern?: PagePattern;
     page_data?: PageData;
     provider_id?: string;

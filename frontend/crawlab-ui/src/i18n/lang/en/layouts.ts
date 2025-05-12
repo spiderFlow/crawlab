@@ -227,6 +227,18 @@ const layouts: LLayouts = {
         disclaimer: 'Disclaimer',
       },
     },
+    autoprobe: {
+      list: {
+        title: 'AutoProbe List',
+      },
+      detail: {
+        title: 'AutoProbe Detail',
+        tabs: {
+          overview: 'Overview',
+          tasks: 'Task',
+        },
+      },
+    }
   },
 };
 

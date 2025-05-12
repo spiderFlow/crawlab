@@ -44,6 +44,7 @@ export declare global {
           disclaimer: string;
         };
       };
+      autoprobe: string;
     };
   }
 }

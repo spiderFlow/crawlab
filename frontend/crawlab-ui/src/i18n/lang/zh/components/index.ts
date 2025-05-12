@@ -27,6 +27,7 @@ import role from './role';
 import tag from './tag';
 import environment from './environment';
 import ai from './ai';
+import autoprobe from './autoprobe';
 
 const components: LComponents = {
   chart,
@@ -58,6 +59,7 @@ const components: LComponents = {
   tag,
   environment,
   ai,
+  autoprobe,
 };
 
 export default components;

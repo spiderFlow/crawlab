@@ -26,7 +26,11 @@ defineOptions({ name: 'ClSidebarItem' });
   >
     <cl-menu-item-icon :item="item" size="normal" />
     <template #title>
-      <span class="menu-item-title">{{ t(item.title) }}</span>
+      <span class="menu-item-title">
+        <el-badge :value="item.badge" :type="item.badgeType" :offset="[12, 0]">
+          {{ t(item.title) }}
+        </el-badge>
+      </span>
     </template>
   </el-menu-item>
 
@@ -58,6 +62,8 @@ defineOptions({ name: 'ClSidebarItem' });
   }
 
   .menu-item-title {
+    display: inline;
+    line-height: 24px;
     margin-left: 6px;
   }
 }

@@ -80,6 +80,7 @@ const common: LCommon = {
       proceed: 'Are you sure to proceed?',
       create: 'Are you sure to create?',
       continue: 'Are you sure to continue?',
+      setDefault: 'Are you sure to set as default?',
     },
   },
   message: {
@@ -159,6 +160,7 @@ const common: LCommon = {
     other: 'Other',
     all: 'All',
     unlimited: 'Unlimited',
+    preview: 'Preview',
   },
   placeholder: {
     empty: 'Empty',

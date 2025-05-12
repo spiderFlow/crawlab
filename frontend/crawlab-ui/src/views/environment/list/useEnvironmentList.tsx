@@ -35,7 +35,6 @@ const useEnvironmentList = () => {
           label: t('views.environment.navActions.new.label'),
           tooltip: t('views.environment.navActions.new.tooltip'),
           icon: ['fa', 'plus'],
-          type: 'success',
           onClick: async () => {
             commit(`${ns}/showDialog`, 'create');
           },

@@ -1,4 +1,4 @@
-const ai: LangAi = {
+const ai: LComponentsAI = {
   chatbot: {
     title: 'Crawlab AI Assistant',
     tooltip: 'Chat with AI Assistant',

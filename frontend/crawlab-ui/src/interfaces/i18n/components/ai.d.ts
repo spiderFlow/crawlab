@@ -1,5 +1,5 @@
 export declare global {
-  interface LangAi {
+  interface LComponentsAI {
     chatbot: {
       title: string;
       tooltip: string;

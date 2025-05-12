@@ -11,4 +11,7 @@ type AutoProbeStoreGetters = BaseStoreGetters<AutoProbe>;
 
 interface AutoProbeStoreMutations extends BaseStoreMutations<AutoProbe> {}
 
-interface AutoProbeStoreActions extends BaseStoreActions<AutoProbe> {}
+interface AutoProbeStoreActions extends BaseStoreActions<AutoProbe> {
+  runTask: StoreAction<AutoProbeStoreState, { id: string }>;
+  cancelTask: StoreAction<AutoProbeStoreState, { id: string }>;
+}

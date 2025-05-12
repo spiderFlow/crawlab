@@ -300,6 +300,8 @@ export const getIconByRouteConcept = (concept: RouteConcept): Icon => {
       return ['fa', 'key'];
     case 'disclaimer':
       return ['fa', 'info-circle'];
+    case 'autoprobe':
+      return ['fa', 'satellite-dish'];
     default:
       return ['fa', 'circle'];
   }

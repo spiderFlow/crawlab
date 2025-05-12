@@ -122,6 +122,10 @@ export declare global {
         pat: string;
         disclaimer: string;
       }>;
+      autoprobe: LListLayoutPage<{
+        overview: string;
+        tasks: string;
+      }>;
     };
   }
 }

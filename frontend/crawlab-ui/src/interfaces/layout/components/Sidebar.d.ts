@@ -5,5 +5,7 @@ export declare global {
     icon?: Icon;
     hidden?: boolean;
     routeConcept?: RouteConcept;
+    badge?: string;
+    badgeType?: BasicType;
   }
 }

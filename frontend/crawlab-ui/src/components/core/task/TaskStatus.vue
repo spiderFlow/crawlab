@@ -10,6 +10,7 @@ import {
   TASK_STATUS_RUNNING,
 } from '@/constants/task';
 import { translate } from '@/utils';
+import { TagProps } from '@/components/ui/tag/types';
 
 const props = defineProps<{
   status: TaskStatus;

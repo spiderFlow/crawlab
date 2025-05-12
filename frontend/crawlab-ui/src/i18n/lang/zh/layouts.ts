@@ -227,6 +227,18 @@ const layouts: LLayouts = {
         disclaimer: '免责声明',
       },
     },
+    autoprobe: {
+      list: {
+        title: 'AutoProbe 列表',
+      },
+      detail: {
+        title: 'AutoProbe 详情',
+        tabs: {
+          overview: '概览',
+          tasks: '任务',
+        },
+      },
+    },
   },
 };
 

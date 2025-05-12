@@ -108,9 +108,19 @@ const toggleModel = (model: string) => {
   if (index === -1) {
     // Enable model
     modelValue.models.push(model);
+
+    // If this is the first model being added, set it as default
+    if (modelValue.models.length === 1 && !modelValue.default_model) {
+      modelValue.default_model = model;
+    }
   } else {
     // Disable model
     modelValue.models.splice(index, 1);
+
+    // If default model is being disabled, update default model
+    if (modelValue.default_model === model) {
+      modelValue.default_model = modelValue.models.length > 0 ? modelValue.models[0] : '';
+    }
   }
 
   emit('update:modelValue', modelValue);
@@ -121,6 +131,10 @@ const updateDefaultModels = () => {
   if (!modelValue) return;
   if (defaultModels.value.length > 0) {
     modelValue.models = [...defaultModels.value];
+    // Set default model to first enabled model
+    if (modelValue.models.length > 0 && !modelValue.default_model) {
+      modelValue.default_model = modelValue.models[0];
+    }
   }
 };
 
@@ -220,9 +234,6 @@ defineOptions({ name: 'ClLlmProviderForm' });
         :placeholder="t('views.system.ai.name')"
       />
     </cl-form-item>
-    <cl-form-item :label="t('views.system.ai.enabled')" :span="4">
-      <cl-switch v-model="modelValue.enabled" />
-    </cl-form-item>
     <cl-form-item
       :label="t('views.system.ai.apiKey')"
       :span="4"
@@ -272,9 +283,6 @@ defineOptions({ name: 'ClLlmProviderForm' });
       <div class="models-section">
         <!-- Default models from provider -->
         <div v-if="defaultModels.length > 0" class="default-models">
-          <div class="section-title">
-            {{ t('views.system.ai.defaultModels') }}
-          </div>
           <div class="model-list">
             <el-checkbox
               v-for="model in defaultModels"
@@ -283,17 +291,16 @@ defineOptions({ name: 'ClLlmProviderForm' });
               @change="() => toggleModel(model)"
               class="model-checkbox"
             >
-              {{ model }}
+              <span>{{ model }}</span>
+              <span class="default-model-badge" v-if="model === modelValue.default_model">
+                ({{ t('common.mode.default') }})
+              </span>
             </el-checkbox>
           </div>
         </div>
 
         <!-- Custom models -->
         <div class="custom-models">
-          <div class="section-title">
-            {{ t('views.system.ai.customModels') }}
-          </div>
-
           <!-- Add custom model input -->
           <div class="add-model">
             <el-input
@@ -333,6 +340,21 @@ defineOptions({ name: 'ClLlmProviderForm' });
           </div>
         </div>
       </div>
+    </cl-form-item>
+
+    <cl-form-item :label="t('views.system.ai.defaultModel')" :span="4" prop="default_model">
+      <el-select
+        v-model="modelValue.default_model"
+        :placeholder="t('views.system.ai.defaultModel')"
+        :disabled="!modelValue.models || modelValue.models.length === 0"
+      >
+        <el-option
+          v-for="model in modelValue.models || []"
+          :key="model"
+          :label="model"
+          :value="model"
+        />
+      </el-select>
     </cl-form-item>
   </cl-form>
 </template>
@@ -385,6 +407,12 @@ defineOptions({ name: 'ClLlmProviderForm' });
       color: var(--el-text-color-secondary);
       font-style: italic;
     }
+  }
+
+  .default-model-badge {
+    margin-left: 5px;
+    color: var(--el-text-color-secondary);
+    font-size: 12px;
   }
 }
 </style>

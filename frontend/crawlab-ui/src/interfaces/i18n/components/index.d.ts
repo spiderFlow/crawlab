@@ -20,7 +20,8 @@ export declare global {
     environment: LComponentsEnvironment;
     notification: LComponentsNotification;
     editor: LComponentsEditor;
-    ai: LAi;
+    ai: LComponentsAI;
+    autoprobe: LComponentsAutoProbe;
 
     // model-related components
     node: LComponentsNode;

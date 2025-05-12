@@ -43,6 +43,7 @@ const router: LRouter = {
         disclaimer: '免责声明',
       },
     },
+    autoprobe: 'AutoProbe',
   },
 };
 

@@ -13,18 +13,19 @@ import task from '@/router/task';
 import schedule from '@/router/schedule';
 import user from '@/router/user';
 import role from '@/router/role';
-import token from '@/router/token';
 import notification from '@/router/notification';
 import git from '@/router/git';
 import database from '@/router/database';
 import dependency from '@/router/dependency';
-import environment from '@/router/environment';
 import system from '@/router/system';
 import misc from '@/router/misc';
+import autoprobe from '@/router/autoprobe';
 import { initRouterAuth } from '@/router/hooks/auth';
 import { ROUTER_ROOT_NAME_ROOT } from '@/constants/router';
 import { ClNormalLayout } from '@/layouts';
-import { getIconByRouteConcept } from '@/utils';
+import { getIconByRouteConcept, translate } from '@/utils';
+
+const t = translate;
 
 export function getDefaultRoutes(): Array<ExtendedRouterRecord> {
   return [
@@ -48,9 +49,8 @@ export function getDefaultRoutes(): Array<ExtendedRouterRecord> {
         ...database,
         ...dependency,
         ...system,
-        // ...environment,
-        // ...token,
         ...misc,
+        ...autoprobe,
       ],
     },
   ];
@@ -129,6 +129,13 @@ export function getDefaultSidebarMenuItems(): MenuItem[] {
           icon: getIconByRouteConcept('notificationRequest'),
         },
       ],
+    },
+    {
+      path: '/autoprobes',
+      title: 'router.menuItems.autoprobe',
+      icon: getIconByRouteConcept('autoprobe'),
+      badge: t('common.mode.preview'),
+      badgeType: 'primary',
     },
     {
       path: '/users',

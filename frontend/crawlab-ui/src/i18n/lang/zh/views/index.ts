@@ -17,6 +17,7 @@ import environment from './environment';
 import llm from './llm';
 import system from './system';
 import misc from './misc';
+import autoprobe from './autoprobe';
 
 const views: LViews = {
   login,
@@ -38,5 +39,6 @@ const views: LViews = {
   llm,
   system,
   misc,
+  autoprobe,
 };
 export default views;

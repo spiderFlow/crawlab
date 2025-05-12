@@ -93,6 +93,7 @@ export declare global {
         proceed: string;
         create: string;
         continue: string;
+        setDefault: string;
       };
     };
     message: {
@@ -172,6 +173,7 @@ export declare global {
       other: string;
       all: string;
       unlimited: string;
+      preview: string;
     };
     placeholder: {
       empty: string;

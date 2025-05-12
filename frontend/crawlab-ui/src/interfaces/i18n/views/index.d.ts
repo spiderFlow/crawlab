@@ -19,5 +19,6 @@ export declare global {
     environment: LViewsEnvironments;
     llm: LViewsLLM;
     system: LViewsSystem;
+    autoprobe: LViewsAutoProbe;
   }
 }

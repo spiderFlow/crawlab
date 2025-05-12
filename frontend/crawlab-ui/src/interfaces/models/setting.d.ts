@@ -16,11 +16,7 @@ export declare global {
     auto_install?: boolean;
   }
 
-  interface SettingAi {
-    enable_ai?: boolean;
-    api_key?: string;
-    model?: string;
-    max_tokens?: number;
-    temperature?: number;
+  interface SettingAI {
+    default_provider_id?: string;
   }
 }

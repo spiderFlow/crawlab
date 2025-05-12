@@ -1,37 +1,32 @@
-import { computed } from 'vue';
-import { TABLE_COLUMN_NAME_ACTIONS } from '@/constants/table';
 import { useStore } from 'vuex';
-import useList from '@/layouts/content/list/useList';
-import { useRouter } from 'vue-router';
-import { translate } from '@/utils/i18n';
+import { useList } from '@/layouts';
+import { computed } from 'vue';
 import {
   ACTION_ADD,
   ACTION_DELETE,
   ACTION_FILTER,
   ACTION_FILTER_SEARCH,
+  ACTION_RUN,
   ACTION_VIEW,
   ACTION_VIEW_SPIDERS,
   FILTER_OP_CONTAINS,
+  TABLE_COLUMN_NAME_ACTIONS,
 } from '@/constants';
-import { getIconByAction, onListFilterChangeByKey } from '@/utils';
+import { getIconByAction, onListFilterChangeByKey, translate } from '@/utils';
 import { ClNavLink } from '@/components';
+import { useRouter } from 'vue-router';
+import { ElMessage, ElMessageBox } from 'element-plus';
 
-const useProjectList = () => {
-  // router
+const t = translate;
+
+const useAutoProbeList = () => {
   const router = useRouter();
 
-  // store
-  const ns = 'project';
-  const store = useStore<RootStoreState>();
+  const ns: ListStoreNamespace = 'autoprobe';
+  const store = useStore();
   const { commit } = store;
 
-  // i18n
-  const t = translate;
-
-  // use list
-  const { actionFunctions } = useList<Project>(ns, store);
-
-  // action functions
+  const { actionFunctions } = useList<AutoProbe>(ns, store);
   const { deleteByIdConfirm } = actionFunctions;
 
   // nav actions
@@ -44,8 +39,8 @@ const useProjectList = () => {
           id: 'add-btn',
           className: 'add-btn',
           buttonType: 'label',
-          label: t('views.projects.navActions.new.label'),
-          tooltip: t('views.projects.navActions.new.tooltip'),
+          label: t('views.autoprobe.navActions.new.label'),
+          tooltip: t('views.autoprobe.navActions.new.tooltip'),
           icon: getIconByAction(ACTION_ADD),
           onClick: () => {
             commit(`${ns}/showDialog`, 'create');
@@ -61,7 +56,9 @@ const useProjectList = () => {
           action: ACTION_FILTER_SEARCH,
           id: 'filter-search',
           className: 'search',
-          placeholder: t('views.projects.navActions.filter.search.placeholder'),
+          placeholder: t(
+            'views.autoprobe.navActions.filter.search.placeholder'
+          ),
           onChange: onListFilterChangeByKey(
             store,
             ns,
@@ -74,40 +71,30 @@ const useProjectList = () => {
   ]);
 
   // table columns
-  const tableColumns = computed<TableColumns<Project>>(
+  const tableColumns = computed<TableColumns<AutoProbe>>(
     () =>
       [
         {
           className: 'name',
           key: 'name',
-          label: t('views.projects.table.columns.name'),
+          label: t('views.autoprobe.table.columns.name'),
           icon: ['fa', 'font'],
           width: '150',
-          value: (row: Project) => (
-            <ClNavLink path={`/projects/${row._id}`} label={row.name} />
+          value: (row: AutoProbe) => (
+            <ClNavLink path={`/autoprobes/${row._id}`} label={row.name} />
           ),
           hasSort: true,
           hasFilter: true,
           allowFilterSearch: true,
         },
         {
-          className: 'spiders',
-          key: 'spiders',
-          label: t('views.projects.table.columns.spiders'),
-          icon: ['fa', 'spider'],
-          value: (row: Project) => (
-            <ClNavLink
-              path={`/projects/${row._id}/spiders`}
-              label={row.spiders || '0'}
-            />
-          ),
-          width: '120',
-        },
-        {
-          key: 'description',
-          label: t('views.projects.table.columns.description'),
-          icon: ['fa', 'comment-alt'],
+          key: 'url',
+          label: t('views.autoprobe.table.columns.url'),
+          icon: ['fa', 'at'],
           width: 'auto',
+          value: (row: AutoProbe) => (
+            <ClNavLink path={row.url} label={row.url} external />
+          ),
           hasFilter: true,
           allowFilterSearch: true,
         },
@@ -120,21 +107,33 @@ const useProjectList = () => {
             {
               tooltip: t('common.actions.view'),
               onClick: async row => {
-                await router.push(`/projects/${row._id}`);
+                await router.push(`/autoprobes/${row._id}`);
               },
               action: ACTION_VIEW,
             },
             {
-              tooltip: t('common.actions.viewSpiders'),
+              tooltip: t('common.actions.run'),
               onClick: async row => {
-                await router.push(`/projects/${row._id}/spiders`);
+                await ElMessageBox.confirm(
+                  t('common.messageBox.confirm.run'),
+                  t('common.actions.restart'),
+                  {
+                    type: 'warning',
+                    confirmButtonClass: 'confirm-btn',
+                  }
+                );
+                try {
+                  await store.dispatch(`${ns}/runTask`, { id: row._id });
+                  ElMessage.success(t('common.message.success.run'));
+                } catch (e) {
+                  ElMessage.error((e as Error).message);
+                }
               },
-              action: ACTION_VIEW_SPIDERS,
+              action: ACTION_RUN,
               contextMenu: true,
             },
             {
               tooltip: t('common.actions.delete'),
-              disabled: row => row.spiders > 0,
               onClick: deleteByIdConfirm,
               action: ACTION_DELETE,
               contextMenu: true,
@@ -142,23 +141,14 @@ const useProjectList = () => {
           ],
           disableTransfer: true,
         },
-      ] as TableColumns<Project>
+      ] as TableColumns<AutoProbe>
   );
 
-  const selectableFunction = (row: Project) => {
-    return row.spiders === 0;
-  };
-
-  // options
-  const opts = {
+  return {
+    ...useList<AutoProbe>(ns, store),
     navActions,
     tableColumns,
-  } as UseListOptions<Project>;
-
-  return {
-    ...useList<Project>(ns, store, opts),
-    selectableFunction,
   };
 };
 
-export default useProjectList;
+export default useAutoProbeList;

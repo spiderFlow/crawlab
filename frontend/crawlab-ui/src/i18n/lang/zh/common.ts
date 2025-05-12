@@ -80,6 +80,7 @@ const common: LCommon = {
       proceed: '您是否确定继续?',
       create: '您是否确定创建?',
       continue: '您是否确定继续?',
+      setDefault: '您是否确定设为默认?',
     },
   },
   message: {
@@ -159,6 +160,7 @@ const common: LCommon = {
     other: '其他',
     all: '全部',
     unlimited: '无限制',
+    preview: '预览',
   },
   placeholder: {
     empty: '空',
