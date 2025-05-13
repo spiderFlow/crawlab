@@ -1,6 +1,6 @@
 <script setup lang="tsx">
 import { computed, onBeforeMount, ref } from 'vue';
-import { getDefaultPagination, translate } from '@/utils';
+import { getDefaultPagination, setupAutoUpdate, translate } from '@/utils';
 import useRequest from '@/services/request';
 import { ClNavLink, ClAutoProbeTaskStatus } from '@/components';
 import { useDetail } from '@/layouts';
@@ -188,6 +188,10 @@ const onTablePaginationChange = async (pagination: TablePagination) => {
 };
 
 const onClickRun = async () => {
+  await ElMessageBox.confirm(
+    t('common.messageBox.confirm.run'),
+    t('common.actions.run')
+  );
   try {
     await store.dispatch(`${ns}/runTask`, { id: activeId.value });
     await getTasks(); // Refresh the list after running a task
@@ -197,9 +201,8 @@ const onClickRun = async () => {
   }
 };
 
-onBeforeMount(async () => {
-  await Promise.all([getTasks()]);
-});
+onBeforeMount(getTasks);
+setupAutoUpdate(getTasks);
 
 defineOptions({ name: 'ClAutoProbeDetailTabTasks' });
 </script>
