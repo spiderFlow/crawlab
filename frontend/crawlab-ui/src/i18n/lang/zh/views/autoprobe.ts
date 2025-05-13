@@ -5,6 +5,8 @@ const autoprobe: LViewsAutoProbe = {
       url: 'URL',
       query: '查询',
       status: '状态',
+      lastTask: '最近任务',
+      patterns: '模式',
     },
   },
   navActions: {

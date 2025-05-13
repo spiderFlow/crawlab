@@ -236,6 +236,7 @@ const layouts: LLayouts = {
         tabs: {
           overview: '概览',
           tasks: '任务',
+          patterns: '模式',
         },
       },
     },

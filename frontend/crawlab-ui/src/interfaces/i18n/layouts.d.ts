@@ -125,6 +125,7 @@ export declare global {
       autoprobe: LListLayoutPage<{
         overview: string;
         tasks: string;
+        patterns: string;
       }>;
     };
   }

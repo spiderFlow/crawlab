@@ -293,10 +293,6 @@ defineOptions({ name: 'ClListLayout' });
     }
   }
 
-  &:deep(.tag) {
-    margin-right: 10px;
-  }
-
   .nav-actions {
     max-height: 52px;
     background-color: var(--cl-container-white-bg);

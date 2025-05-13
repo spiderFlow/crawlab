@@ -3,9 +3,19 @@ export declare global {
     name?: string;
     url?: string;
     query?: string;
+    last_task_id?: string;
+    last_task?: AutoProbeTask;
+    default_task_id?: string;
+    page_pattern?: PagePattern;
+    page_data?: PageData;
   }
 
-  type AutoProbeTaskStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+  type AutoProbeTaskStatus =
+    | 'pending'
+    | 'running'
+    | 'completed'
+    | 'failed'
+    | 'cancelled';
 
   type SelectorType = 'css' | 'xpath' | 'regex';
   type ExtractType = 'text' | 'attribute' | 'html';
@@ -71,5 +81,10 @@ export declare global {
     autoprobe_id: string;
     url: string;
     html?: string;
+  }
+
+  interface AutoProbeNavItem<T = any> extends NavItem<T> {
+    type?: 'page_pattern' | 'fields' | 'lists' | 'pagination' | 'list' | 'item' | 'field';
+    children?: AutoProbeNavItem[];
   }
 }

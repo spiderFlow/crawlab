@@ -144,6 +144,7 @@ const common: LCommon = {
     indexes: '索引',
     results: '结果',
     output: '输出',
+    patterns: '模式',
   },
   status: {
     unassigned: '未指定',

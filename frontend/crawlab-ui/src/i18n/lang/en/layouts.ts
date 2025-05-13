@@ -236,6 +236,7 @@ const layouts: LLayouts = {
         tabs: {
           overview: 'Overview',
           tasks: 'Task',
+          patterns: 'Patterns',
         },
       },
     }

@@ -24,4 +24,61 @@ interface LComponentsAutoProbe {
       };
     };
   };
+  stats: {
+    totalFields: string;
+    totalLists: string;
+    paginationType: string;
+    noPagination: string;
+  };
+  navItems: {
+    lists: string;
+    fields: string;
+    pagination: string;
+    list: string;
+    field: string;
+  };
+  patterns: {
+    selectItem: string;
+  };
+  field: {
+    title: string;
+    name: string;
+    selector: string;
+    type: string;
+    extractionType: string;
+    attributeName: string;
+    defaultValue: string;
+    notFound: string;
+    self: string;
+  };
+  list: {
+    title: string;
+    name: string;
+    listSelector: string;
+    listSelectorType: string;
+    itemSelector: string;
+    itemSelectorType: string;
+    fields: string;
+    nestedLists: string;
+    notFound: string;
+    self: string;
+  };
+  pagination: {
+    title: string;
+    type: string;
+    selectorType: string;
+    selector: string;
+    maxPages: string;
+    startPage: string;
+    notFound: string;
+  };
+  pagePattern: {
+    title: string;
+    name: string;
+    stats: string;
+    fields: string;
+    lists: string;
+    hasPagination: string;
+    notFound: string;
+  };
 }

@@ -1,5 +1,6 @@
 import AutoProbeDetail from './autoprobe/detail/AutoProbeDetail.vue';
 import AutoProbeDetailTabOverview from './autoprobe/detail/tabs/AutoProbeDetailTabOverview.vue';
+import AutoProbeDetailTabPatterns from './autoprobe/detail/tabs/AutoProbeDetailTabPatterns.vue';
 import AutoProbeDetailTabTasks from './autoprobe/detail/tabs/AutoProbeDetailTabTasks.vue';
 import AutoProbeList from './autoprobe/list/AutoProbeList.vue';
 import DatabaseDetail from './database/detail/DatabaseDetail.vue';
@@ -125,6 +126,7 @@ import useUserList from './user/list/useUserList';
 export {
   AutoProbeDetail as ClAutoProbeDetail,
   AutoProbeDetailTabOverview as ClAutoProbeDetailTabOverview,
+  AutoProbeDetailTabPatterns as ClAutoProbeDetailTabPatterns,
   AutoProbeDetailTabTasks as ClAutoProbeDetailTabTasks,
   AutoProbeList as ClAutoProbeList,
   DatabaseDetail as ClDatabaseDetail,

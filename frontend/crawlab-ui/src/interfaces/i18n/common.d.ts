@@ -157,6 +157,7 @@ export declare global {
       indexes: string;
       results: string;
       output: string;
+      patterns: string;
     };
     status: {
       unassigned: string;

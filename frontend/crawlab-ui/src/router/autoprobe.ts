@@ -1,9 +1,14 @@
-import { TAB_NAME_OVERVIEW, TAB_NAME_TASKS } from '@/constants/tab';
+import {
+  TAB_NAME_OVERVIEW,
+  TAB_NAME_PATTERNS,
+  TAB_NAME_TASKS,
+} from '@/constants/tab';
 import {
   ClAutoProbeList,
   ClAutoProbeDetail,
   ClAutoProbeDetailTabOverview,
   ClAutoProbeDetailTabTasks,
+  ClAutoProbeDetailTabPatterns,
 } from '@/views';
 import { getIconByTabName, translate } from '@/utils';
 import { RouteLocation } from 'vue-router';
@@ -41,6 +46,12 @@ export default [
         title: t('layouts.routes.autoprobe.detail.tabs.tasks'),
         icon: getIconByTabName(TAB_NAME_TASKS),
         component: async () => ClAutoProbeDetailTabTasks,
+      },
+      {
+        path: TAB_NAME_PATTERNS,
+        title: t('layouts.routes.autoprobe.detail.tabs.patterns'),
+        icon: getIconByTabName(TAB_NAME_PATTERNS),
+        component: async () => ClAutoProbeDetailTabPatterns,
       },
     ],
   },

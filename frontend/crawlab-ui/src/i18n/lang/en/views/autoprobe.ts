@@ -5,6 +5,8 @@ const autoprobe: LViewsAutoProbe = {
       url: 'URL',
       query: 'Query',
       status: 'Status',
+      lastTask: 'Last Task',
+      patterns: 'Patterns',
     },
   },
   navActions: {

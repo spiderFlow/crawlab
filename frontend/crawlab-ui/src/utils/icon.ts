@@ -58,6 +58,7 @@ import {
   TAB_NAME_OUTPUT,
   TAB_NAME_OVERVIEW,
   TAB_NAME_PAGES,
+  TAB_NAME_PATTERNS,
   TAB_NAME_PERMISSIONS,
   TAB_NAME_RESULTS,
   TAB_NAME_ROLES,
@@ -127,6 +128,8 @@ export const getIconByTabName = (tabName: string): Icon => {
       return ['fa', 'user-check'];
     case TAB_NAME_PAGES:
       return ['fa', 'file-alt'];
+    case TAB_NAME_PATTERNS:
+      return ['fa', 'network-wired'];
     default:
       return ['fa', 'circle'];
   }

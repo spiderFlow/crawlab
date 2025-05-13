@@ -4,7 +4,11 @@ import {
   getDefaultStoreMutations,
   getDefaultStoreState,
 } from '@/utils/store';
-import { TAB_NAME_OVERVIEW, TAB_NAME_TASKS } from '@/constants/tab';
+import {
+  TAB_NAME_OVERVIEW,
+  TAB_NAME_PATTERNS,
+  TAB_NAME_TASKS,
+} from '@/constants/tab';
 import { translate } from '@/utils/i18n';
 import useRequest from '@/services/request';
 
@@ -18,6 +22,7 @@ const state = {
   tabs: [
     { id: TAB_NAME_OVERVIEW, title: t('common.tabs.overview') },
     { id: TAB_NAME_TASKS, title: t('common.tabs.tasks') },
+    { id: TAB_NAME_PATTERNS, title: t('common.tabs.patterns') },
   ],
 } as AutoProbeStoreState;
 

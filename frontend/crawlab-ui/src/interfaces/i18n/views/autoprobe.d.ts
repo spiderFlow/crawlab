@@ -5,6 +5,8 @@ interface LViewsAutoProbe {
       url: string;
       query: string;
       status: string;
+      lastTask: string;
+      patterns: string;
     };
   };
   navActions: LNavActions & {

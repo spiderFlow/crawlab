@@ -8,12 +8,15 @@ import {
   ACTION_FILTER_SEARCH,
   ACTION_RUN,
   ACTION_VIEW,
-  ACTION_VIEW_SPIDERS,
   FILTER_OP_CONTAINS,
   TABLE_COLUMN_NAME_ACTIONS,
 } from '@/constants';
 import { getIconByAction, onListFilterChangeByKey, translate } from '@/utils';
-import { ClNavLink } from '@/components';
+import {
+  ClNavLink,
+  ClAutoProbeTaskStatus,
+  ClAutoProbePatternStats,
+} from '@/components';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 
@@ -92,9 +95,47 @@ const useAutoProbeList = () => {
           label: t('views.autoprobe.table.columns.url'),
           icon: ['fa', 'at'],
           width: 'auto',
+          minWidth: '200',
           value: (row: AutoProbe) => (
             <ClNavLink path={row.url} label={row.url} external />
           ),
+          hasFilter: true,
+          allowFilterSearch: true,
+        },
+        {
+          key: 'last_task',
+          label: t('views.autoprobe.table.columns.lastTask'),
+          icon: ['fa', 'heartbeat'],
+          width: '120',
+          value: (row: AutoProbe) => {
+            const { status, error } = row.last_task || {};
+            if (!status) return;
+            return (
+              <ClAutoProbeTaskStatus
+                status={status}
+                error={error}
+                clickable
+                onClick={() => router.push(`/autoprobes/${row._id}/tasks`)}
+              />
+            );
+          },
+          hasFilter: true,
+          allowFilterSearch: true,
+        },
+        {
+          key: 'patterns',
+          label: t('views.autoprobe.table.columns.patterns'),
+          icon: ['fa', 'network-wired'],
+          width: '200',
+          value: (row: AutoProbe) => {
+            return (
+              <ClAutoProbePatternStats
+                autoprobe={row}
+                clickable
+                onClick={() => router.push(`/autoprobes/${row._id}/patterns`)}
+              />
+            );
+          },
           hasFilter: true,
           allowFilterSearch: true,
         },
