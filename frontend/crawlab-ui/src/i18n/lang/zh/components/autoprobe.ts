@@ -74,12 +74,26 @@ const autoprobe: LComponentsAutoProbe = {
   },
   pagePattern: {
     title: '页面模式',
+    type: '类型',
     name: '名称',
     stats: '统计',
     fields: '字段',
     lists: '列表',
     hasPagination: '有分页',
     notFound: '未找到页面模式详情',
+    fieldCount: '字段数',
+    types: {
+      field: '字段',
+      list: '列表',
+      pagination: '分页',
+    },
+    selector: '选择器',
+    selectorType: '选择器类型',
+    selectorTypes: {
+      css: 'CSS',
+      xpath: 'XPath',
+      regex: '正则表达式',
+    },
   },
 };
 

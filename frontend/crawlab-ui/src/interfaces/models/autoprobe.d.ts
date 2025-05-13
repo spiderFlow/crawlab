@@ -19,12 +19,14 @@ export declare global {
 
   type SelectorType = 'css' | 'xpath' | 'regex';
   type ExtractType = 'text' | 'attribute' | 'html';
-  type PaginationType = 'next' | 'load' | 'scroll';
 
-  interface FieldRule {
+  interface BaseSelector {
     name: string;
     selector_type: SelectorType;
     selector: string;
+  }
+
+  interface FieldRule extends BaseSelector {
     extraction_type: ExtractType;
     attribute_name?: string;
     default_value?: string;
@@ -44,13 +46,7 @@ export declare global {
     item_pattern: ItemPattern;
   }
 
-  interface Pagination {
-    type: PaginationType;
-    selector_type?: SelectorType;
-    selector?: string;
-    max_pages?: number;
-    start_page?: number;
-  }
+  type Pagination = BaseSelector;
 
   interface PagePattern {
     name: string;
@@ -84,7 +80,18 @@ export declare global {
   }
 
   interface AutoProbeNavItem<T = any> extends NavItem<T> {
-    type?: 'page_pattern' | 'fields' | 'lists' | 'pagination' | 'list' | 'item' | 'field';
+    name?: string;
+    type?:
+      | 'page_pattern'
+      | 'fields'
+      | 'lists'
+      | 'pagination'
+      | 'list'
+      | 'item'
+      | 'field';
     children?: AutoProbeNavItem[];
+    fieldCount?: number;
+    field?: FieldRule;
+    pagination?: Pagination;
   }
 }

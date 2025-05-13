@@ -74,11 +74,25 @@ interface LComponentsAutoProbe {
   };
   pagePattern: {
     title: string;
+    type: string;
     name: string;
     stats: string;
     fields: string;
     lists: string;
     hasPagination: string;
     notFound: string;
+    fieldCount: string;
+    types: {
+      field: string;
+      list: string;
+      pagination: string;
+    };
+    selector: string;
+    selectorType: string;
+    selectorTypes: {
+      css: string;
+      xpath: string;
+      regex: string;
+    };
   };
 }

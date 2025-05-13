@@ -74,12 +74,26 @@ const autoprobe: LComponentsAutoProbe = {
   },
   pagePattern: {
     title: 'Page Pattern',
+    type: 'Type',
     name: 'Name',
     stats: 'Statistics',
     fields: 'Fields',
     lists: 'Lists',
     hasPagination: 'Has Pagination',
     notFound: 'Page pattern details not found',
+    fieldCount: 'Fields',
+    types: {
+      field: 'Field',
+      list: 'List',
+      pagination: 'Pagination',
+    },
+    selector: 'Selector',
+    selectorType: 'Selector Type',
+    selectorTypes: {
+      css: 'CSS',
+      xpath: 'XPath',
+      regex: 'Regex',
+    },
   },
 };
 

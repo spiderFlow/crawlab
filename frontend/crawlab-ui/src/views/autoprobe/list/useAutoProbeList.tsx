@@ -11,7 +11,12 @@ import {
   FILTER_OP_CONTAINS,
   TABLE_COLUMN_NAME_ACTIONS,
 } from '@/constants';
-import { getIconByAction, onListFilterChangeByKey, translate } from '@/utils';
+import {
+  getIconByAction,
+  onListFilterChangeByKey,
+  setupAutoUpdate,
+  translate,
+} from '@/utils';
 import {
   ClNavLink,
   ClAutoProbeTaskStatus,
@@ -30,7 +35,7 @@ const useAutoProbeList = () => {
   const { commit } = store;
 
   const { actionFunctions } = useList<AutoProbe>(ns, store);
-  const { deleteByIdConfirm } = actionFunctions;
+  const { getList, deleteByIdConfirm } = actionFunctions;
 
   // nav actions
   const navActions = computed<ListActionGroup[]>(() => [
@@ -184,6 +189,8 @@ const useAutoProbeList = () => {
         },
       ] as TableColumns<AutoProbe>
   );
+
+  setupAutoUpdate(getList);
 
   return {
     ...useList<AutoProbe>(ns, store),

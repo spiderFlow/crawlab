@@ -37,8 +37,10 @@ const processListItem = (list: ListRule): AutoProbeNavItem => {
       children.push({
         id: `${list.name}-${field.name}`,
         label: field.name,
+        name: field.name,
         icon: ['fa', 'tag'],
         type: 'field',
+        field,
       });
     });
   }
@@ -53,6 +55,7 @@ const processListItem = (list: ListRule): AutoProbeNavItem => {
   return {
     id: list.name,
     label: `${list.name} (${children.length})`,
+    name: list.name,
     type: 'list',
     icon: ['fa', 'list'],
     children,
@@ -69,8 +72,10 @@ const computedTreeItems = computed<AutoProbeNavItem[]>(() => {
       children.push({
         id: field.name,
         label: field.name,
+        name: field.name,
         icon: ['fa', 'tag'],
         type: 'field',
+        field,
       });
     });
   }
@@ -87,8 +92,10 @@ const computedTreeItems = computed<AutoProbeNavItem[]>(() => {
     children.push({
       id: 'pagination',
       label: t('components.autoprobe.navItems.pagination'),
+      name: t('components.autoprobe.navItems.pagination'),
       type: 'pagination',
-      icon: ['fa', 'pager'],
+      icon: ['fa', 'ellipsis-h'],
+      pagination: pagePagination.value,
     });
   }
 
@@ -96,6 +103,7 @@ const computedTreeItems = computed<AutoProbeNavItem[]>(() => {
     {
       id: 'page',
       label: `${form.value.page_pattern.name} (${children.length})`,
+      name: form.value.page_pattern.name,
       type: 'page_pattern',
       icon: ['fa', 'network-wired'],
       children,
@@ -120,10 +128,10 @@ const getFieldData = (fieldName: string) => {
 // Function to get data for a specific navigation item
 const getNavItemData = (item: AutoProbeNavItem) => {
   if (!pageData.value) return undefined;
-  
+
   // Convert to Record<string, any> to handle dynamic property access
   const data = pageData.value as Record<string, any>;
-  
+
   switch (item.type) {
     case 'field':
       // For fields, extract from page data by field name
@@ -330,28 +338,25 @@ defineOptions({ name: 'ClAutoProbeDetailTabPatterns' });
     </div>
     <div class="content">
       <template v-if="activeNavItem?.type === 'field'">
-        <cl-auto-probe-field-detail 
-          :field="activeNavItem" 
-          :page-data="getNavItemData(activeNavItem)" 
+        <cl-auto-probe-field-detail
+          :field="activeNavItem"
+          :page-data="getNavItemData(activeNavItem)"
         />
       </template>
       <template v-else-if="activeNavItem?.type === 'list'">
-        <cl-auto-probe-list-detail 
-          :list="activeNavItem" 
-          :page-data="getNavItemData(activeNavItem)" 
+        <cl-auto-probe-list-detail
+          :list="activeNavItem"
+          :page-data="getNavItemData(activeNavItem)"
         />
       </template>
       <template v-else-if="activeNavItem?.type === 'pagination'">
-        <cl-auto-probe-pagination-detail 
-          :pagination="activeNavItem" 
-          :page-data="getNavItemData(activeNavItem)" 
+        <cl-auto-probe-pagination-detail
+          :pagination="activeNavItem"
+          :page-data="getNavItemData(activeNavItem)"
         />
       </template>
       <template v-else-if="activeNavItem?.type === 'page_pattern'">
-        <cl-auto-probe-page-pattern-detail 
-          :page-pattern="activeNavItem" 
-          :page-data="getNavItemData(activeNavItem)" 
-        />
+        <cl-auto-probe-page-pattern-detail :page-pattern="activeNavItem" />
       </template>
       <div v-else class="placeholder">
         {{
@@ -464,7 +469,6 @@ defineOptions({ name: 'ClAutoProbeDetailTabPatterns' });
 
   .content {
     flex: 1;
-    padding: 16px;
     overflow: auto;
 
     .detail-panel {

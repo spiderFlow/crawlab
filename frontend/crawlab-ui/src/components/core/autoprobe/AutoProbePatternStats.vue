@@ -121,7 +121,7 @@ defineOptions({ name: 'ClAutoProbePatternStats' });
   <div v-else class="autoprobe-stats-empty">
     <cl-tag
       :icon="['fa', 'question-circle']"
-      label="No Pattern"
+      :label="t('common.status.unknown')"
       type="info"
       :clickable="clickable"
       @click="emit('click')"
@@ -137,6 +137,5 @@ defineOptions({ name: 'ClAutoProbePatternStats' });
 
 .autoprobe-stats-empty {
   display: flex;
-  justify-content: center;
 }
 </style>

@@ -3,7 +3,12 @@ import { ref, computed, onBeforeMount } from 'vue';
 import { ElSpace, ElMessage, ElMessageBox, ElCheckbox } from 'element-plus';
 import { ClTag, ClNavLink, ClIcon } from '@/components';
 import useRequest from '@/services/request';
-import { getDefaultPagination, plainClone, translate } from '@/utils';
+import {
+  EMPTY_OBJECT_ID,
+  getDefaultPagination,
+  plainClone,
+  translate,
+} from '@/utils';
 import {
   ACTION_DELETE,
   ACTION_EDIT,
@@ -37,7 +42,7 @@ const updateDefaultProviderId = async (id: string) => {
         default_provider_id: id,
       },
     };
-    if (!settingAI.value) {
+    if (!settingAI.value?._id || settingAI.value._id === EMPTY_OBJECT_ID) {
       await post('/settings/ai', { data });
     } else {
       await put('/settings/ai', { data });
