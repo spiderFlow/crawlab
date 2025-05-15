@@ -94,6 +94,13 @@ const autoprobe: LComponentsAutoProbe = {
       xpath: 'XPath',
       regex: 'Regex',
     },
+    extractionType: 'Extraction Type',
+    extractionTypes: {
+      text: 'Text',
+      attribute: 'Attribute',
+      html: 'HTML',
+    },
+    attribute: 'Attribute',
   },
 };
 

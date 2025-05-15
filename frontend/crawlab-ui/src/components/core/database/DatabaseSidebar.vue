@@ -148,8 +148,14 @@ const debouncedFilter = debounce(() => {
 
 watch(searchKeyword, debouncedFilter);
 
+const loading = ref(false);
 const getMetadata = async () => {
-  await store.dispatch(`${ns}/getMetadata`, { id: activeId.value });
+  loading.value = true;
+  try {
+    await store.dispatch(`${ns}/getMetadata`, { id: activeId.value });
+  } finally {
+    loading.value = false;
+  }
 };
 
 const createTable = async () => {
@@ -703,7 +709,9 @@ const sidebarRef = ref<HTMLElement | null>(null);
         "
       />
     </div>
-    <el-scrollbar>
+
+    <el-skeleton v-if="loading" :rows="10" animated :throttle="100" />
+    <el-scrollbar v-else>
       <el-tree
         ref="treeRef"
         node-key="id"
@@ -930,6 +938,13 @@ const sidebarRef = ref<HTMLElement | null>(null);
         }
       }
     }
+  }
+
+  .el-skeleton {
+    margin: 10px;
+    width: calc(100% - 20px);
+    height: calc(100% - 20px);
+    overflow: hidden;
   }
 }
 </style>

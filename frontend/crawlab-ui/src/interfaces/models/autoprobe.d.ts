@@ -7,7 +7,7 @@ export declare global {
     last_task?: AutoProbeTask;
     default_task_id?: string;
     page_pattern?: PagePattern;
-    page_data?: PageData;
+    page_data?: PageDataRow;
   }
 
   type AutoProbeTaskStatus =
@@ -46,19 +46,16 @@ export declare global {
     item_pattern: ItemPattern;
   }
 
-  type Pagination = BaseSelector;
+  type PaginationRule = BaseSelector;
 
   interface PagePattern {
     name: string;
     fields?: FieldRule[];
     lists?: ListRule[];
-    pagination?: Pagination;
+    pagination?: PaginationRule;
   }
 
-  interface PageData {
-    data?: Record<string, any>;
-    list_data?: any[][];
-  }
+  type PageData = Record<string, string | number | boolean | PageData[]>;
 
   interface AutoProbeTask extends BaseModel {
     autoprobe_id: string;
@@ -73,25 +70,14 @@ export declare global {
     usage?: LLMResponseUsage;
   }
 
-  interface AutoProbeFetchResult extends BaseModel {
-    autoprobe_id: string;
-    url: string;
-    html?: string;
-  }
+  type AutoProbeItemType = 'page_pattern' | 'list' | 'field' | 'pagination';
 
   interface AutoProbeNavItem<T = any> extends NavItem<T> {
     name?: string;
-    type?:
-      | 'page_pattern'
-      | 'fields'
-      | 'lists'
-      | 'pagination'
-      | 'list'
-      | 'item'
-      | 'field';
+    type?: AutoProbeItemType;
+    rule?: ListRule | FieldRule | PaginationRule;
     children?: AutoProbeNavItem[];
+    parent?: AutoProbeNavItem;
     fieldCount?: number;
-    field?: FieldRule;
-    pagination?: Pagination;
   }
 }

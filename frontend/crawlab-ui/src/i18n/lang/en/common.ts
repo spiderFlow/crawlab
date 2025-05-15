@@ -145,6 +145,7 @@ const common: LCommon = {
     results: 'Results',
     output: 'Output',
     patterns: 'Patterns',
+    preview: 'Preview',
   },
   status: {
     unassigned: 'Unassigned',

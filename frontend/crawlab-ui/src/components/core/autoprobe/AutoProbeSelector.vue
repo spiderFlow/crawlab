@@ -1,53 +1,32 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { translate } from '@/utils';
+import {
+  translate,
+  getIconBySelectorType,
+  getIconByExtractType,
+} from '@/utils';
 
 const props = defineProps<{
-  type: 'field' | 'pagination';
-  rule: FieldRule | Pagination;
+  selectorType: SelectorType;
+  selector: string;
+  extractType?: ExtractType;
+  attribute?: string;
+}>();
+
+const emit = defineEmits<{
+  (e: 'click'): void;
 }>();
 
 const t = translate;
 
 const selectorIcon = computed<Icon>(() => {
-  const { rule } = props;
-  switch (rule.selector_type) {
-    case 'css':
-      return ['fab', 'css'];
-    case 'xpath':
-      return ['fa', 'code'];
-    case 'regex':
-      return ['fa', 'search'];
-  }
+  const { selectorType } = props;
+  return getIconBySelectorType(selectorType);
 });
 
-const selectorType = computed(() => {});
-
-const extractionIcon = computed<Icon>(() => {
-  const { rule, type } = props;
-  if (type === 'field') {
-    switch ((rule as FieldRule).extraction_type) {
-      case 'attribute':
-        return ['fa', 'tag'];
-      case 'text':
-        return ['fa', 'font'];
-      case 'html':
-        return ['fa', 'code'];
-      default:
-        return ['fa', 'question'];
-    }
-  } else {
-    return ['fa', 'question'];
-  }
-});
-
-const extractionLabel = computed(() => {
-  const { rule, type } = props;
-  if (type === 'field') {
-    return (rule as FieldRule).extraction_type;
-  } else {
-    return '';
-  }
+const extractIcon = computed<Icon>(() => {
+  const { extractType } = props;
+  return getIconByExtractType(extractType);
 });
 
 defineOptions({ name: 'ClAutoProbeSelector' });
@@ -57,18 +36,62 @@ defineOptions({ name: 'ClAutoProbeSelector' });
   <div class="selector">
     <cl-tag
       :icon="selectorIcon"
-      :label="rule.selector"
+      :label="selector"
       :tooltip="
-        t(
-          `components.autoprobe.pagePattern.selectorTypes.${rule.selector_type}`
-        )
+        t(`components.autoprobe.pagePattern.selectorTypes.${selectorType}`)
       "
-    />
-    <template v-if="type === 'field'">
+      clickable
+    >
+      <template #tooltip>
+        <div>
+          <label>
+            {{ t('components.autoprobe.pagePattern.selectorType') }}:
+          </label>
+          <span>
+            {{
+              t(
+                `components.autoprobe.pagePattern.selectorTypes.${selectorType}`
+              )
+            }}
+          </span>
+        </div>
+        <div>
+          <label>{{ t('components.autoprobe.pagePattern.selector') }}: </label>
+          <span>{{ selector }}</span>
+        </div>
+      </template>
+    </cl-tag>
+    <template v-if="extractType">
       <span class="divider">
         <cl-icon :icon="['fa', 'angle-right']" />
       </span>
-      <cl-tag :icon="extractionIcon" :label="extractionLabel" />
+      <cl-tag
+        :icon="extractIcon"
+        :label="attribute"
+        clickable
+        @click="emit('click')"
+      >
+        <template #tooltip>
+          <div>
+            <label>
+              {{ t('components.autoprobe.pagePattern.extractionType') }}:
+            </label>
+            <span>
+              {{
+                t(
+                  `components.autoprobe.pagePattern.extractionTypes.${extractType}`
+                )
+              }}
+            </span>
+          </div>
+          <div v-if="extractType === 'attribute'">
+            <label>
+              {{ t('components.autoprobe.pagePattern.attribute') }}:
+            </label>
+            <span>{{ attribute }}</span>
+          </div>
+        </template>
+      </cl-tag>
     </template>
   </div>
 </template>

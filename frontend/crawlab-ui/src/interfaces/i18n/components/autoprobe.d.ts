@@ -94,5 +94,12 @@ interface LComponentsAutoProbe {
       xpath: string;
       regex: string;
     };
+    extractionType: string;
+    extractionTypes: {
+      text: string;
+      attribute: string;
+      html: string;
+    };
+    attribute: string;
   };
 }

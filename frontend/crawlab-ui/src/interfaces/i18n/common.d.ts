@@ -158,6 +158,7 @@ export declare global {
       results: string;
       output: string;
       patterns: string;
+      preview: string;
     };
     status: {
       unassigned: string;

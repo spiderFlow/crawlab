@@ -19,12 +19,11 @@ import * as theme from './ui/lexical/utils/theme';
 import * as VariableNode from './ui/lexical/nodes/VariableNode';
 import AssistantConsole from './core/ai/AssistantConsole.vue';
 import AtomMaterialIcon from './ui/icon/AtomMaterialIcon.vue';
-import AutoProbeFieldDetail from './core/autoprobe/AutoProbeFieldDetail.vue';
 import AutoProbeForm from './core/autoprobe/AutoProbeForm.vue';
-import AutoProbeListDetail from './core/autoprobe/AutoProbeListDetail.vue';
-import AutoProbePagePatternDetail from './core/autoprobe/AutoProbePagePatternDetail.vue';
-import AutoProbePaginationDetail from './core/autoprobe/AutoProbePaginationDetail.vue';
+import AutoProbeItemDetail from './core/autoprobe/AutoProbeItemDetail.vue';
+import AutoProbePagePatternsSidebar from './core/autoprobe/AutoProbePagePatternsSidebar.vue';
 import AutoProbePatternStats from './core/autoprobe/AutoProbePatternStats.vue';
+import AutoProbeResultsContainer from './core/autoprobe/AutoProbeResultsContainer.vue';
 import AutoProbeSelector from './core/autoprobe/AutoProbeSelector.vue';
 import AutoProbeTaskStatus from './core/autoprobe/AutoProbeTaskStatus.vue';
 import BlockOptionsDropdownList from './ui/lexical/components/BlockOptionsDropdownList.vue';
@@ -275,12 +274,11 @@ export {
   VariableNode as VariableNode,
   AssistantConsole as ClAssistantConsole,
   AtomMaterialIcon as ClAtomMaterialIcon,
-  AutoProbeFieldDetail as ClAutoProbeFieldDetail,
   AutoProbeForm as ClAutoProbeForm,
-  AutoProbeListDetail as ClAutoProbeListDetail,
-  AutoProbePagePatternDetail as ClAutoProbePagePatternDetail,
-  AutoProbePaginationDetail as ClAutoProbePaginationDetail,
+  AutoProbeItemDetail as ClAutoProbeItemDetail,
+  AutoProbePagePatternsSidebar as ClAutoProbePagePatternsSidebar,
   AutoProbePatternStats as ClAutoProbePatternStats,
+  AutoProbeResultsContainer as ClAutoProbeResultsContainer,
   AutoProbeSelector as ClAutoProbeSelector,
   AutoProbeTaskStatus as ClAutoProbeTaskStatus,
   BlockOptionsDropdownList as ClBlockOptionsDropdownList,

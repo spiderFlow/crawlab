@@ -145,6 +145,7 @@ const common: LCommon = {
     results: '结果',
     output: '输出',
     patterns: '模式',
+    preview: '预览',
   },
   status: {
     unassigned: '未指定',

@@ -104,3 +104,11 @@ defineOptions({ name: 'ClSpiderStat' });
     </cl-tag>
   </div>
 </template>
+
+<style scoped>
+.spider-stat {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+</style>

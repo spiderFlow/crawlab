@@ -94,6 +94,13 @@ const autoprobe: LComponentsAutoProbe = {
       xpath: 'XPath',
       regex: '正则表达式',
     },
+    extractionType: '提取类型',
+    extractionTypes: {
+      text: '文本',
+      html: 'HTML',
+      attribute: '属性',
+    },
+    attribute: '属性',
   },
 };
 
