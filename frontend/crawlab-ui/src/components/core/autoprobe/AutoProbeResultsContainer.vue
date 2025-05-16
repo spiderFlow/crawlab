@@ -20,8 +20,7 @@ const resultsContainerRef = ref<HTMLElement | null>(null);
 // States
 const activeTabName = ref<string | undefined>(TAB_NAME_RESULTS);
 
-// Computed
-const resultsVisible = computed(() => !!activeTabName.value);
+const resultsVisible = ref(true);
 
 const resultsTabItems = computed<NavItem[]>(() => [
   {
@@ -80,15 +79,17 @@ const tableCellStyle: CellStyle<PageData> = ({ column }) => {
 
 // Methods
 const onTabSelect = (id: string) => {
-  if (activeTabName.value === id) {
-    hideResults();
-  } else {
-    activeTabName.value = id;
+  activeTabName.value = id;
+  if (!resultsVisible.value) {
+    resultsVisible.value = true;
   }
 };
 
-const hideResults = () => {
-  activeTabName.value = undefined;
+const toggleResults = () => {
+  resultsVisible.value = !resultsVisible.value;
+  if (!activeTabName.value && resultsVisible.value) {
+    activeTabName.value = TAB_NAME_RESULTS;
+  }
 };
 
 // Resize handler
@@ -128,10 +129,13 @@ defineOptions({ name: 'ClAutoProbeResultsContainer' });
       <template #extra>
         <div class="results-actions">
           <cl-icon
-            v-if="resultsVisible"
             color="var(--cl-info-color)"
-            :icon="['fa', 'minus']"
-            @click="hideResults"
+            :icon="
+              resultsVisible
+                ? ['fa', 'window-minimize']
+                : ['fa', 'window-maximize']
+            "
+            @click="toggleResults"
           />
         </div>
       </template>
