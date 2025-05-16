@@ -3,4 +3,5 @@ interface TreeNode<T = any> {
   value?: any;
   children?: T[];
   path?: string;
+  level?: number;
 }

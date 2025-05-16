@@ -125,7 +125,8 @@ defineOptions({ name: 'ClDetailLayout' });
     overflow: hidden;
 
     .nav-actions {
-      height: fit-content;
+      height: 53px;
+      flex: 0 0 53px;
     }
 
     .nav-select {
@@ -143,7 +144,7 @@ defineOptions({ name: 'ClDetailLayout' });
 
     .content-container {
       flex: 1;
-      height: calc(100% - 41px - 50px);
+      height: calc(100% - 41px - 53px);
     }
   }
 }

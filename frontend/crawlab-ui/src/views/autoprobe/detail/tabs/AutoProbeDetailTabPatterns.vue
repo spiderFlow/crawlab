@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useStore } from 'vuex';
-import { getIconByExtractType, getIconByItemType, translate } from '@/utils';
 import { cloneDeep } from 'lodash';
+import { getIconByExtractType, getIconByItemType, translate } from '@/utils';
+import { useAutoProbeDetail } from '@/views';
 
 // i18n
 const t = translate;
@@ -11,6 +12,8 @@ const t = translate;
 const store = useStore();
 const { autoprobe: state } = store.state as RootStoreState;
 
+const { activeId } = useAutoProbeDetail();
+
 // form data
 const form = computed<AutoProbe>(() => state.form);
 const pageFields = computed(() => form.value?.page_pattern?.fields);
@@ -18,6 +21,54 @@ const pageLists = computed(() => form.value?.page_pattern?.lists);
 const pagePagination = computed(() => form.value?.page_pattern?.pagination);
 const pageData = computed<PageData>(() => form.value?.page_data || {});
 const pageNavItemId = 'page';
+
+// results data and fields based on active item
+const resultsDataFields = computed<AutoProbeResults>(() => {
+  const rootDataFields: AutoProbeResults = {
+    data: pageData.value,
+    fields: computedTreeItems.value[0].children?.filter(
+      item => item.type !== 'pagination'
+    ),
+  };
+
+  if (!activeNavItem.value || !pageData.value) {
+    return rootDataFields;
+  }
+
+  const item = activeNavItem.value;
+
+  if (item.level === 0) {
+    return rootDataFields;
+  } else if (item.level === 1) {
+    if (item.type === 'list') {
+      return {
+        data: pageData.value[item.name!],
+        fields: item.children,
+      } as AutoProbeResults;
+    }
+    return {
+      ...rootDataFields,
+      activeField: item,
+    };
+  } else {
+    let currentItem = item;
+    while (currentItem.parent) {
+      const parent = currentItem.parent;
+      if (parent.level === 1 && parent.type === 'list') {
+        return {
+          data: pageData.value[parent.name!],
+          fields: parent.children,
+          activeField: currentItem,
+        } as AutoProbeResults;
+      }
+      currentItem = currentItem.parent;
+    }
+    return rootDataFields;
+  }
+});
+const resultsData = computed(() => resultsDataFields.value.data);
+const resultsFields = computed(() => resultsDataFields.value.fields);
+const resultsActiveField = computed(() => resultsDataFields.value.activeField);
 
 const normalizeItem = (item: AutoProbeNavItem) => {
   const label = item.label ?? `${item.name} (${item.children?.length || 0})`;
@@ -38,7 +89,8 @@ const normalizeItem = (item: AutoProbeNavItem) => {
 // Helper function to recursively process list items
 const processListItem = (
   list: ListRule,
-  parent?: AutoProbeNavItem
+  parent?: AutoProbeNavItem,
+  level: number = 1
 ): AutoProbeNavItem => {
   const listItem: AutoProbeNavItem = {
     id: list.name,
@@ -47,6 +99,7 @@ const processListItem = (
     rule: list,
     children: [],
     parent,
+    level,
   };
 
   // Add fields directly if they exist
@@ -60,6 +113,7 @@ const processListItem = (
           type: 'field',
           rule: field,
           parent: listItem,
+          level: level + 1,
         })
       );
     });
@@ -68,7 +122,7 @@ const processListItem = (
   // Recursively process nested lists if they exist
   if (list.item_pattern?.lists && list.item_pattern.lists.length > 0) {
     list.item_pattern.lists.forEach((nestedList: ListRule) => {
-      listItem.children!.push(processListItem(nestedList, listItem));
+      listItem.children!.push(processListItem(nestedList, listItem, level + 1));
     });
   }
 
@@ -96,6 +150,7 @@ const computedTreeItems = computed<AutoProbeNavItem[]>(() => {
     name: form.value.page_pattern.name,
     type: 'page_pattern',
     children: [],
+    level: 0,
   };
 
   // Add fields directly if they exist
@@ -109,6 +164,7 @@ const computedTreeItems = computed<AutoProbeNavItem[]>(() => {
           type: 'field',
           rule: field,
           parent: rootItem,
+          level: 1,
         })
       );
     });
@@ -117,7 +173,7 @@ const computedTreeItems = computed<AutoProbeNavItem[]>(() => {
   // Add lists directly if they exist
   if (pageLists.value) {
     pageLists.value.forEach(list => {
-      rootItem.children!.push(processListItem(list, rootItem));
+      rootItem.children!.push(processListItem(list, rootItem, 1));
     });
   }
 
@@ -131,6 +187,7 @@ const computedTreeItems = computed<AutoProbeNavItem[]>(() => {
         type: 'pagination',
         rule: pagePagination.value,
         parent: rootItem,
+        level: 1,
       })
     );
   }
@@ -145,6 +202,11 @@ watch(
   },
   { immediate: true }
 );
+
+watch(activeId, () => {
+  // Reset active item when the page changes
+  activeNavItem.value = undefined;
+});
 
 // ref
 const sidebarRef = ref();
@@ -193,11 +255,11 @@ defineOptions({ name: 'ClAutoProbeDetailTabPatterns' });
         </div>
       </div>
 
-      <!--TODO: implement the data for activeNavItem-->
       <cl-auto-probe-results-container
         v-if="detailNavItem"
-        :data="pageData"
-        :fields="activeNavItem?.children"
+        :data="resultsData"
+        :fields="resultsFields"
+        :active-field-name="resultsActiveField?.name"
         @size-change="onSizeChange"
       />
     </div>

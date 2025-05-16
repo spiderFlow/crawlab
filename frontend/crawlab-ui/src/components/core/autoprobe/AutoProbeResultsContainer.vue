@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { ClTag } from '@/components';
 import { translate, getIconByItemType } from '@/utils';
 import { TAB_NAME_RESULTS, TAB_NAME_PREVIEW } from '@/constants';
+import { CellStyle } from 'element-plus';
 
 const t = translate;
 
@@ -10,6 +11,7 @@ const t = translate;
 const props = defineProps<{
   data?: PageData | PageData[];
   fields?: AutoProbeNavItem[];
+  activeFieldName?: string;
 }>();
 
 // Refs
@@ -39,6 +41,7 @@ const tableColumns = computed<TableColumns<PageData>>(() => {
     return {
       key: field.name,
       label: field.name,
+      minWidth: '200',
       value: (row: PageData) => {
         switch (field.type) {
           case 'list':
@@ -64,6 +67,16 @@ const tableData = computed<TableData<PageData | PageData[]>>(() => {
   }
   return [data];
 });
+
+const tableCellStyle: CellStyle<PageData> = ({ column }) => {
+  const { activeFieldName } = props;
+  if (column.columnKey === activeFieldName) {
+    return {
+      backgroundColor: 'var(--el-color-primary-light-9)',
+    };
+  }
+  return {};
+};
 
 // Methods
 const onTabSelect = (id: string) => {
@@ -125,8 +138,11 @@ defineOptions({ name: 'ClAutoProbeResultsContainer' });
     </cl-nav-tabs>
     <div class="results" v-if="activeTabName === TAB_NAME_RESULTS">
       <cl-table
+        :key="JSON.stringify(tableColumns)"
         :columns="tableColumns"
         :data="tableData"
+        :header-cell-style="tableCellStyle"
+        :cell-style="tableCellStyle"
         embedded
         hide-footer
       />

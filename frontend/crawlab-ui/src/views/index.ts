@@ -92,6 +92,7 @@ import TaskDetailTabLogs from './task/detail/tabs/TaskDetailTabLogs.vue';
 import TaskDetailTabOverview from './task/detail/tabs/TaskDetailTabOverview.vue';
 import TaskList from './task/list/TaskList.vue';
 import TokenList from './token/list/TokenList.vue';
+import useAutoProbeDetail from './autoprobe/detail/useAutoProbeDetail';
 import useAutoProbeList from './autoprobe/list/useAutoProbeList';
 import useDatabaseDetail from './database/detail/useDatabaseDetail';
 import useDatabaseList from './database/list/useDatabaseList';
@@ -218,6 +219,7 @@ export {
   TaskDetailTabOverview as ClTaskDetailTabOverview,
   TaskList as ClTaskList,
   TokenList as ClTokenList,
+  useAutoProbeDetail as useAutoProbeDetail,
   useAutoProbeList as useAutoProbeList,
   useDatabaseDetail as useDatabaseDetail,
   useDatabaseList as useDatabaseList,

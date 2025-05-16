@@ -80,4 +80,10 @@ export declare global {
     parent?: AutoProbeNavItem;
     fieldCount?: number;
   }
+
+  interface AutoProbeResults {
+    data?: PageData | PageData[];
+    fields?: AutoProbeNavItem[];
+    activeField?: AutoProbeNavItem;
+  }
 }

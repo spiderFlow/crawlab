@@ -316,7 +316,6 @@ export const getDefaultStoreActions = <T = any>(
       state,
       commit,
     }: StoreActionContext<BaseStoreState<T>>) => {
-      console.debug('getList');
       const { page, size } = state.tablePagination;
       try {
         commit('setTableLoading', true);
