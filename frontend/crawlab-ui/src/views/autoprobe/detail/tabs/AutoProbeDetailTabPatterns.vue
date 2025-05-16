@@ -199,6 +199,9 @@ watch(
   () => state.form,
   () => {
     treeItems.value = cloneDeep(computedTreeItems.value);
+    if (!activeNavItem.value) {
+      activeNavItem.value = treeItems.value[0];
+    }
   },
   { immediate: true }
 );

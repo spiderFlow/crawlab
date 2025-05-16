@@ -18,10 +18,10 @@ const props = defineProps<{
 // Refs
 const resultsContainerRef = ref<HTMLElement | null>(null);
 const iframeRef = ref<HTMLIFrameElement | null>(null);
+const iframeLoading = ref(true);
 
 // States
 const activeTabName = ref<string | undefined>(TAB_NAME_RESULTS);
-
 const resultsVisible = ref(true);
 
 const resultsTabItems = computed<NavItem[]>(() => [
@@ -85,6 +85,11 @@ const onTabSelect = (id: string) => {
   if (!resultsVisible.value) {
     resultsVisible.value = true;
   }
+
+  // Reset iframe loading state when switching to preview tab
+  if (id === TAB_NAME_PREVIEW) {
+    iframeLoading.value = true;
+  }
 };
 
 const toggleResults = () => {
@@ -92,6 +97,10 @@ const toggleResults = () => {
   if (!activeTabName.value && resultsVisible.value) {
     activeTabName.value = TAB_NAME_RESULTS;
   }
+};
+
+const onIframeLoad = () => {
+  iframeLoading.value = false;
 };
 
 // Resize handler
@@ -154,12 +163,16 @@ defineOptions({ name: 'ClAutoProbeResultsContainer' });
       />
     </div>
     <div class="preview" v-else-if="activeTabName === TAB_NAME_PREVIEW">
-      <iframe
-        v-if="url"
-        ref="iframeRef"
-        :src="url"
-        sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-downloads allow-modals allow-presentation"
-      />
+      <el-skeleton :rows="15" animated v-if="iframeLoading && url" />
+      <div class="iframe-container">
+        <iframe
+          v-if="url"
+          ref="iframeRef"
+          :src="url"
+          sandbox="allow-scripts allow-same-origin"
+          @load="onIframeLoad"
+        />
+      </div>
     </div>
   </div>
 </template>
@@ -223,10 +236,20 @@ defineOptions({ name: 'ClAutoProbeResultsContainer' });
     overflow: hidden;
     height: calc(100% - 41px);
 
-    iframe {
+    .el-skeleton {
+      padding: 20px;
+    }
+
+    .iframe-container {
+      position: relative;
       width: 100%;
       height: 100%;
-      border: none;
+
+      iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+      }
     }
   }
 }
