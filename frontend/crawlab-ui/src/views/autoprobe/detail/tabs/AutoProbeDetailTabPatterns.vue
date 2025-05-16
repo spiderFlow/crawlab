@@ -260,6 +260,7 @@ defineOptions({ name: 'ClAutoProbeDetailTabPatterns' });
         :data="resultsData"
         :fields="resultsFields"
         :active-field-name="resultsActiveField?.name"
+        :url="form.url"
         @size-change="onSizeChange"
       />
     </div>

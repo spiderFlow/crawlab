@@ -12,10 +12,12 @@ const props = defineProps<{
   data?: PageData | PageData[];
   fields?: AutoProbeNavItem[];
   activeFieldName?: string;
+  url?: string;
 }>();
 
 // Refs
 const resultsContainerRef = ref<HTMLElement | null>(null);
+const iframeRef = ref<HTMLIFrameElement | null>(null);
 
 // States
 const activeTabName = ref<string | undefined>(TAB_NAME_RESULTS);
@@ -151,7 +153,9 @@ defineOptions({ name: 'ClAutoProbeResultsContainer' });
         hide-footer
       />
     </div>
-    <div class="output" v-else-if="activeTabName === TAB_NAME_PREVIEW"></div>
+    <div class="preview" v-else-if="activeTabName === TAB_NAME_PREVIEW">
+      <iframe v-if="url" ref="iframeRef" :src="url" />
+    </div>
   </div>
 </template>
 
@@ -210,18 +214,14 @@ defineOptions({ name: 'ClAutoProbeResultsContainer' });
     }
   }
 
-  .output {
-    padding: 10px;
+  .preview {
+    overflow: hidden;
     height: calc(100% - 41px);
-    overflow: auto;
-    white-space: pre-wrap;
 
-    pre {
-      margin: 0;
-      font-size: 14px;
-      line-height: 1.5;
-      color: var(--cl-text-color);
-      white-space: pre-wrap;
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
     }
   }
 }
