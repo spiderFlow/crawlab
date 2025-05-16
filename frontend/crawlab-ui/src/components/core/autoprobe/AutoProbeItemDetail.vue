@@ -168,14 +168,21 @@ defineOptions({ name: 'ClAutoProbeItemDetail' });
 </script>
 
 <template>
-  <div class="cl-autoprobe-page-pattern-detail">
+  <div class="autoprobe-page-pattern-detail">
     <cl-table
       :columns="tableColumns"
       :data="tableData"
       embedded
+      sticky-header
       hide-footer
       :row-style="rowStyle"
       :cell-style="cellStyle"
     />
   </div>
 </template>
+
+<style scoped>
+.autoprobe-page-pattern-detail {
+  height: 100%;
+}
+</style>

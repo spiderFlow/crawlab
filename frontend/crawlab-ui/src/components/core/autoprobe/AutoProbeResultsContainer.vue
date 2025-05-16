@@ -154,7 +154,12 @@ defineOptions({ name: 'ClAutoProbeResultsContainer' });
       />
     </div>
     <div class="preview" v-else-if="activeTabName === TAB_NAME_PREVIEW">
-      <iframe v-if="url" ref="iframeRef" :src="url" />
+      <iframe
+        v-if="url"
+        ref="iframeRef"
+        :src="url"
+        sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-downloads allow-modals allow-presentation"
+      />
     </div>
   </div>
 </template>
