@@ -86,4 +86,27 @@ export declare global {
     fields?: AutoProbeNavItem[];
     activeField?: AutoProbeNavItem;
   }
+
+  interface PageViewPort {
+    width: number;
+    height: number;
+  }
+
+  interface ElementCoordinates {
+    top: number;
+    left: number;
+    width: number;
+    height: number;
+  }
+
+  interface PageItemCoordinates {
+    id: string;
+    name: string;
+    coordinates: ElementCoordinates;
+  }
+
+  interface PagePreview {
+    screenshot_base64: string;
+    page_items_coordinates: PageItemCoordinates[];
+  }
 }

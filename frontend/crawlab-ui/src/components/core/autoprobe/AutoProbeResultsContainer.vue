@@ -1,9 +1,10 @@
 <script setup lang="tsx">
 import { computed, ref } from 'vue';
+import { CellStyle } from 'element-plus';
 import { ClTag } from '@/components';
 import { translate, getIconByItemType } from '@/utils';
 import { TAB_NAME_RESULTS, TAB_NAME_PREVIEW } from '@/constants';
-import { CellStyle } from 'element-plus';
+import useRequest from '@/services/request';
 
 const t = translate;
 
@@ -13,12 +14,25 @@ const props = defineProps<{
   fields?: AutoProbeNavItem[];
   activeFieldName?: string;
   url?: string;
+  activeId?: string;
 }>();
+
+// Emits
+const emit = defineEmits<{
+  (e: 'size-change', size: number): void;
+}>();
+
+const { post } = useRequest();
 
 // Refs
 const resultsContainerRef = ref<HTMLElement | null>(null);
 const iframeRef = ref<HTMLIFrameElement | null>(null);
 const iframeLoading = ref(true);
+const previewRef = ref<HTMLDivElement | null>(null);
+const previewLoading = ref(false);
+const pagePreview = ref<PagePreview>();
+const overlayRef = ref<HTMLDivElement | null>(null);
+const scrollPosition = ref({ top: 0, left: 0 });
 
 // States
 const activeTabName = ref<string | undefined>(TAB_NAME_RESULTS);
@@ -80,7 +94,7 @@ const tableCellStyle: CellStyle<PageData> = ({ column }) => {
 };
 
 // Methods
-const onTabSelect = (id: string) => {
+const onTabSelect = async (id: string) => {
   activeTabName.value = id;
   if (!resultsVisible.value) {
     resultsVisible.value = true;
@@ -89,6 +103,7 @@ const onTabSelect = (id: string) => {
   // Reset iframe loading state when switching to preview tab
   if (id === TAB_NAME_PREVIEW) {
     iframeLoading.value = true;
+    setTimeout(getPreview, 10);
   }
 };
 
@@ -101,6 +116,32 @@ const toggleResults = () => {
 
 const onIframeLoad = () => {
   iframeLoading.value = false;
+  iframeRef.value?.addEventListener('focus', event => {
+    console.debug(event);
+  });
+};
+
+const getPreview = async () => {
+  const { activeId } = props;
+  const rect = previewRef.value?.getBoundingClientRect();
+  const viewport: PageViewPort | undefined = rect
+    ? {
+        width: rect.width,
+        height: rect.height,
+      }
+    : undefined;
+  previewLoading.value = true;
+  try {
+    const res = await post<any, ResponseWithData<PagePreview>>(
+      `/ai/autoprobes/${activeId}/preview`,
+      {
+        viewport,
+      }
+    );
+    pagePreview.value = res.data;
+  } finally {
+    previewLoading.value = false;
+  }
 };
 
 // Resize handler
@@ -109,11 +150,6 @@ const onSizeChange = (size: number) => {
   // Emit event to parent to adjust layout
   emit('size-change', size);
 };
-
-// Emits
-const emit = defineEmits<{
-  (e: 'size-change', size: number): void;
-}>();
 
 defineOptions({ name: 'ClAutoProbeResultsContainer' });
 </script>
@@ -162,16 +198,40 @@ defineOptions({ name: 'ClAutoProbeResultsContainer' });
         hide-footer
       />
     </div>
-    <div class="preview" v-else-if="activeTabName === TAB_NAME_PREVIEW">
-      <el-skeleton :rows="15" animated v-if="iframeLoading && url" />
-      <div class="iframe-container">
-        <iframe
-          v-if="url"
-          ref="iframeRef"
-          :src="url"
-          sandbox="allow-scripts allow-same-origin"
-          @load="onIframeLoad"
-        />
+    <div
+      v-else-if="activeTabName === TAB_NAME_PREVIEW"
+      ref="previewRef"
+      class="preview"
+    >
+      <!--      <el-skeleton :rows="15" animated v-if="iframeLoading && url" />-->
+      <div v-loading="previewLoading" class="preview-container">
+        <div v-if="pagePreview" ref="overlayRef" class="preview-overlay">
+          <img class="screenshot" :src="pagePreview.screenshot_base64" />
+          <div
+            v-for="coord in pagePreview.page_items_coordinates"
+            :key="coord.id"
+            class="element-mask"
+            :style="{
+              position: 'absolute',
+              left: coord.coordinates?.left + 'px',
+              top: coord.coordinates?.top + 'px',
+              width: coord.coordinates?.width + 'px',
+              height: coord.coordinates?.height + 'px',
+            }"
+          >
+            <el-badge
+              type="primary"
+              :badge-style="{opacity: 0.5}"
+            >
+              <template #content>
+                <span style="margin-right: 5px">
+                  <cl-icon :icon="getIconByItemType('field')" />
+                </span>
+                {{ coord.id }}
+              </template>
+            </el-badge>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -236,19 +296,33 @@ defineOptions({ name: 'ClAutoProbeResultsContainer' });
     overflow: hidden;
     height: calc(100% - 41px);
 
-    .el-skeleton {
-      padding: 20px;
-    }
-
-    .iframe-container {
+    .preview-container {
       position: relative;
       width: 100%;
       height: 100%;
+      overflow: auto;
+      scrollbar-width: none;
 
-      iframe {
+      .preview-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
         width: 100%;
-        height: 100%;
-        border: none;
+
+        img.screenshot {
+          width: 100%;
+        }
+
+        .element-mask {
+          border: 1px solid var(--el-color-primary);
+          border-radius: 4px;
+          pointer-events: none;
+
+          &:hover {
+            background-color: var(--cl-primary-color);
+            opacity: 0.8;
+          }
+        }
       }
     }
   }
