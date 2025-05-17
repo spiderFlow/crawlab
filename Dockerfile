@@ -17,9 +17,7 @@ WORKDIR /app
 #RUN npm config set unsafe-perm true
 #RUN npm install -g yarn && yarn install
 
-#RUN yarn install && yarn run build:prod
-RUN npm install -g yarn \
-	&& yarn install --registry=https://registry.npm.taobao.org
+#RUN yarn install && yarn run build:prod 
 
 RUN npm run build:prod
 # images
