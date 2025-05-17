@@ -58,6 +58,7 @@ COPY --from=frontend-build /app/dist /app/dist
 # copy nginx config files
 COPY ./nginx/crawlab.conf /etc/nginx/conf.d
 
+COPY --from=ghcr.io/astral-sh/uv:0.7.5 /uv /uvx /bin/
 # working directory
 WORKDIR /app/backend
 
