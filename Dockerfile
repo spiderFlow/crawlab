@@ -38,7 +38,7 @@ RUN chmod 777 /tmp \
 
 
 # install backend
-RUN pipx ensurepath && pipx install scrapy pymongo bs4 requests crawlab-sdk scrapy-splash
+# RUN pipx ensurepath && pipx install scrapy pymongo bs4 requests crawlab-sdk scrapy-splash
 
 # add files
 COPY ./backend/conf /app/backend/conf
