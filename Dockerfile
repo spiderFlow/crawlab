@@ -32,13 +32,13 @@ ENV CRAWLAB_IS_DOCKER Y
 # install packages
 RUN chmod 777 /tmp \
 	&& apt-get update \
-	&& apt-get install -y curl git net-tools iputils-ping ntp ntpdate python3 python3-pip nginx wget dumb-init \
+	&& apt-get install -y curl git net-tools iputils-ping ntp ntpdate python3 python3-pip pipx nginx wget dumb-init \
 	&& ln -s /usr/bin/pip3 /usr/local/bin/pip \
 	&& ln -s /usr/bin/python3 /usr/local/bin/python
 
 
 # install backend
-RUN pip install scrapy pymongo bs4 requests crawlab-sdk scrapy-splash
+RUN pipx enusurepath && pipx install scrapy pymongo bs4 requests crawlab-sdk scrapy-splash
 
 # add files
 COPY ./backend/conf /app/backend/conf
