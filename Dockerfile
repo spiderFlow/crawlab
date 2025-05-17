@@ -50,11 +50,11 @@ COPY ./docker_init.sh /app/docker_init.sh
 
 # copy backend files
 RUN mkdir -p /opt/bin
-COPY --from=backend-build /go/bin/crawlab /opt/bin
+COPY --from=crawlabteam/crawlab:v0.5.1 /opt/bin/crawlab /opt/bin
 RUN cp /opt/bin/crawlab /usr/local/bin/crawlab-server
 
 # copy frontend files
-COPY --from=frontend-build /app/dist /app/dist
+COPY  --from=crawlabteam/crawlab:v0.5.1 /app/dist /app/dist
 
 # copy nginx config files
 COPY ./nginx/crawlab.conf /etc/nginx/conf.d
