@@ -13,7 +13,7 @@ on:
       - v*
 
 env:
-  IMAGE_NAME: tikazyq/crawlab
+  IMAGE_NAME: ttl.sh/crawlab
 
 jobs:
   # Push image to GitHub Package Registry.
