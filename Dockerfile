@@ -19,7 +19,7 @@ WORKDIR /app
 
 #RUN yarn install && yarn run build:prod 
 
-RUN npm run build:prod
+RUN npm install && npm run build:prod
 # images
 FROM ubuntu:latest
 
